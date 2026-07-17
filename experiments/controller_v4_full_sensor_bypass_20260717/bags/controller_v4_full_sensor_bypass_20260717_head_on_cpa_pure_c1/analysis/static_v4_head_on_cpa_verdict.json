@@ -1,0 +1,15 @@
+{
+  "verdict": "PASS",
+  "fail_reasons": [],
+  "both_robots_completed": true,
+  "avoid_turn_count": 6,
+  "local_mode_count": 0,
+  "recover_count": 8,
+  "recover_to_cruise_transitions": 2,
+  "collision_detected": false,
+  "minimum_center_separation_m": 0.14164457863579974,
+  "collision_distance_m": 0.07,
+  "preload_realtime_factor": 0.956,
+  "full_load_realtime_factor": 0.95,
+  "realtime_factor_ok": true
+}
