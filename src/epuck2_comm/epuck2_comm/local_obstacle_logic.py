@@ -474,9 +474,20 @@ class EncounterAvoidanceV4:
             self.phase = "PASS_CONFIRM"
             self.pass_confirm_since_s = now_s
             return LocalObstacleDecision(True, False, "LOCAL_PASS_CONFIRM", self.side_track_creep_mps, 0.0)
-        # Raw quiet but joint pass conditions not yet met: hold, never creep
-        # blindly just because the raw side/narrow trigger happened to clear.
-        return LocalObstacleDecision(True, False, "LOCAL_SIDE_TRACK_HOLD", 0.0, 0.0)
+        # Raw (aggregate) quiet but the joint PASS_CONFIRM conditions aren't
+        # met yet: this must still make forward progress -- freezing here
+        # forever (pilot_v4_a's actual failure mode: raw quiet, conditions
+        # never met, robot stalls at (0,0) until the duration ceiling forces
+        # FAILSAFE) is exactly the "prolonged edge-hugging stall" the
+        # acceptance checklist forbids. Still gated on real sensor evidence,
+        # though: the TRACKING ZONE band (not the raw aggregate, which can
+        # go quiet before the zone triple genuinely clears) decides whether
+        # a straight-ahead creep is safe -- DANGER still holds.
+        band = self._tracking_band(zones)
+        if band == "DANGER":
+            return LocalObstacleDecision(True, False, "LOCAL_SIDE_TRACK_HOLD", 0.0, 0.0)
+        linear = self.side_track_warn_mps if band == "WARN" else self.side_track_creep_mps
+        return LocalObstacleDecision(True, False, "LOCAL_SIDE_TRACK_CREEP", linear, 0.0)
 
     # -- PASS_CONFIRM --------------------------------------------------
 
@@ -486,7 +497,7 @@ class EncounterAvoidanceV4:
             return self._handle_side_track(side_active, is_narrow, decision, zones, now_s, own_x, own_y, own_yaw_rad)
         if not self._pass_confirm_conditions_met(zones, now_s, own_x, own_y):
             self.phase = "SIDE_TRACK"
-            return LocalObstacleDecision(True, False, "LOCAL_SIDE_TRACK_HOLD", 0.0, 0.0)
+            return self._handle_side_track(side_active, is_narrow, decision, zones, now_s, own_x, own_y, own_yaw_rad)
         if now_s - self.pass_confirm_since_s >= self.pass_confirm_hold_s:
             self.phase = "RECOVERY_ALLOWED"
             return LocalObstacleDecision(True, False, "LOCAL_RECOVERY_READY", 0.0, 0.0)
