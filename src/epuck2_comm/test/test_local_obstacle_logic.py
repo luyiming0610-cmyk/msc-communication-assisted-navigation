@@ -62,9 +62,9 @@ def test_tof_only_front_detection_remains_available():
 def test_latch_holds_turn_direction_during_short_range_dropout():
     latch = LocalAvoidanceLatch(clear_hold_s=1.0)
     detected = decide_local_obstacle(0.12, math.inf, math.inf, VALID_ALL)
-    assert latch.apply(detected, 10.0).mode == "LOCAL_FRONT_WARN"
+    assert latch.apply(detected, 10.0, 0.0, 0.0).mode == "LOCAL_FRONT_WARN"
     clear = decide_local_obstacle(math.inf, math.inf, math.inf, VALID_ALL)
-    held = latch.apply(clear, 10.5)
+    held = latch.apply(clear, 10.5, 0.0, 0.0)
     assert held.mode == "LOCAL_CLEARANCE"
     assert held.angular_rps < 0.0
 
@@ -72,7 +72,7 @@ def test_latch_holds_turn_direction_during_short_range_dropout():
 def test_latch_releases_after_clear_hold_interval():
     latch = LocalAvoidanceLatch(clear_hold_s=1.0)
     detected = decide_local_obstacle(0.12, math.inf, math.inf, VALID_ALL)
-    latch.apply(detected, 10.0)
+    latch.apply(detected, 10.0, 0.0, 0.0)
     clear = decide_local_obstacle(math.inf, math.inf, math.inf, VALID_ALL)
-    released = latch.apply(clear, 11.1)
+    released = latch.apply(clear, 11.1, 0.0, 0.0)
     assert not released.active
