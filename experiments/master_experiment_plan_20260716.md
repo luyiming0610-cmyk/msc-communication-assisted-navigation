@@ -166,6 +166,41 @@ it remains for manual, directly-observed execution (one interface command at a
 time) and must not be auto-run. The three v4 pilots above are exclusionary
 evidence only and are not pooled with any formal-trial statistics.
 
+### 2026-07-17, later same day: Phase 4 formal batch complete (5/5 PASS)
+
+Formal Trial 01 was run manually, step-by-step, with the user directly
+observing Webots throughout (per explicit instruction); Trials 02-05 then
+ran automatically via `run_combined_v4_pilot.sh` once Trials 01-02 both
+confirmed the identical frozen `combined_v4/` configuration passes. Full
+detail, per-trial table, and batch statistics:
+`experiments/controller_v4_full_sensor_bypass_20260717/PHASE4_FORMAL_BATCH_SUMMARY_20260717.md`.
+
+**Result: 5/5 PASS, 0/5 collision.** Mean minimum robot-robot separation
+0.2736 ± 0.0044 m, mean box clearance 0.1229 m, mean full-load realtime
+factor 0.984 (n=4 automated trials; Trial 01 confirmed in range by direct
+user observation). Phase 4's n=5 canonical-geometry gate is met; **Phase 4
+is complete.**
+
+Naming rule for this scenario, binding for the dissertation: **"staged
+local-obstacle avoidance followed by communication-assisted
+proximity/cooperative avoidance."** All 5 trials triggered via
+`PROXIMITY_FALLBACK` (`dcpa_at_trigger` 0.197-0.216m, always above the
+0.14m predicted-conflict threshold) -- confirmed via
+`analyze_trigger_reason.py` (analysis-only, does not touch the frozen
+controller) on every trial. This is a genuine, reproducible property of the
+frozen geometry (epuck1's post-box `LOCAL_RECOVER` restores heading, not
+lateral position), not a controller defect or an engineered result. This
+batch is valid evidence of the two-stage local-then-communication
+avoidance mechanism working correctly and safely, but must never be cited
+as evidence of preventing an otherwise-certain head-on collision.
+
+Per the current project re-prioritization (route re-alignment against the
+official COMP5200M Spec/SP, `HANDOFF_20260717.md`), further avoidance-
+scenario expansion is intentionally paused here. Remaining project effort
+moves to the communication-library core objectives (protocol audit, formal
+communication metrics, a controlled delay/loss impairment matrix, and
+physical Pi-puck validation).
+
 ### 2026-07-17 second update: started_at timebase fix, trigger-reason classification, and official Spec/SP re-alignment
 
 **Timebase fix.** A `self.started_at` clock-initialization race was found and
