@@ -420,3 +420,115 @@ def test_nan_and_negative_zone_values_treated_as_no_detection():
     assert d.mode == "LOCAL_SIDE_TRACK"
     assert not latch.front_seen
     assert not latch.mid_seen
+
+
+# -- command-gated turn ledger (pilot_v4_a attempt #3 fix) -------------------
+
+
+def test_zero_command_yaw_noise_does_not_accumulate_over_20s():
+    """20s of angular_cmd=0 (CREEP) with yaw noise matching attempt #3's own
+    measured characteristic (p99=0.0022rad/tick, well inside the default
+    0.01rad noise band): the ledger must not grow."""
+    import random
+
+    latch = EncounterAvoidanceV4(max_turn_ledger_rad=100.0, max_inplace_turn_rad=10.0)
+    latch.apply(_left_side(), _zones(), 0.0, 0.0, 0.0, 0.0)
+    t = 0.05
+    latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.0)
+    assert latch.last_commanded_angular_rps == 0.0
+
+    rng = random.Random(20260717)
+    yaw = 0.0
+    for _ in range(400):  # 20s at 0.05s/tick
+        t += 0.05
+        yaw += rng.uniform(-0.0022, 0.0022)
+        latch.apply(_clear(), _zones(), t, 0.0, 0.0, yaw)
+    assert latch.turn_ledger_used_rad < 0.05
+    assert latch.drift_events == 0
+
+
+def test_intentional_single_direction_turn_is_counted():
+    latch = EncounterAvoidanceV4(max_inplace_turn_rad=10.0, max_turn_ledger_rad=100.0)
+    t = 0.0
+    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, 0.0)
+    yaw = 0.0
+    for _ in range(10):
+        t += 0.05
+        yaw -= 0.045
+        latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, yaw)
+    assert latch.turn_ledger_used_rad == pytest.approx(abs(yaw), abs=1e-6)
+
+
+def test_alternating_turns_accumulate_absolute_value_not_net():
+    latch = EncounterAvoidanceV4(max_inplace_turn_rad=10.0, max_turn_ledger_rad=100.0)
+    t = 0.0
+    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, 0.0)
+    yaw = 0.0
+    sequence = [-0.05] * 5 + [0.05] * 5
+    for delta in sequence:
+        t += 0.05
+        yaw += delta
+        angular = -0.45 if delta < 0 else 0.45
+        latch.apply(_front_warn(angular_rps=angular), _zones(), t, 0.0, 0.0, yaw)
+    assert yaw == pytest.approx(0.0, abs=1e-9)  # net yaw change is zero
+    assert latch.turn_ledger_used_rad == pytest.approx(0.5, abs=1e-6)  # but path length is not
+
+
+def test_persistent_drift_despite_zero_command_triggers_diagnostic_not_ledger():
+    """A yaw delta outside the noise band despite a ~0 commanded angular
+    (attempt #3's own dropped-odometry glitch shape) must be flagged as a
+    drift event, never silently folded into the safety-relevant ledger."""
+    latch = EncounterAvoidanceV4(max_turn_ledger_rad=100.0, max_inplace_turn_rad=10.0)
+    latch.apply(_left_side(), _zones(), 0.0, 0.0, 0.0, 0.0)
+    t = 0.05
+    latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.0)
+    assert latch.drift_events == 0
+
+    t += 0.05
+    d = latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.96)  # mirrors the real glitch magnitude
+    assert latch.drift_events == 1
+    assert latch.turn_ledger_used_rad < 0.05
+    assert d.mode != "LOCAL_ENCOUNTER_FAILSAFE"
+
+
+def test_attempt_c_glitch_replay_does_not_trigger_premature_ledger_failsafe():
+    """Replays attempt #3's actual shape: DETECT_TURN to ~-0.96rad, settle
+    into CREEP (commanded 0), then the exact single-tick glitch recorded in
+    that pilot's bag (yaw snaps to 0.0 for one sample, then reverts) partway
+    through a long creep. The ledger must stay well under the real cap and
+    FAILSAFE must not fire from this alone."""
+    latch = EncounterAvoidanceV4(max_turn_ledger_rad=1.40, max_inplace_turn_rad=0.90)
+    t = 0.0
+    yaw = -0.19
+    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, -0.49, 0.0, yaw)
+    while abs(yaw) < 0.96:
+        t += 0.0563
+        yaw -= 0.045
+        latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, -0.49, 0.0, yaw)
+    # A brief raw side trigger (matches the real run) forces the SIDE_TRACK
+    # transition, then raw clears into CREEP (commanded 0).
+    t += 0.1
+    latch.apply(_left_side(), _zones(), t, -0.49, -0.02, yaw)
+    assert latch.phase == "SIDE_TRACK"
+    t += 0.1
+    latch.apply(_clear(), _zones(), t, -0.49, -0.02, yaw)
+    assert latch.last_commanded_angular_rps == 0.0
+
+    # Long creep, genuinely tiny noise, matching attempt #3's real measured
+    # per-tick statistics.
+    for i in range(170):
+        t += 0.1
+        yaw += 0.0005 if i % 2 == 0 else -0.0005
+        latch.apply(_clear(), _zones(), t, -0.45, -0.10, yaw)
+
+    ledger_before_glitch = latch.turn_ledger_used_rad
+    # The recorded glitch: one sample snaps to yaw=0.0, next sample reverts.
+    t += 0.1
+    latch.apply(_clear(), _zones(), t, -0.44, -0.11, 0.0)
+    t += 0.1
+    latch.apply(_clear(), _zones(), t, -0.44, -0.11, yaw)
+
+    assert latch.turn_ledger_used_rad < 1.40, "the ledger must not breach its cap from a single glitch sample"
+    assert latch.turn_ledger_used_rad == pytest.approx(ledger_before_glitch, abs=0.02)
+    assert latch.phase != "FAILSAFE"
+    assert latch.drift_events >= 1

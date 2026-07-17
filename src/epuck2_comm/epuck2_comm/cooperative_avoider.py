@@ -202,6 +202,7 @@ class CooperativeAvoider(Node):
         self.recovery_completed_at = None
         self.recovery_source = None
         self.last_log = 0.0
+        self._last_logged_drift_events = 0
         self.last_publish_time = time.monotonic()
         self.local_latch = EncounterAvoidanceV4(
             clearance_speed_mps=min(self.avoidance_speed, 0.006),
@@ -453,10 +454,20 @@ class CooperativeAvoider(Node):
         # LOCAL_SIDE_ENCOUNTER_FAILSAFE) is preserved here so the two remain
         # distinguishable in logs without changing command behaviour.
         raw_mode_suffix = f" raw_local_mode={raw_local_mode}" if raw_local_mode else ""
+        # controller_v4_full_sensor_bypass_20260717 pilot_v4_a attempt #3
+        # fix: surface the command-gated ledger's drift/instability counter
+        # whenever nonzero, so a yaw reading that moved despite a ~0
+        # commanded angular (and was therefore NOT trusted into the ledger)
+        # is visible in the log, never silently dropped.
+        drift_suffix = (
+            f" drift_events={self.local_latch.drift_events}"
+            if self.local_latch.drift_events
+            else ""
+        )
         self.get_logger().info(
             f"{prefix} mode={self.mode} {peer_metrics} "
             f"local=({local[0]:.3f},{local[1]:.3f},{local[2]:.3f})m "
-            f"cmd=({linear:.3f},{angular:.3f}){raw_mode_suffix}"
+            f"cmd=({linear:.3f},{angular:.3f}){raw_mode_suffix}{drift_suffix}"
         )
 
     def _complete(self, message: str) -> None:
@@ -513,6 +524,18 @@ class CooperativeAvoider(Node):
         ):
             self.encounter_complete = False
         local_decision = self._local_decision(now)
+        if self.local_latch.drift_events > self._last_logged_drift_events:
+            # controller_v4_full_sensor_bypass_20260717 pilot_v4_a attempt #3
+            # fix: a drift/instability event (yaw moved despite a ~0
+            # commanded angular, outside the measured noise band) must
+            # never be silently ignored -- log it immediately, bypassing
+            # the periodic _log() throttle.
+            self.get_logger().warn(
+                f"local encounter drift/instability detected: yaw moved "
+                f"despite ~0 commanded angular, outside the measured noise "
+                f"band (total drift_events={self.local_latch.drift_events})"
+            )
+            self._last_logged_drift_events = self.local_latch.drift_events
         if (
             local_decision is not None
             and local_decision.safety_stop

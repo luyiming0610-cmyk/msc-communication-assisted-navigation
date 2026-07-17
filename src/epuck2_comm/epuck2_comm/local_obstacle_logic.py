@@ -217,6 +217,35 @@ DEFAULT_REQUIRED_LONGITUDINAL_PROGRESS_M = 0.10
 DEFAULT_REQUIRED_LATERAL_OFFSET_NO_EVIDENCE_M = 0.10
 DEFAULT_PASS_CONFIRM_HOLD_NO_EVIDENCE_S = 2.0
 
+# controller_v4_full_sensor_bypass_20260717 pilot_v4_a attempt #3 finding:
+# a naive |normalize_angle(delta_yaw)| ledger, summed unconditionally every
+# tick, treats a single bad /epuck1/state sample the same as real motion --
+# attempt #3's own bag showed one sample with validity_flags missing
+# FLAG_ODOM_VALID (the same reset-artifact signature found in pilot_a3's
+# post-shutdown tail, here appearing mid-run) that briefly reported
+# x=0,y=0,yaw=0; a naive ledger reconstruction that doesn't skip it double-
+# counts a ~1.92rad phantom turn from a single dropped odometry sample. The
+# ledger below is command-gated: it only trusts a real yaw delta as
+# "intentional turning" when the PREVIOUS tick's own commanded angular_rps
+# was non-trivial; when the previous command was ~0 (CREEP/PASS_CONFIRM),
+# a yaw delta within the measured noise band is silently dropped (not
+# accumulated, not treated as turning), but a delta outside that band
+# despite a ~0 command is never silently folded into the ledger either --
+# it is flagged as a drift/instability event instead (see drift_events)
+# and the tick is held rather than trusted.
+# LEDGER_COMMAND_GATE_RPS: every real commanded angular in this state
+# machine is either exactly 0.0 or >=0.30rad/s (side_turn_rps) -- 0.02 is a
+# clean, wide separation, not itself a calibrated dynamics threshold.
+DEFAULT_LEDGER_COMMAND_GATE_RPS = 0.02
+# DEFAULT_LEDGER_YAW_NOISE_BAND_RAD: derived from pilot_v4_a attempt #3's
+# own measured CREEP/PASS_CONFIRM per-tick |delta_yaw| distribution with the
+# single glitch sample excluded (median=0.0, p99=0.0022rad at ~0.1s/tick,
+# forensic report attached to that pilot's evidence) -- set at roughly 4x
+# that observed p99 for margin. *** UNCALIBRATED pilot candidate, tied to
+# attempt #3's specific ~10Hz state-publish rate; must be re-derived if the
+# sampling rate changes materially. ***
+DEFAULT_LEDGER_YAW_NOISE_BAND_RAD = 0.01
+
 _TRACKING_ZONES = {
     "LEFT": ("left_front_m", "left_mid_m", "left_rear_m"),
     "RIGHT": ("right_front_m", "right_mid_m", "right_rear_m"),
@@ -270,6 +299,8 @@ class EncounterAvoidanceV4:
     # sensor-confirmed path, never "front clear alone."
     required_lateral_offset_no_evidence_m: float = DEFAULT_REQUIRED_LATERAL_OFFSET_NO_EVIDENCE_M
     pass_confirm_hold_no_evidence_s: float = DEFAULT_PASS_CONFIRM_HOLD_NO_EVIDENCE_S
+    ledger_command_gate_rps: float = DEFAULT_LEDGER_COMMAND_GATE_RPS
+    ledger_yaw_noise_band_rad: float = DEFAULT_LEDGER_YAW_NOISE_BAND_RAD
     zone_danger_m: float = 0.042
     zone_warn_m: float = 0.052
     zone_release_m: float = 0.058
@@ -282,6 +313,8 @@ class EncounterAvoidanceV4:
     turn_ledger_used_rad: float = 0.0
     turn_sign: float = -1.0
     tracking_side: str = "LEFT"
+    last_commanded_angular_rps: float = 0.0
+    drift_events: int = 0
     last_raw_mode: str = ""
     last_active_s: float = field(default=None)
     front_seen: bool = False
@@ -297,6 +330,23 @@ class EncounterAvoidanceV4:
     # -- public entry point --------------------------------------------
 
     def apply(
+        self,
+        decision: LocalObstacleDecision,
+        zones: ZoneSnapshot,
+        now_s: float,
+        own_x: float,
+        own_y: float,
+        own_yaw_rad: float,
+    ) -> LocalObstacleDecision:
+        """Thin wrapper around _apply_inner() that captures whatever angular
+        command is about to be returned -- regardless of which of
+        _apply_inner()'s many return sites produced it -- so the NEXT call's
+        _update_ledger() can command-gate against it."""
+        result = self._apply_inner(decision, zones, now_s, own_x, own_y, own_yaw_rad)
+        self.last_commanded_angular_rps = result.angular_rps
+        return result
+
+    def _apply_inner(
         self,
         decision: LocalObstacleDecision,
         zones: ZoneSnapshot,
@@ -375,6 +425,7 @@ class EncounterAvoidanceV4:
         self.mid_seen = False
         self.rear_seen = False
         self.pass_confirm_since_s = None
+        self.last_commanded_angular_rps = 0.0
 
     def _close(self) -> None:
         self.phase = "CLOSED"
@@ -391,11 +442,34 @@ class EncounterAvoidanceV4:
         self.mid_seen = False
         self.rear_seen = False
         self.pass_confirm_since_s = None
+        self.last_commanded_angular_rps = 0.0
 
     def _update_ledger(self, own_yaw_rad: float) -> None:
+        """Command-gated turn-ledger update (pilot_v4_a attempt #3 fix).
+
+        Trusts a real yaw delta as intentional turning only when the
+        PREVIOUS tick's own commanded angular_rps was non-trivial
+        (>=ledger_command_gate_rps); when the previous command was ~0
+        (CREEP/PASS_CONFIRM/HOLD), a delta within the measured
+        ledger_yaw_noise_band_rad is ordinary measurement noise and is not
+        accumulated, but a delta OUTSIDE that band despite a ~0 command is
+        never silently folded into the ledger either -- exactly the shape
+        of a single bad /epuck1/state sample (a dropped-odometry glitch
+        reporting yaw=0, as found in attempt #3's own bag) -- it increments
+        drift_events instead, a diagnostic signal the caller can surface,
+        without corrupting the safety-relevant ledger. Always accumulates
+        by absolute value (never net-cancels opposite-direction turns) and
+        handles +/-pi wraparound via normalize_angle, unchanged.
+        """
         delta = normalize_angle(float(own_yaw_rad) - self.previous_yaw)
-        self.turn_ledger_used_rad += abs(delta)
         self.previous_yaw = float(own_yaw_rad)
+        abs_delta = abs(delta)
+        if abs(self.last_commanded_angular_rps) >= self.ledger_command_gate_rps:
+            self.turn_ledger_used_rad += abs_delta
+            return
+        if abs_delta <= self.ledger_yaw_noise_band_rad:
+            return
+        self.drift_events += 1
 
     def _check_failsafe_ceilings(self, now_s, own_x, own_y) -> bool:
         distance = math.hypot(own_x - self.origin[0], own_y - self.origin[1])
