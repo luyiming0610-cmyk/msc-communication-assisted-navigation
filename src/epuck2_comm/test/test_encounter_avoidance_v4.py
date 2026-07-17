@@ -246,6 +246,79 @@ def test_reopening_after_recovery_interrupt_reverts_to_side_track_not_fresh_ledg
     assert not latch.rear_seen  # re-require a full PASS_CONFIRM before retrying
 
 
+def test_no_sensor_evidence_at_all_falls_back_to_stricter_conservative_gate():
+    """pilot_v4_a attempt #2 finding: a front-triggered DETECT_TURN reacting
+    from ToF range can keep the robot outside the ps zone sensors' ~6.6cm
+    reach for the whole encounter, so front/mid/rear_seen never become
+    True. The design's own contingency requires falling back to a stricter,
+    purely-odometry gate in that case -- never "front clear alone". This
+    verifies both halves: the fallback's own (larger) lateral requirement
+    is enforced, and it only engages when there really is zero zone
+    evidence."""
+    latch = EncounterAvoidanceV4(
+        required_lateral_offset_m=0.05,
+        required_lateral_offset_no_evidence_m=0.15,
+        required_longitudinal_progress_m=0.02,
+        pass_confirm_hold_s=0.1,
+        pass_confirm_hold_no_evidence_s=0.3,
+    )
+    robot = _Robot()
+    t = 0.05
+    latch.apply(_left_side(), _zones(), t, robot.x, robot.y, robot.yaw)
+    assert latch.phase == "SIDE_TRACK"
+
+    # Raw clears immediately; zones NEVER report anything (no ps sensor ever
+    # had physical opportunity to see the box) -- drive enough lateral
+    # travel to satisfy the sensor-confirmed threshold (0.05) but not the
+    # stricter no-evidence one (0.15) yet.
+    for _ in range(20):
+        t += 0.05
+        robot.x += 0.006
+        robot.y -= 0.006
+        d = latch.apply(_clear(), _zones(), t, robot.x, robot.y, robot.yaw)
+        assert d.mode != "LOCAL_RECOVERY_READY", (
+            "0.05m lateral offset is not enough under the no-evidence "
+            "fallback's own stricter 0.15m requirement"
+        )
+    assert not (latch.front_seen or latch.mid_seen or latch.rear_seen)
+
+    # Continue until lateral offset clears the stricter 0.15m threshold.
+    reached = False
+    for _ in range(60):
+        t += 0.05
+        robot.x += 0.006
+        robot.y -= 0.006
+        d = latch.apply(_clear(), _zones(), t, robot.x, robot.y, robot.yaw)
+        if d.mode == "LOCAL_RECOVERY_READY":
+            reached = True
+            break
+    assert reached, "sufficient lateral offset under the no-evidence fallback must eventually recover"
+
+
+def test_partial_sensor_evidence_never_falls_back_to_the_weaker_gate():
+    """front_seen/mid_seen True but rear never confirmed (pilot_a3's own
+    shape) must stay blocked forever, never sliding into the no-evidence
+    fallback just because rear_seen specifically is False."""
+    latch = EncounterAvoidanceV4(
+        required_lateral_offset_m=0.02,
+        required_lateral_offset_no_evidence_m=0.02,  # deliberately easy if it ever engaged
+        required_longitudinal_progress_m=0.01,
+        pass_confirm_hold_s=0.05,
+    )
+    robot = _Robot()
+    t = 0.05
+    latch.apply(_left_side(), _zones(), t, robot.x, robot.y, robot.yaw)
+    t += 0.05
+    latch.apply(_left_side(), _zones(left_front_m=0.045), t, robot.x, robot.y, robot.yaw)
+    assert latch.front_seen and not latch.rear_seen
+    for _ in range(60):
+        t += 0.05
+        robot.x += 0.01
+        robot.y -= 0.01
+        d = latch.apply(_clear(), _zones(), t, robot.x, robot.y, robot.yaw)
+        assert d.mode != "LOCAL_RECOVERY_READY"
+
+
 def test_right_side_mirrors_left_side():
     latch = EncounterAvoidanceV4(
         required_lateral_offset_m=0.05, required_longitudinal_progress_m=0.03,

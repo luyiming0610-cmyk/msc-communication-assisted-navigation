@@ -65,13 +65,15 @@ class CooperativeAvoider(Node):
         self.declare_parameter("local_v4_max_inplace_turn_rad", 0.90)
         self.declare_parameter("local_v4_max_turn_ledger_rad", 1.40)
         self.declare_parameter("local_v4_max_bypass_extension_m", 0.40)
-        self.declare_parameter("local_v4_max_encounter_duration_s", 18.0)
+        self.declare_parameter("local_v4_max_encounter_duration_s", 25.0)
         self.declare_parameter("local_v4_pass_confirm_hold_s", 1.0)
         self.declare_parameter("local_v4_rearm_quiet_s", 1.5)
         self.declare_parameter("local_v4_side_track_creep_mps", 0.010)
         self.declare_parameter("local_v4_side_track_warn_mps", 0.005)
         self.declare_parameter("local_v4_required_lateral_offset_m", 0.070)
         self.declare_parameter("local_v4_required_longitudinal_progress_m", 0.10)
+        self.declare_parameter("local_v4_required_lateral_offset_no_evidence_m", 0.10)
+        self.declare_parameter("local_v4_pass_confirm_hold_no_evidence_s", 2.0)
         self.declare_parameter("rearm_distance_m", 0.45)
         self.declare_parameter("max_linear_accel_mps2", 0.05)
         self.declare_parameter("max_linear_decel_mps2", 0.10)
@@ -167,6 +169,12 @@ class CooperativeAvoider(Node):
         self.local_v4_required_longitudinal_progress = float(
             self.get_parameter("local_v4_required_longitudinal_progress_m").value
         )
+        self.local_v4_required_lateral_offset_no_evidence = float(
+            self.get_parameter("local_v4_required_lateral_offset_no_evidence_m").value
+        )
+        self.local_v4_pass_confirm_hold_no_evidence = float(
+            self.get_parameter("local_v4_pass_confirm_hold_no_evidence_s").value
+        )
         self.rearm_distance = float(self.get_parameter("rearm_distance_m").value)
         self.max_linear_accel = float(
             self.get_parameter("max_linear_accel_mps2").value
@@ -207,6 +215,8 @@ class CooperativeAvoider(Node):
             side_track_warn_mps=self.local_v4_side_track_warn,
             required_lateral_offset_m=self.local_v4_required_lateral_offset,
             required_longitudinal_progress_m=self.local_v4_required_longitudinal_progress,
+            required_lateral_offset_no_evidence_m=self.local_v4_required_lateral_offset_no_evidence,
+            pass_confirm_hold_no_evidence_s=self.local_v4_pass_confirm_hold_no_evidence,
             zone_danger_m=self.local_side_danger,
             zone_warn_m=self.local_side_warn,
             zone_release_m=self.local_side_release,

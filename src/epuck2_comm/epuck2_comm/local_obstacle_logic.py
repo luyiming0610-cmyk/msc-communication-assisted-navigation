@@ -188,7 +188,14 @@ def decide_local_obstacle(
 DEFAULT_MAX_INPLACE_TURN_RAD = 0.90
 DEFAULT_MAX_TURN_LEDGER_RAD = 1.40
 DEFAULT_MAX_BYPASS_EXTENSION_M = 0.40
-DEFAULT_MAX_ENCOUNTER_DURATION_S = 18.0
+# pilot_v4_a attempt #2: with SIDE_TRACK_CREEP's straight-line creep at
+# DEFAULT_SIDE_TRACK_CREEP_MPS and DETECT_TURN settling around
+# DEFAULT_MAX_INPLACE_TURN_RAD, the achievable lateral rate was observed at
+# only ~0.008 m/s (attempt #2's own recorded trajectory: -0.104m lateral
+# over ~13s of creep). Raised from 18.0s to give the no-evidence fallback's
+# larger lateral requirement (below) comfortable time to actually be
+# reached, instead of racing the duration ceiling.
+DEFAULT_MAX_ENCOUNTER_DURATION_S = 25.0
 DEFAULT_PASS_CONFIRM_HOLD_S = 1.0
 DEFAULT_REARM_QUIET_S = 1.5
 DEFAULT_SIDE_TRACK_CREEP_MPS = 0.010
@@ -199,6 +206,16 @@ DEFAULT_SIDE_TRACK_WARN_MPS = 0.005
 # constant and must be re-derived for any different box/robot geometry.
 DEFAULT_REQUIRED_LATERAL_OFFSET_M = 0.070
 DEFAULT_REQUIRED_LONGITUDINAL_PROGRESS_M = 0.10
+# Conservative no-ps-evidence fallback (see _pass_confirm_conditions_met):
+# deliberately larger than DEFAULT_REQUIRED_LATERAL_OFFSET_M (~1.4x) since
+# it is the sole gate when no ps zone sensor ever confirmed anything: still
+# an UNCALIBRATED pilot candidate, sized to be reachable within
+# DEFAULT_MAX_ENCOUNTER_DURATION_S at the observed ~0.008 m/s lateral rate
+# (~0.10/0.008 =~ 12.5s of creep, comfortably inside the ~23s budget left
+# after DETECT_TURN) while still clearing the 0.065m danger band by a
+# healthy margin.
+DEFAULT_REQUIRED_LATERAL_OFFSET_NO_EVIDENCE_M = 0.10
+DEFAULT_PASS_CONFIRM_HOLD_NO_EVIDENCE_S = 2.0
 
 _TRACKING_ZONES = {
     "LEFT": ("left_front_m", "left_mid_m", "left_rear_m"),
@@ -243,6 +260,16 @@ class EncounterAvoidanceV4:
     side_track_warn_mps: float = DEFAULT_SIDE_TRACK_WARN_MPS
     required_lateral_offset_m: float = DEFAULT_REQUIRED_LATERAL_OFFSET_M
     required_longitudinal_progress_m: float = DEFAULT_REQUIRED_LONGITUDINAL_PROGRESS_M
+    # controller_v4_full_sensor_bypass_20260717 pilot_v4_a attempt #2 finding:
+    # a front-triggered DETECT_TURN (reacting from the much longer ToF range)
+    # routinely never lets the robot close within the ps zone sensors' own
+    # short (~6.6cm) range at all, so front_seen/mid_seen/rear_seen can
+    # structurally never become true. These two candidates are the
+    # conservative, purely-odometry fallback gate for exactly that case (see
+    # _pass_confirm_conditions_met) -- deliberately stricter than the
+    # sensor-confirmed path, never "front clear alone."
+    required_lateral_offset_no_evidence_m: float = DEFAULT_REQUIRED_LATERAL_OFFSET_NO_EVIDENCE_M
+    pass_confirm_hold_no_evidence_s: float = DEFAULT_PASS_CONFIRM_HOLD_NO_EVIDENCE_S
     zone_danger_m: float = 0.042
     zone_warn_m: float = 0.052
     zone_release_m: float = 0.058
@@ -426,16 +453,41 @@ class EncounterAvoidanceV4:
         return longitudinal, lateral
 
     def _pass_confirm_conditions_met(self, zones, now_s, own_x, own_y) -> bool:
-        if not self.rear_seen:
-            return False
         if not self._tracking_zones_all_clear(zones):
             return False
         longitudinal, lateral = self._encounter_local_offset(own_x, own_y)
-        if abs(lateral) < self.required_lateral_offset_m:
-            return False
         if longitudinal < self.required_longitudinal_progress_m:
             return False
-        return True
+        if self.rear_seen:
+            return abs(lateral) >= self.required_lateral_offset_m
+        if self.front_seen or self.mid_seen:
+            # Partial ps-zone evidence (got close enough to be seen at
+            # least once on this flank) but the rear zone never confirmed
+            # the pass -- this is the genuinely suspicious case (pilot_a3's
+            # own shape) and must stay blocked, never fall through to the
+            # no-evidence path below.
+            return False
+        # No ps-zone sensor (max ~6.6cm range) ever had a physical chance to
+        # register anything during this whole encounter -- confirmed by
+        # pilot_v4_a attempt #2: DETECT_TURN correctly reacts from the much
+        # longer ToF range and can steer the robot away before it ever
+        # closes within ps range at all, so front/mid/rear_seen structurally
+        # can never become true. Per the design's own explicit contingency
+        # ("if the sensor layout cannot reliably form front->mid->rear->clear,
+        # fall back to a stricter odometry-lateral-displacement + continuous-
+        # clear joint gate, never 'front clear alone'"): require a larger
+        # lateral margin than the sensor-confirmed path, on top of the same
+        # longitudinal-progress and tracking-zone-clear conditions already
+        # checked above, plus a longer confirm-hold (see
+        # _required_pass_confirm_hold_s()). This is NOT "front clear grants
+        # recovery" -- it is deliberately a strictly stronger, multi-
+        # condition test than the sensor-confirmed path.
+        return abs(lateral) >= self.required_lateral_offset_no_evidence_m
+
+    def _required_pass_confirm_hold_s(self) -> float:
+        if self.rear_seen:
+            return self.pass_confirm_hold_s
+        return self.pass_confirm_hold_no_evidence_s
 
     # -- DETECT_TURN --------------------------------------------------
 
@@ -498,7 +550,7 @@ class EncounterAvoidanceV4:
         if not self._pass_confirm_conditions_met(zones, now_s, own_x, own_y):
             self.phase = "SIDE_TRACK"
             return self._handle_side_track(side_active, is_narrow, decision, zones, now_s, own_x, own_y, own_yaw_rad)
-        if now_s - self.pass_confirm_since_s >= self.pass_confirm_hold_s:
+        if now_s - self.pass_confirm_since_s >= self._required_pass_confirm_hold_s():
             self.phase = "RECOVERY_ALLOWED"
             return LocalObstacleDecision(True, False, "LOCAL_RECOVERY_READY", 0.0, 0.0)
         return LocalObstacleDecision(True, False, "LOCAL_PASS_CONFIRM", self.side_track_creep_mps, 0.0)
