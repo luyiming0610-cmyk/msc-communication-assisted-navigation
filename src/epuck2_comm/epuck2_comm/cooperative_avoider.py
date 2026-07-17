@@ -56,13 +56,18 @@ class CooperativeAvoider(Node):
         self.declare_parameter("local_clear_hold_s", 1.0)
         self.declare_parameter("local_bypass_distance_m", 0.08)
         self.declare_parameter("local_recovery_turn_rps", 0.18)
-        # controller_v2_local_latch_20260717: side-lane encounter bounds.
-        # v2 pilot candidates, NOT validated constants — see
-        # controller_v2_local_latch_design_20260717.md sections 6 and 9.
-        self.declare_parameter("local_side_max_turn_rad", 0.50)
-        self.declare_parameter("local_side_max_bypass_extension_m", 0.30)
-        self.declare_parameter("local_side_clear_confirm_s", 1.0)
-        self.declare_parameter("local_side_rearm_quiet_s", 1.5)
+        # controller_v3_unified_encounter_20260717: shared front+side
+        # encounter ledger and CONSTRAINED-state bounds.
+        # *** v3 pilot candidates, NOT validated constants. *** See
+        # controller_v3_unified_encounter_design_20260717.md sections 6.1,
+        # 6.7, and 9 — none of these have been confirmed safe by a real
+        # Webots pilot yet.
+        self.declare_parameter("local_encounter_max_turn_rad", 0.70)
+        self.declare_parameter("local_encounter_max_bypass_extension_m", 0.30)
+        self.declare_parameter("local_encounter_clear_confirm_s", 1.0)
+        self.declare_parameter("local_encounter_rearm_quiet_s", 1.5)
+        self.declare_parameter("local_encounter_constrained_speed_mps", 0.006)
+        self.declare_parameter("local_encounter_max_constrained_duration_s", 10.0)
         self.declare_parameter("rearm_distance_m", 0.45)
         self.declare_parameter("max_linear_accel_mps2", 0.05)
         self.declare_parameter("max_linear_decel_mps2", 0.10)
@@ -126,19 +131,25 @@ class CooperativeAvoider(Node):
         self.local_recovery_turn = float(
             self.get_parameter("local_recovery_turn_rps").value
         )
-        # controller_v2_local_latch_20260717: v2 pilot candidates, NOT
-        # validated constants.
-        self.local_side_max_turn = float(
-            self.get_parameter("local_side_max_turn_rad").value
+        # controller_v3_unified_encounter_20260717: v3 pilot candidates,
+        # NOT validated constants.
+        self.local_encounter_max_turn = float(
+            self.get_parameter("local_encounter_max_turn_rad").value
         )
-        self.local_side_max_bypass_extension = float(
-            self.get_parameter("local_side_max_bypass_extension_m").value
+        self.local_encounter_max_bypass_extension = float(
+            self.get_parameter("local_encounter_max_bypass_extension_m").value
         )
-        self.local_side_clear_confirm = float(
-            self.get_parameter("local_side_clear_confirm_s").value
+        self.local_encounter_clear_confirm = float(
+            self.get_parameter("local_encounter_clear_confirm_s").value
         )
-        self.local_side_rearm_quiet = float(
-            self.get_parameter("local_side_rearm_quiet_s").value
+        self.local_encounter_rearm_quiet = float(
+            self.get_parameter("local_encounter_rearm_quiet_s").value
+        )
+        self.local_encounter_constrained_speed = float(
+            self.get_parameter("local_encounter_constrained_speed_mps").value
+        )
+        self.local_encounter_max_constrained_duration = float(
+            self.get_parameter("local_encounter_max_constrained_duration_s").value
         )
         self.rearm_distance = float(self.get_parameter("rearm_distance_m").value)
         self.max_linear_accel = float(
@@ -173,12 +184,13 @@ class CooperativeAvoider(Node):
             clear_hold_s=self.local_clear_hold,
             clearance_speed_mps=min(self.avoidance_speed, 0.006),
             clearance_turn_rps=min(self.turn_rate, 0.30),
-            side_speed_mps=self.avoidance_speed,
             local_bypass_distance_m=self.local_bypass_distance,
-            max_side_encounter_turn_rad=self.local_side_max_turn,
-            max_bypass_extension_m=self.local_side_max_bypass_extension,
-            side_clear_confirm_s=self.local_side_clear_confirm,
-            rearm_quiet_s=self.local_side_rearm_quiet,
+            max_turn_ledger_rad=self.local_encounter_max_turn,
+            max_bypass_extension_m=self.local_encounter_max_bypass_extension,
+            side_clear_confirm_s=self.local_encounter_clear_confirm,
+            rearm_quiet_s=self.local_encounter_rearm_quiet,
+            constrained_speed_mps=self.local_encounter_constrained_speed,
+            max_constrained_duration_s=self.local_encounter_max_constrained_duration,
         )
         self.smoother = CommandSmoother(
             max_linear_accel_mps2=self.max_linear_accel,
@@ -221,12 +233,14 @@ class CooperativeAvoider(Node):
             f"recovery turn limit={self.local_recovery_turn:.3f}rad/s"
         )
         self.get_logger().info(
-            "controller_v2_local_latch_20260717: side-lane encounter bounds "
-            "(v2 pilot candidates, NOT validated constants) "
-            f"max_turn={self.local_side_max_turn:.3f}rad, "
-            f"max_bypass_extension={self.local_side_max_bypass_extension:.3f}m, "
-            f"clear_confirm={self.local_side_clear_confirm:.2f}s, "
-            f"rearm_quiet={self.local_side_rearm_quiet:.2f}s"
+            "controller_v3_unified_encounter_20260717: shared encounter "
+            "bounds (v3 pilot candidates, NOT validated constants) "
+            f"max_turn_ledger={self.local_encounter_max_turn:.3f}rad, "
+            f"max_bypass_extension={self.local_encounter_max_bypass_extension:.3f}m, "
+            f"clear_confirm={self.local_encounter_clear_confirm:.2f}s, "
+            f"rearm_quiet={self.local_encounter_rearm_quiet:.2f}s, "
+            f"constrained_speed={self.local_encounter_constrained_speed:.3f}m/s, "
+            f"max_constrained_duration={self.local_encounter_max_constrained_duration:.1f}s"
         )
         self.get_logger().info(
             "command smoothing: linear accel/decel="
@@ -300,7 +314,7 @@ class CooperativeAvoider(Node):
             danger_turn_rps=self.turn_rate,
         )
         return self.local_latch.apply(
-            decision, now, self.own_state.x_m, self.own_state.y_m
+            decision, now, self.own_state.x_m, self.own_state.y_m, self.own_state.yaw_rad
         )
 
     def _bypass_progress(self) -> float:
