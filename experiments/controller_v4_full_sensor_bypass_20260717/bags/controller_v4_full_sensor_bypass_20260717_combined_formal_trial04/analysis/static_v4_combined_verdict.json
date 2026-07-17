@@ -1,0 +1,30 @@
+{
+  "verdict": "PASS",
+  "fail_reasons": [],
+  "task_complete_count": 1,
+  "cooperative_complete_count": 1,
+  "stopped_by_max_runtime_only": false,
+  "timebase_init_count": 2,
+  "timebase_reset_count": 0,
+  "trigger_reason": "PROXIMITY_FALLBACK",
+  "trigger_distance_m": 0.3397459909048517,
+  "tcpa_at_trigger_s": 4.0,
+  "dcpa_at_trigger_m": 0.21311593457037126,
+  "closing_speed_at_trigger_mps": 0.03988268205009123,
+  "avoid_turn_count": 5,
+  "epuck1_local_count": 61,
+  "epuck2_local_count": 0,
+  "local_before_peer_order_ok": true,
+  "collision_detected": false,
+  "minimum_center_separation_m": 0.27766531493506424,
+  "collision_distance_m": 0.07,
+  "epuck1_passed_box": true,
+  "epuck1_box_clearance_m": 0.12369845666212695,
+  "box_collision_detected": {
+    "/epuck1/state": false,
+    "/epuck2/state": false
+  },
+  "preload_realtime_factor": 1.002,
+  "full_load_realtime_factor": 0.965,
+  "realtime_factor_ok": true
+}

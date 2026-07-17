@@ -1,0 +1,14 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_combined_formal_trial04",
+  "horizon_s": 4.0,
+  "safety_radius_m": 0.14,
+  "trigger_distance_m_threshold": 0.34,
+  "trigger_time_s": 54.581770597,
+  "trigger_reason": "PROXIMITY_FALLBACK",
+  "trigger_distance_m": 0.3397459909048517,
+  "tcpa_at_trigger_s": 4.0,
+  "dcpa_at_trigger_m": 0.21311593457037126,
+  "closing_speed_at_trigger_mps": 0.03988268205009123,
+  "minimum_center_separation_m": 0.27766531493506424,
+  "minimum_center_separation_time_s": 67.129218433
+}
