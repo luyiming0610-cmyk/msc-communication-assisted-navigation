@@ -81,3 +81,31 @@ configurable bypass distance on the diverted heading, and only then enters a
 rate-limited `LOCAL_RECOVER` state. This separates obstacle clearance from path
 recovery and prevents the left-right oscillation observed in the first static
 obstacle diagnostic trial.
+
+## controller_v4_ros_time_consistency (2026-07-17)
+
+`local_obstacle_logic.py`'s `EncounterAvoidanceV4` replaces the earlier
+direction-latch bypass with a single unified encounter state machine
+(`CLOSED -> DETECT_TURN -> SIDE_TRACK -> PASS_CONFIRM -> RECOVERY_ALLOWED ->
+CLOSED`, with a terminal `FAILSAFE`). The state machine itself is
+clock-agnostic (it takes `now_s` purely as a parameter); `cooperative_avoider.py`
+now supplies that `now_s`, and every other motion/state-transition timer
+(`max_runtime_s`, message freshness, command smoothing, `startup_hold_s`),
+exclusively from the ROS node clock (`self.get_clock().now()`), which follows
+Webots simulation time under `use_sim_time:=true`. `time.monotonic()`/
+`time.time()` are reserved for two things only: the external shell-script
+watchdog in each pilot's run script, and confirmed diagnostic-only log fields
+(e.g. `wall_time=` in the per-transition `TRANSITION` log line, purely for
+human log correlation, never read by any decision).
+
+A command-gated turn ledger (`_update_ledger`) only counts a yaw delta as
+intentional turning when the previous tick's actual applied angular velocity
+exceeds `ledger_command_gate_rps`; smaller deltas are checked against a noise
+band and, if exceeded repeatedly, escalate to a `PERSISTENT_DRIFT` safety
+stop. This closed the box-corner runaway-turn defect (a single dropped/
+grazing sensor reading could previously keep re-arming an unbounded turn) that
+the combined wooden-box-plus-moving-peer scenario originally surfaced.
+`failsafe_cause` is now an explicit enum (`TURN_LEDGER_CEILING`,
+`BYPASS_EXTENSION_CEILING`, `DURATION_CEILING`, `PERSISTENT_DRIFT`) and every
+`self.mode` change emits an un-throttled `TRANSITION` log line with the full
+ledger/zone/command snapshot.

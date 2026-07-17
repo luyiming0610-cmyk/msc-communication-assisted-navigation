@@ -109,3 +109,51 @@ For a future controller revision, replace wall-clock-dependent control timing wi
 one consistent clock abstraction that follows ROS time in simulation and system
 time on hardware. Such a code change would define a new controller version and
 would require new post-change batches; it was not introduced mid-batch here.
+
+## 2026-07-17: follow-up implemented (controller_v4_ros_time_consistency)
+
+The above follow-up is now implemented. `cooperative_avoider.py`'s `_now_s()`
+reads exclusively from `self.get_clock().now()` (the ROS node clock, which
+follows Webots simulation time under `use_sim_time:=true`), and every timer
+that previously used `time.monotonic()` -- `max_runtime_s`, message
+freshness, command smoothing, `startup_hold_s`, and the local-obstacle
+encounter/turn-ledger state machine's own timers -- now derives from it.
+`time.monotonic()`/`time.time()` are reserved for the external shell-script
+watchdog and confirmed diagnostic-only log fields.
+
+This directly explains a previously observed discrepancy: a rigorous offline
+replay of recorded bag data through the real, unmodified state machine showed
+several `controller_v1`-era encounters should have completed successfully,
+yet the live runs hit `FAILSAFE`. Root cause was the wall-clock/sim-time
+mismatch this audit originally flagged. Post-fix pilot evidence (`pilot_v4_b2`
+then `pilot_v4_b3`, `experiments/controller_v4_full_sensor_bypass_20260717/`)
+confirmed zero FAILSAFE on the same scenario that previously failed reliably
+at the same PASS_CONFIRM-then-FAILSAFE pattern.
+
+Realtime factors measured for the three v4 exclusionary pilots (dual pre-load/
+full-load gate, same protocol as this audit's controlled-realtime runs):
+
+| Pilot | Preload factor | Full-load factor |
+|---|---:|---:|
+| `pilot_v4_b3` | 0.956 | 0.970 |
+| `pilot_v4_c` | 0.956 | 0.950 |
+| combined box+peer | 1.004 | 0.912 |
+
+All six values are within the locked 0.8-1.2 interval.
+
+### Open finding: `self.started_at` initialization race (not yet fixed)
+
+While reconciling `pilot_v4_b3`'s stop reason, the controller's own internal
+`elapsed >= max_runtime_s` check was observed to fire at `ros_time=70.000`
+exactly (matching the configured ceiling exactly), while the earliest real
+`TRANSITION` log line in the same run was at `ros_time=16.260` -- roughly 16s
+of sim time had already elapsed before the controller's first observed
+activity. This suggests `self.started_at = self._now_s()` may be captured
+before the node's ROS-time clock subscription has received its first
+`/clock` message (a known rclpy race, where `Clock.now()` can return `0`
+until the first `/clock` sample arrives), making `max_runtime_s` and
+`startup_hold_s` fire earlier, in absolute sim-time terms, than the
+node-construction instant they are meant to be measured from. This did not
+affect `pilot_v4_b3`'s PASS verdict (which was earned via external,
+ground-truth x-position and mode monitoring, not this internal timer), and
+has not been fixed or further diagnosed -- flagged here for a future revision.

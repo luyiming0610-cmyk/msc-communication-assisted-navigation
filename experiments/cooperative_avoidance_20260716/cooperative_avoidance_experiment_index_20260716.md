@@ -65,3 +65,27 @@ CPA acted first in the clean, communication-normal head-on scenario.
 2. Advance to the wooden-box plus moving communicated-robot scenario.
 3. Use the same dual rate gate and fresh-session protocol for the combined scenario.
 4. After the combined scenario passes, compare periodic and event-triggered communication under controlled delay/loss conditions.
+
+## 2026-07-17 addendum: controller_v4 exclusionary pilots (not pooled here)
+
+Item 2 above (wooden-box plus moving-peer) surfaced a `controller_v1` safety
+defect and paused Phase 4; see `combined_wood_moving_peer_README.md` (same
+directory) and `experiments/master_experiment_plan_20260716.md`'s 2026-07-17
+addendum for the full defect chain and the `controller_v2`/`v3`/`v4` fix
+sequence. All trials in this index remain valid `controller_v1` evidence for
+Phases 1–3 (the defect only manifests in the extended-runtime, box-corner-
+grazing tail that Phase 1–3 protocols never reached).
+
+Three excluded `controller_v4_ros_time_consistency` pilots (evidence under
+`experiments/controller_v4_full_sensor_bypass_20260717/`, not this directory,
+and not pooled with any table above) re-validated static-box, pure-CPA and
+combined behaviour before returning to Phase 4:
+
+| Pilot | Classification | Collision | Main finding |
+|---|---|---:|---|
+| `pilot_v4_b3` (`static_box_fusion_b3`) | Excluded pilot, PASS | No | Real box-pass `x=0.1895m`, clearance 0.1237m, no FAILSAFE |
+| `pilot_v4_c` (`head_on_cpa_pure_c1`) | Excluded pilot, PASS | No | Both robots completed CPA symmetrically; local avoidance never mis-triggered (0 `LOCAL_*` occurrences) in a box-free arena |
+| combined box+peer (`combined_trial1`) | Excluded pilot, PASS | No | `epuck1` passed box (clearance 0.120m) before CPA; `epuck2` never entered `LOCAL_*`; no FAILSAFE |
+
+Formal Phase 4 Trial 01 has not been run; it remains for manual, directly
+observed execution.

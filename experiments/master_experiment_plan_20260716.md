@@ -119,6 +119,53 @@ Current status: Phases 1–3 have passed. The next experiment is the canonical
 wooden-box plus moving-peer Trial 01, followed by four frozen-protocol repetitions
 if the directly observed run passes.
 
+### 2026-07-17 update: controller_v1 defect chain and controller_v4 fix
+
+The first attempt at the canonical combined scenario (`pilot_01`-`pilot_04` in
+`experiments/cooperative_avoidance_20260716/config/combined_wood_moving_peer/`)
+found a `controller_v1` safety defect, not a scenario-geometry problem: after
+`epuck1`'s box bypass, a grazing IR flicker near the box's trailing corner could
+repeatedly re-arm an unbounded turn (a single continuous turn of up to ~4.8 s /
+~1.2 rad was observed), swinging the robot into the box. This paused Phase 4 and
+triggered three successive controller revisions (see
+`experiments/controller_v2_local_latch_20260717/`,
+`experiments/controller_v3_unified_encounter_20260717/`, and
+`experiments/controller_v4_full_sensor_bypass_20260717/`), each committed and
+tested independently before the next was designed.
+
+`controller_v4_ros_time_consistency` (the current tip) additionally found and
+fixed a second, independent defect: the controller's motion/state-machine
+timers used `time.monotonic()` instead of the ROS/simulation clock, so
+Webots-simulation-speed variance (already flagged in
+`simulation_rate_integrity_audit_20260716.md`'s "Engineering follow-up") could
+desynchronize `max_runtime_s`/`startup_hold_s`/message-freshness from what the
+controller's own state machine believed had elapsed. This is now fixed: every
+such timer reads `self.get_clock().now()` exclusively.
+
+Three excluded, non-statistical v4 pilots were run to re-validate all three
+components before returning to Phase 4's formal Trial 01 (evidence: git commits
+`06e2b5c`, `4d70beb`, `fd0f03d`; full pilot detail in
+`experiments/controller_v4_full_sensor_bypass_20260717/`):
+
+- `pilot_v4_b3` (static box, `enable_peer_avoidance:=true`, no moving peer):
+  PASS. Real `max_x=0.1895m` past the pass threshold, clearance 0.1237m, no
+  collision, no FAILSAFE.
+- `pilot_v4_c` (`head_on_cpa_v4`, pure dual-robot CPA, no box, local avoidance
+  left enabled to positively confirm it never mis-triggers): PASS. Both robots
+  completed `CRUISE->AVOID_TURN->AVOID_PASS->RECOVER->CRUISE->COMPLETE`
+  symmetrically; zero `LOCAL_*` occurrences (zones stayed clear throughout, as
+  expected in a box-free arena).
+- Combined box+moving-peer pilot (`combined_v4`, geometry copied verbatim from
+  the pre-defect `pilot_04` configuration): PASS. `epuck1` genuinely passed the
+  box (clearance 0.120m), entered `LOCAL_*` before its first `AVOID_TURN`,
+  `epuck2` never entered a local-obstacle mode, both robots completed CPA
+  avoidance, zero collision, zero FAILSAFE.
+
+**Formal Trial 01 for Phase 4 has NOT been run.** Per explicit user instruction,
+it remains for manual, directly-observed execution (one interface command at a
+time) and must not be auto-run. The three v4 pilots above are exclusionary
+evidence only and are not pooled with any formal-trial statistics.
+
 ## Phase 5 — Communication policy and impairment
 
 On a fixed representative scenario compare:
