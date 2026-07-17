@@ -1,0 +1,87 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_trial3",
+  "warmup_s": 2.0,
+  "cooldown_s": 2.0,
+  "peer_timeout_s": 0.5,
+  "topics": {
+    "/epuck1/state": {
+      "message_count_total_in_bag": 452,
+      "message_count_in_window": 417,
+      "excluded_by_window": 35,
+      "session_count": 1,
+      "sessions": [
+        {
+          "message_count": 417,
+          "unique_sequence_count": 417,
+          "expected_sequence_count": 417,
+          "first_sequence": 26,
+          "last_sequence": 442,
+          "missing_sequence_count": 0,
+          "duplicate_count": 0,
+          "out_of_order_count": 0,
+          "packet_delivery_ratio": 1.0,
+          "negative_age_sample_count": 0,
+          "mean_message_age_s": 1784327449.4449153,
+          "p50_message_age_s": 1784327449.4158084,
+          "p95_message_age_s": 1784327450.3375335,
+          "p99_message_age_s": 1784327450.4048865,
+          "max_message_age_s": 1784327450.4296255,
+          "mean_interval_s": 0.11319256459291165,
+          "actual_rate_hz": 8.834502545254832,
+          "stale_state_candidate_events": 0,
+          "mean_message_size_bytes": 80.0,
+          "total_bytes": 33360,
+          "duration_s": 47.088106870651245,
+          "mean_bandwidth_bytes_per_s": 708.459146417551
+        }
+      ],
+      "peak_bandwidth_bytes_per_s_per_session": [
+        800.0
+      ],
+      "overall_packet_delivery_ratio": 1.0,
+      "overall_expected_sequence_count": 417,
+      "overall_received_sequence_count": 417,
+      "cpu_memory_overhead": "NOT MEASURED -- cannot be reliably reconstructed from a bag alone; requires a live psutil-style sampling companion run alongside the recorded trial."
+    },
+    "/epuck2/state": {
+      "message_count_total_in_bag": 444,
+      "message_count_in_window": 409,
+      "excluded_by_window": 35,
+      "session_count": 1,
+      "sessions": [
+        {
+          "message_count": 409,
+          "unique_sequence_count": 409,
+          "expected_sequence_count": 409,
+          "first_sequence": 42,
+          "last_sequence": 450,
+          "missing_sequence_count": 0,
+          "duplicate_count": 0,
+          "out_of_order_count": 0,
+          "packet_delivery_ratio": 1.0,
+          "negative_age_sample_count": 0,
+          "mean_message_age_s": 1784327449.466646,
+          "p50_message_age_s": 1784327449.4594111,
+          "p95_message_age_s": 1784327450.338952,
+          "p99_message_age_s": 1784327450.4094307,
+          "max_message_age_s": 1784327450.4370525,
+          "mean_interval_s": 0.11312301836761773,
+          "actual_rate_hz": 8.839933856346402,
+          "stale_state_candidate_events": 0,
+          "mean_message_size_bytes": 80.0,
+          "total_bytes": 32720,
+          "duration_s": 46.15419149398804,
+          "mean_bandwidth_bytes_per_s": 708.9280288717017
+        }
+      ],
+      "peak_bandwidth_bytes_per_s_per_session": [
+        720.0
+      ],
+      "overall_packet_delivery_ratio": 1.0,
+      "overall_expected_sequence_count": 409,
+      "overall_received_sequence_count": 409,
+      "cpu_memory_overhead": "NOT MEASURED -- cannot be reliably reconstructed from a bag alone; requires a live psutil-style sampling companion run alongside the recorded trial."
+    }
+  },
+  "clock_domain_note": "All timestamps in this analysis are ROS/sim time from a single shared /clock domain (one Webots session). Valid for latency measurement as-is. Do NOT reuse this age/latency methodology across two independently-clocked devices (e.g. sim host vs. physical Pi-puck) without first verifying clock sync -- see verify_clock_sync() in this module."
+}

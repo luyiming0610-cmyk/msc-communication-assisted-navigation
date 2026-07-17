@@ -1,0 +1,3 @@
+topic,session_index,message_count,unique_sequence_count,expected_sequence_count,missing_sequence_count,duplicate_count,out_of_order_count,packet_delivery_ratio,mean_message_age_s,p50_message_age_s,p95_message_age_s,p99_message_age_s,max_message_age_s,actual_rate_hz,stale_state_candidate_events,mean_message_size_bytes,mean_bandwidth_bytes_per_s,peak_bandwidth_bytes_per_s
+/epuck1/state,0,404,404,404,0,0,0,1.0,1784327230.596258,1784327230.6237988,1784327231.4558191,1784327231.514449,1784327231.5361516,8.824372920815213,0,80.0,707.7015702251804,800.0
+/epuck2/state,0,384,384,384,0,0,0,1.0,1784327230.6456156,1784327230.674522,1784327231.4619815,1784327231.5176241,1784327231.5341425,8.832142176152514,0,80.0,708.4162079671155,800.0

@@ -29,6 +29,7 @@ setup(
             "cooperative_avoider = epuck2_comm.cooperative_avoider:main",
             "network_impairment_relay = "
             "epuck2_comm.network_impairment_relay:main",
+            "sequence_counter = epuck2_comm.sequence_counter:main",
             "analyze_cooperative_bag = "
             "epuck2_comm.analyze_cooperative_bag:main",
             "analyze_static_bag = epuck2_comm.analyze_static_bag:main",

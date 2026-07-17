@@ -1,0 +1,15 @@
+{
+  "verdict": "FAIL",
+  "fail_reasons": [
+    "/epuck1/state_raw->/epuck1/state: only 481/508 raw sequences reached the relayed topic (zero-loss relay should forward ~all)",
+    "/epuck2/state_raw->/epuck2/state: only 479/509 raw sequences reached the relayed topic (zero-loss relay should forward ~all)",
+    "epuck1: relay log forwarded_count=789 vs analyzer message_count_total_in_bag=481 disagree by more than 2%",
+    "epuck2: relay log forwarded_count=788 vs analyzer message_count_total_in_bag=479 disagree by more than 2%"
+  ],
+  "complete_count": 2,
+  "content_mismatches": 0,
+  "preload_realtime_factor": 0.952,
+  "full_load_realtime_factor": 0.977,
+  "realtime_factor_ok": true,
+  "comm_performance_summary_ref": "analysis/comm_performance_summary.json"
+}
