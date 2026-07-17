@@ -1,0 +1,52 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_a",
+  "controller_log": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/logs/controller_v4_full_sensor_bypass_20260717_static_box_a.log",
+  "controller_window_s": [
+    1784304889.7989514,
+    1784304941.5294032
+  ],
+  "excluded_reset_artifact_samples": 2,
+  "excluded_out_of_window_samples": 298,
+  "box": {
+    "x_m": -0.25,
+    "y_m": 0.0,
+    "size_m": 0.06
+  },
+  "robot_radius_m": 0.035,
+  "pass_x_m": -0.175,
+  "max_epuck1_x_m": -0.487199991941452,
+  "epuck1_passed_box": false,
+  "returned_to_danger_zone_after_passing": false,
+  "minimum_box_clearance_m": {
+    "/epuck1/state": 0.17219999194145202,
+    "/epuck2/state": 0.7557591125066945
+  },
+  "minimum_box_clearance_state": {
+    "/epuck1/state": {
+      "time_s": 8.017004251480103,
+      "x_m": -0.487199991941452,
+      "y_m": 3.0611999610155544e-20
+    },
+    "/epuck2/state": {
+      "time_s": 0.06843924522399902,
+      "x_m": 0.44999998807907104,
+      "y_m": 0.44999998807907104
+    }
+  },
+  "box_collision_detected": {
+    "/epuck1/state": false,
+    "/epuck2/state": false
+  },
+  "final_state": {
+    "/epuck2/state": {
+      "x_m": 0.44999998807907104,
+      "y_m": 0.44999998807907104,
+      "yaw_rad": 3.1415927410125732
+    },
+    "/epuck1/state": {
+      "x_m": -0.4872024655342102,
+      "y_m": -4.147496383666294e-06,
+      "yaw_rad": -0.9308605790138245
+    }
+  }
+}

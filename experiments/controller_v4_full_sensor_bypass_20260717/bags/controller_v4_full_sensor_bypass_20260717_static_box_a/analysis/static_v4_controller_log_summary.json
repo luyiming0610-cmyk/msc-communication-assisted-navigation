@@ -1,0 +1,55 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_a",
+  "controller_log": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/logs/controller_v4_full_sensor_bypass_20260717_static_box_a.log",
+  "complete_message": "maximum runtime reached; commanding zero",
+  "mode_transitions": [
+    [
+      1784304889.885825,
+      "STARTUP_HOLD",
+      null
+    ],
+    [
+      1784304895.2601464,
+      "CRUISE",
+      null
+    ],
+    [
+      1784304897.8903568,
+      "LOCAL_FRONT_WARN",
+      null
+    ],
+    [
+      1784304898.43505,
+      "LOCAL_DETECT_TURN",
+      null
+    ],
+    [
+      1784304899.9970164,
+      "LOCAL_SIDE_TRACK_HOLD",
+      null
+    ],
+    [
+      1784304914.5264988,
+      "SAFE_STOP_LOCAL_SENSORS",
+      "LOCAL_ENCOUNTER_FAILSAFE"
+    ]
+  ],
+  "modes_seen_set": [
+    "CRUISE",
+    "LOCAL_DETECT_TURN",
+    "LOCAL_FRONT_WARN",
+    "LOCAL_SIDE_TRACK_HOLD",
+    "SAFE_STOP_LOCAL_SENSORS",
+    "STARTUP_HOLD"
+  ],
+  "legacy_local_bypass_appeared": false,
+  "detect_turn_occurred": true,
+  "side_track_occurred": true,
+  "pass_confirm_occurred": false,
+  "local_recover_occurred": false,
+  "cruise_resumed": true,
+  "failsafe_occurred": true,
+  "sensor_invalid_occurred": false,
+  "final_mode": "SAFE_STOP_LOCAL_SENSORS",
+  "log_row_count": 98
+}
