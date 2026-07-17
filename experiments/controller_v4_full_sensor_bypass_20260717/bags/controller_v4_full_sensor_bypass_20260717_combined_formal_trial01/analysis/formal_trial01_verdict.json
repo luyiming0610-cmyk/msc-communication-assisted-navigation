@@ -25,6 +25,8 @@
   "dcpa_at_trigger_m": 0.19786654634917689,
   "closing_speed_at_trigger_mps": 0.04299549782555576,
   "realtime_factor_ok": true,
+  "avoid_turn_synchronized_ros_time": 109.900,
+  "reset_artifact_check": "manually verified: 0 exact-(0,0,0) pose samples in /epuck1/state (1027 total samples); last 8 samples are stable and consistent with a genuinely stopped robot, not a post-shutdown artifact. analyze_combined_task.py itself has no built-in reset-artifact filter (unlike analyze_static_v4_task.py's _is_reset_artifact()); this manual check substitutes for it on this trial.",
   "note_realtime_factor": "NOT measured via the automated verify_realtime_factor gate (manual step-by-step trial did not run it). User directly observed the Webots on-screen realtime-factor display throughout the run and explicitly confirmed it stayed within the required 0.8-1.2 range (chat confirmation: user asked 'is this the range' referring to 0.8-1.2, and confirmed yes). Treated as valid direct-observation evidence for this manually-observed trial, not a substitute for the automated dual-gate measurement used in Trials 02-05.",
   "note_manual_trial": "This was run via manual step-by-step commands (formal Trial 01), not the automated run_combined_v4_pilot.sh script, per explicit user instruction for direct observation."
 }

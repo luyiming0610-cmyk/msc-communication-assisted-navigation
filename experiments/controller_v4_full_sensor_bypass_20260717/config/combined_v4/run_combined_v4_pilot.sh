@@ -238,6 +238,7 @@ sleep 2
 
 python3 -m epuck2_comm.analyze_cooperative_bag "$BAG_DIR" >>"$EXECUTION_LOG" 2>&1
 python3 "$LEGACY_ANALYZER_DIR/analyze_combined_task.py" "$BAG_DIR" >>"$EXECUTION_LOG" 2>&1
+python3 -m epuck2_comm.analyze_trigger_reason "$BAG_DIR" >>"$EXECUTION_LOG" 2>&1
 
 PRELOAD_FACTOR="${PRELOAD_FACTOR:-0}" FULL_LOAD_FACTOR="${FULL_LOAD_FACTOR:-0}" \
   CONTROLLER_LOG="$CONTROLLER_LOG" BAG_DIR="$BAG_DIR" \
@@ -261,8 +262,21 @@ with open(os.path.join(bag_dir, "analysis", "summary.json"), encoding="utf-8") a
     summary = json.load(fh)
 with open(os.path.join(bag_dir, "analysis", "combined_task_summary.json"), encoding="utf-8") as fh:
     combined = json.load(fh)
+with open(os.path.join(bag_dir, "analysis", "trigger_reason_summary.json"), encoding="utf-8") as fh:
+    trigger = json.load(fh)
 
 reasons_fail = []
+
+# controller_v4_trigger_reason_20260717: recorded for the naming rule (this
+# scenario is "staged local-obstacle avoidance followed by communication-
+# assisted proximity/cooperative avoidance") -- NOT a fail condition either
+# way; PREDICTED_CPA and PROXIMITY_FALLBACK are both genuine, independently
+# coded parts of the same frozen controller, and which one fires is a
+# property of approach geometry/speed at record time, not a defect.
+timebase_init_count = len(re.findall(r"TIMEBASE_INIT", log_text))
+timebase_reset_count = len(re.findall(r"TIMEBASE_RESET", log_text))
+if timebase_init_count < 2:
+    reasons_fail.append(f"TIMEBASE_INIT observed only {timebase_init_count} times (<2, one per robot expected)")
 
 if task_complete_count < 1:
     reasons_fail.append("task monitor never logged TASK_COMPLETE (box pass + cooperative recovery)")
@@ -352,6 +366,13 @@ result = {
     "task_complete_count": task_complete_count,
     "cooperative_complete_count": cooperative_complete_count,
     "stopped_by_max_runtime_only": stopped_by_max_runtime_only,
+    "timebase_init_count": timebase_init_count,
+    "timebase_reset_count": timebase_reset_count,
+    "trigger_reason": trigger.get("trigger_reason"),
+    "trigger_distance_m": trigger.get("trigger_distance_m"),
+    "tcpa_at_trigger_s": trigger.get("tcpa_at_trigger_s"),
+    "dcpa_at_trigger_m": trigger.get("dcpa_at_trigger_m"),
+    "closing_speed_at_trigger_mps": trigger.get("closing_speed_at_trigger_mps"),
     "avoid_turn_count": avoid_turn_count,
     "epuck1_local_count": epuck1_local_count,
     "epuck2_local_count": epuck2_local_count,

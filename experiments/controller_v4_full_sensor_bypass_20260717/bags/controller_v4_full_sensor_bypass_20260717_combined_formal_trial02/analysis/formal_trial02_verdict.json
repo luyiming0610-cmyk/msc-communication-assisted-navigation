@@ -1,0 +1,33 @@
+{
+  "verdict": "PASS",
+  "fail_reasons": [],
+  "task_complete_count": 1,
+  "cooperative_complete_count": 1,
+  "stopped_by_max_runtime_only": false,
+  "timebase_init_count": 2,
+  "timebase_reset_count": 0,
+  "avoid_turn_count": 6,
+  "avoid_turn_synchronized_ros_time": 65.700,
+  "epuck1_local_count": 60,
+  "epuck2_local_count": 0,
+  "local_before_peer_order_ok": true,
+  "collision_detected": false,
+  "minimum_center_separation_m": 0.2711518820593857,
+  "collision_distance_m": 0.07,
+  "epuck1_passed_box": true,
+  "epuck1_box_clearance_m": 0.12252505249091597,
+  "box_collision_detected": {
+    "/epuck1/state": false,
+    "/epuck2/state": false
+  },
+  "trigger_reason": "PROXIMITY_FALLBACK",
+  "trigger_distance_m": 0.3378358108975332,
+  "tcpa_at_trigger_s": 4.0,
+  "dcpa_at_trigger_m": 0.19724408182184106,
+  "closing_speed_at_trigger_mps": 0.04674607080452521,
+  "preload_realtime_factor": 0.987,
+  "full_load_realtime_factor": 0.963,
+  "realtime_factor_ok": true,
+  "reset_artifact_check": "manually verified: 0 exact-(0,0,0) pose samples in /epuck1/state (700 total samples); last 8 samples are stable and consistent with a genuinely stopped robot, not a post-shutdown artifact. analyze_combined_task.py itself has no built-in reset-artifact filter (unlike analyze_static_v4_task.py's _is_reset_artifact()); this manual check substitutes for it on this trial.",
+  "note_manual_trial": "Run via the automated run_combined_v4_pilot.sh script (not manually observed step-by-step like Trial 01)."
+}
