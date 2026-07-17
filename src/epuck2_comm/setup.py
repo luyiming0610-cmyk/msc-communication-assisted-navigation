@@ -30,6 +30,8 @@ setup(
             "analyze_cooperative_bag = "
             "epuck2_comm.analyze_cooperative_bag:main",
             "analyze_static_bag = epuck2_comm.analyze_static_bag:main",
+            "analyze_trigger_reason = "
+            "epuck2_comm.analyze_trigger_reason:main",
         ],
     },
 )
