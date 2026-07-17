@@ -1,0 +1,37 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_fusion_a",
+  "controller_version": "controller_v4_ros_time_consistency",
+  "git_commit": "d67c1ab6e58b14b55dccb716ac19edfb4d74d789",
+  "verdict": "FAIL",
+  "fail_reasons": [
+    "NEVER_PASSED_BOX",
+    "FAILSAFE(causes=[])",
+    "LOCAL_RECOVER_NEVER_REACHED",
+    "DID_NOT_END_IN_STABLE_CRUISE(final_mode=SAFE_STOP_LOCAL_SENSORS)"
+  ],
+  "stop_reason": {
+    "complete_message": "maximum runtime reached; commanding zero",
+    "final_mode": "SAFE_STOP_LOCAL_SENSORS",
+    "final_failsafe_cause": null,
+    "stopped_by_max_runtime_only": false
+  },
+  "collision": false,
+  "minimum_box_clearance_m": 0.12206315519925612,
+  "min_clearance_threshold_m": 0.005,
+  "max_epuck1_x_m": -0.38347747921943665,
+  "epuck1_passed_box": false,
+  "returned_to_danger_zone_after_passing": false,
+  "pass_confirm_occurred": true,
+  "local_recover_occurred": false,
+  "cruise_resumed": true,
+  "failsafe_occurred": true,
+  "failsafe_causes": [],
+  "sensor_invalid_occurred": false,
+  "legacy_local_bypass_appeared": false,
+  "preload_realtime_factor": 0.91,
+  "full_load_realtime_factor": 0.943,
+  "realtime_factor_ok": true,
+  "excluded_reset_artifact_samples": 0,
+  "excluded_out_of_window_samples": 270,
+  "note": "This is the ONLY authoritative verdict field for this pilot. A script exit code of 0, or 'COMPLETE: maximum runtime reached' appearing in the log, must NEVER be read as PASS on their own -- see fail_reasons above for what was actually checked."
+}
