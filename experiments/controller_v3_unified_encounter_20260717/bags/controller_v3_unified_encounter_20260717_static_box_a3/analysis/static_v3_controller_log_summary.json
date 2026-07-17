@@ -1,0 +1,129 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v3_unified_encounter_20260717/bags/controller_v3_unified_encounter_20260717_static_box_a3",
+  "controller_log": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v3_unified_encounter_20260717/logs/controller_v3_unified_encounter_20260717_static_box_a3.log",
+  "complete_message": "maximum runtime reached; commanding zero",
+  "mode_transitions": [
+    [
+      1784301141.07432,
+      "STARTUP_HOLD",
+      null
+    ],
+    [
+      1784301143.1296606,
+      "CRUISE",
+      null
+    ],
+    [
+      1784301146.2333806,
+      "LOCAL_FRONT_WARN",
+      null
+    ],
+    [
+      1784301146.7653372,
+      "LOCAL_CLEARANCE",
+      null
+    ],
+    [
+      1784301147.7995887,
+      "LOCAL_BYPASS",
+      null
+    ],
+    [
+      1784301154.7843058,
+      "LOCAL_RECOVER",
+      null
+    ],
+    [
+      1784301157.946726,
+      "CRUISE",
+      null
+    ],
+    [
+      1784301160.6197493,
+      "LOCAL_LEFT_SIDE",
+      null
+    ],
+    [
+      1784301162.7102666,
+      "LOCAL_CLEARANCE",
+      null
+    ],
+    [
+      1784301163.2719176,
+      "LOCAL_ENCOUNTER_HOLD",
+      null
+    ],
+    [
+      1784301173.334558,
+      "SAFE_STOP_LOCAL_SENSORS",
+      "LOCAL_ENCOUNTER_FAILSAFE"
+    ]
+  ],
+  "phase_timeline": [
+    [
+      1784301141.07432,
+      "STARTUP_HOLD"
+    ],
+    [
+      1784301143.1296606,
+      "CRUISE"
+    ],
+    [
+      1784301146.2333806,
+      "ACTIVE"
+    ],
+    [
+      1784301147.7995887,
+      "LOCAL_BYPASS"
+    ],
+    [
+      1784301154.7843058,
+      "RECOVERY"
+    ],
+    [
+      1784301157.946726,
+      "CRUISE"
+    ],
+    [
+      1784301160.6197493,
+      "ACTIVE"
+    ],
+    [
+      1784301163.2719176,
+      "CONSTRAINED"
+    ],
+    [
+      1784301173.334558,
+      "FAILSAFE"
+    ]
+  ],
+  "modes_seen_set": [
+    "CRUISE",
+    "LOCAL_BYPASS",
+    "LOCAL_CLEARANCE",
+    "LOCAL_ENCOUNTER_HOLD",
+    "LOCAL_FRONT_WARN",
+    "LOCAL_LEFT_SIDE",
+    "LOCAL_RECOVER",
+    "SAFE_STOP_LOCAL_SENSORS",
+    "STARTUP_HOLD"
+  ],
+  "failsafe_occurred": true,
+  "sensor_invalid_occurred": false,
+  "hold_occurred": true,
+  "creep_occurred": false,
+  "local_recover_occurred": true,
+  "cruise_resumed_after_encounter": true,
+  "hold_creep_cross_check_violations": [],
+  "post_hoc_turn_ledger": {
+    "window_s": [
+      1784301146.2333806,
+      1784301190.6521423
+    ],
+    "cumulative_turn_rad": 1.6543724508956075,
+    "sample_count": 396
+  },
+  "longest_consecutive_raw_active_streak_ticks": 53,
+  "final_mode": "SAFE_STOP_LOCAL_SENSORS",
+  "log_row_count": 95
+}

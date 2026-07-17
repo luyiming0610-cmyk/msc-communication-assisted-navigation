@@ -1,0 +1,44 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v3_unified_encounter_20260717/bags/controller_v3_unified_encounter_20260717_static_box_a3",
+  "box": {
+    "x_m": -0.25,
+    "y_m": 0.0,
+    "size_m": 0.06
+  },
+  "robot_radius_m": 0.035,
+  "pass_x_m": -0.175,
+  "max_epuck1_x_m": 0.0,
+  "epuck1_passed_box": true,
+  "minimum_box_clearance_m": {
+    "/epuck1/state": -0.010884070099814798,
+    "/epuck2/state": 0.185
+  },
+  "minimum_box_clearance_state": {
+    "/epuck1/state": {
+      "time_s": 27.07341565,
+      "x_m": -0.2911500334739685,
+      "y_m": -0.05138351768255234
+    },
+    "/epuck2/state": {
+      "time_s": 7.825195346,
+      "x_m": 0.0,
+      "y_m": 0.0
+    }
+  },
+  "box_collision_detected": {
+    "/epuck1/state": true,
+    "/epuck2/state": false
+  },
+  "final_state": {
+    "/epuck1/state": {
+      "x_m": -0.2868172228336334,
+      "y_m": -0.054477423429489136,
+      "yaw_rad": -0.7521882653236389
+    },
+    "/epuck2/state": {
+      "x_m": 0.44999998807907104,
+      "y_m": 0.44999998807907104,
+      "yaw_rad": 3.1415927410125732
+    }
+  }
+}
