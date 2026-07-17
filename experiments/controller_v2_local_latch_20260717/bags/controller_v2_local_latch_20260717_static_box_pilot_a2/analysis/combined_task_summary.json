@@ -1,0 +1,44 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v2_local_latch_20260717/bags/controller_v2_local_latch_20260717_static_box_pilot_a2",
+  "box": {
+    "x_m": -0.25,
+    "y_m": 0.0,
+    "size_m": 0.06
+  },
+  "robot_radius_m": 0.035,
+  "pass_x_m": -0.175,
+  "max_epuck1_x_m": 0.1829390823841095,
+  "epuck1_passed_box": true,
+  "minimum_box_clearance_m": {
+    "/epuck1/state": -0.007297874768963177,
+    "/epuck2/state": 0.185
+  },
+  "minimum_box_clearance_state": {
+    "/epuck1/state": {
+      "time_s": 25.921312977,
+      "x_m": -0.300599068403244,
+      "y_m": -0.04852258414030075
+    },
+    "/epuck2/state": {
+      "time_s": 16.818208211,
+      "x_m": 0.0,
+      "y_m": 0.0
+    }
+  },
+  "box_collision_detected": {
+    "/epuck1/state": true,
+    "/epuck2/state": false
+  },
+  "final_state": {
+    "/epuck2/state": {
+      "x_m": 0.44999998807907104,
+      "y_m": 0.44999998807907104,
+      "yaw_rad": 3.1415927410125732
+    },
+    "/epuck1/state": {
+      "x_m": 0.1829390823841095,
+      "y_m": -0.12251662462949753,
+      "yaw_rad": -1.942890293094024e-16
+    }
+  }
+}

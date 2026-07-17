@@ -1,0 +1,48 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v2_local_latch_20260717/bags/controller_v2_local_latch_20260717_static_box_pilot_a",
+  "controller_log": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v2_local_latch_20260717/logs/controller_v2_local_latch_20260717_static_box_pilot_a.log",
+  "mode_transitions": [
+    [
+      1784290019.788902,
+      "STARTUP_HOLD"
+    ],
+    [
+      1784290023.0453143,
+      "CRUISE"
+    ],
+    [
+      1784290026.275024,
+      "LOCAL_CLEARANCE"
+    ],
+    [
+      1784290027.3681056,
+      "LOCAL_BYPASS"
+    ],
+    [
+      1784290035.0348194,
+      "LOCAL_RECOVER"
+    ],
+    [
+      1784290037.6730864,
+      "CRUISE"
+    ],
+    [
+      1784290040.3399742,
+      "LOCAL_CLEARANCE"
+    ]
+  ],
+  "local_left_side_count": 0,
+  "local_right_side_count": 0,
+  "local_clearance_count": 2,
+  "max_consecutive_side_retriggers": 1,
+  "side_bypass_occurred": false,
+  "recovery_ready_occurred": false,
+  "local_recover_occurred": true,
+  "failsafe_occurred": false,
+  "safe_stop_local_sensors_occurred": false,
+  "stale_or_invalid_state_occurred": false,
+  "task_complete_seen": false,
+  "cumulative_side_cmd_vel_turn_rad": 1.1290376373174076,
+  "peak_state_yaw_rad": 0.4323428273200989,
+  "final_mode": "LOCAL_CLEARANCE"
+}
