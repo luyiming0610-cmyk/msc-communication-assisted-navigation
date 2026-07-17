@@ -1,0 +1,48 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/cooperative_avoidance_20260716/bags/head_on_offset_040_formal_trial_01",
+  "bag_duration_s": 33.38288806,
+  "robot_radius_m": 0.035,
+  "collision_distance_m": 0.07,
+  "paired_state_samples": 602,
+  "state_message_count": {
+    "/epuck1/state": 301,
+    "/epuck2/state": 302
+  },
+  "invalid_state_messages": {
+    "/epuck1/state": 0,
+    "/epuck2/state": 0
+  },
+  "minimum_center_separation_m": 0.18102200106124902,
+  "minimum_separation_time_s": 25.163646851,
+  "minimum_safety_margin_m": 0.11102200106124901,
+  "collision_detected": false,
+  "final_center_separation_m": 0.3319666858762558,
+  "motion_start_skew_s": 0.1154404669999991,
+  "last_motion_command_skew_s": 0.01846446000000057,
+  "commands": {
+    "/epuck1/cmd_vel": {
+      "message_count": 1134,
+      "motion_start_s": 20.788655721,
+      "last_motion_command_s": 27.102840102,
+      "peak_abs_linear_mps": 0.025,
+      "peak_abs_angular_rps": 0.65,
+      "max_linear_step_mps": 0.025,
+      "max_angular_step_rps": 0.0569414319999737,
+      "max_linear_slew_mps2": 3.6937661048202046,
+      "max_angular_slew_rps2": 10.918695289983546,
+      "angular_sign_changes": 3
+    },
+    "/epuck2/cmd_vel": {
+      "message_count": 1102,
+      "motion_start_s": 20.904096188,
+      "last_motion_command_s": 27.121304562,
+      "peak_abs_linear_mps": 0.025,
+      "peak_abs_angular_rps": 0.65,
+      "max_linear_step_mps": 0.025,
+      "max_angular_step_rps": 0.05951930399999128,
+      "max_linear_slew_mps2": 4.044700083869138,
+      "max_angular_slew_rps2": 4.351224057255228,
+      "angular_sign_changes": 3
+    }
+  }
+}

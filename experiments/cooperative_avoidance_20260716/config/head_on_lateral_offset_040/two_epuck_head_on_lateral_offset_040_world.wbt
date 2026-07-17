@@ -1,0 +1,53 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/robots/gctronic/e-puck/protos/Pi-puck.proto"
+
+WorldInfo {
+  info [
+    "Clean head-on scenario with 0.040 m lateral path offset for communication/CPA-only experiments."
+    "Without avoidance, the 0.040 m centre-line offset is below the 0.070 m two-robot collision diameter."
+  ]
+  title "Two e-puck 0.040 m lateral-offset CPA trial"
+  basicTimeStep 20
+}
+Viewpoint {
+  orientation -0.3259129066293485 0.6045847308938715 0.7268136490617071 1.2809214799066853
+  position -0.6554786770823011 -0.9985859086887117 1.3412109473782257
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 1.5 1.5
+}
+E-puck {
+  name "epuck1"
+  translation -0.35 -0.02 0
+  rotation 0 0 1 0
+  controller "<extern>"
+  version "2"
+  camera_width 640
+  camera_height 480
+  turretSlot [
+    Pi-puck {
+    }
+  ]
+}
+E-puck {
+  name "epuck2"
+  translation 0.35 0.02 0
+  rotation 0 0 1 3.14159
+  controller "<extern>"
+  version "2"
+  camera_width 640
+  camera_height 480
+  turretSlot [
+    Pi-puck {
+    }
+  ]
+}

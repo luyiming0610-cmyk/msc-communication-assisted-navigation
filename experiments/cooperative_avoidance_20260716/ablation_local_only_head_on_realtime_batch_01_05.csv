@@ -1,0 +1,6 @@
+trial,control_input,display_factor_observation,preload_factor,full_load_factor,bag_state_time_factor,minimum_center_separation_m,minimum_safety_margin_m,collision_detected,invalid_state_total,motion_start_skew_s,avoidance_onset_skew_s,last_motion_command_skew_s,epuck1_angular_sign_changes,epuck2_angular_sign_changes
+01,local_only,0.92-1.03,,,0.955293,0.097096,0.027096,false,0,0.000185,0.115547,0.220296,1,1
+02,local_only,,0.998,0.932,0.949473,0.095049,0.025049,false,0,0.051834,0.000012,0.000770,1,1
+03,local_only,,1.064,1.031,0.958179,0.097114,0.027114,false,0,0.001000,0.000003,0.303601,1,1
+04,local_only,,0.987,1.049,0.961033,0.092812,0.022812,false,0,0.000003,0.138698,0.120353,1,1
+05,local_only,,0.958,0.970,0.954363,0.098091,0.028091,false,0,0.040456,0.000004,0.113634,1,1

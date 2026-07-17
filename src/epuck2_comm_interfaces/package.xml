@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>epuck2_comm_interfaces</name>
+  <version>0.1.0</version>
+  <description>Compact state interfaces for the e-puck2-Comm library.</description>
+
+  <maintainer email="yiming.lu@example.invalid">YiMing Lu</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>builtin_interfaces</build_depend>
+  <build_depend>rosidl_default_generators</build_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

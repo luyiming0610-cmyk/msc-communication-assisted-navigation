@@ -1,0 +1,44 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/cooperative_avoidance_20260716/bags/combined_wood_moving_peer_postfix_realtime_trial_pilot_fix_02",
+  "box": {
+    "x_m": 0.28,
+    "y_m": -0.11,
+    "size_m": 0.06
+  },
+  "robot_radius_m": 0.035,
+  "pass_x_m": 0.355,
+  "max_epuck1_x_m": 0.3742739260196686,
+  "epuck1_passed_box": true,
+  "minimum_box_clearance_m": {
+    "/epuck1/state": -0.01001691851163566,
+    "/epuck2/state": 0.045
+  },
+  "minimum_box_clearance_state": {
+    "/epuck1/state": {
+      "time_s": 54.230138437,
+      "x_m": 0.23898030817508698,
+      "y_m": -0.16242143511772156
+    },
+    "/epuck2/state": {
+      "time_s": 10.453337042,
+      "x_m": 0.30917999148368835,
+      "y_m": 4.999008129321344e-18
+    }
+  },
+  "box_collision_detected": {
+    "/epuck1/state": true,
+    "/epuck2/state": false
+  },
+  "final_state": {
+    "/epuck2/state": {
+      "x_m": -0.08496210724115372,
+      "y_m": 0.1128329411149025,
+      "yaw_rad": 3.097476005554199
+    },
+    "/epuck1/state": {
+      "x_m": 0.3742739260196686,
+      "y_m": -0.2966781556606293,
+      "yaw_rad": -0.011029153130948544
+    }
+  }
+}

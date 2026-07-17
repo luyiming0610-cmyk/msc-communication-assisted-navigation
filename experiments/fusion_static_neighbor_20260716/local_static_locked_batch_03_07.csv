@@ -1,0 +1,6 @@
+trial,path_length_m,forward_progress_m,path_efficiency,max_abs_lateral_deviation_m,min_front_range_m,min_surface_clearance_m,motion_duration_s,invalid_state_messages,peer_displacement_m,final_command_zero,collision_detected,obstacle_passed,angular_sign_changes
+03,0.759633,0.540660,0.711739,0.185268,0.172626,0.120235,11.975564,0,0.000000,true,false,true,1
+04,0.814779,0.598130,0.734100,0.185119,0.175209,0.120091,11.983046,0,0.000000,true,false,true,1
+05,0.743559,0.513771,0.690962,0.187553,0.169308,0.122510,11.956887,0,0.000000,true,false,true,1
+06,0.774210,0.550873,0.711530,0.187775,0.176315,0.122733,11.611504,0,0.000000,true,false,true,1
+07,0.801345,0.592686,0.739614,0.185573,0.169214,0.120547,11.981920,0,0.000000,true,false,true,1

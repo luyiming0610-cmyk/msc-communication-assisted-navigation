@@ -1,0 +1,43 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/fusion_static_neighbor_20260716/bags/local_static_long_trial_06",
+  "bag_duration_s": 64.343777327,
+  "invalid_robot_state_messages": 0,
+  "box_geometry": {
+    "center_x_m": -0.25,
+    "center_y_m": 0.0,
+    "size_x_m": 0.06,
+    "size_y_m": 0.06,
+    "robot_radius_m": 0.035
+  },
+  "trajectory": {
+    "state_samples": 582,
+    "path_length_m": 0.7742095189087643,
+    "forward_progress_m": 0.5508732271264307,
+    "maximum_forward_progress_m": 0.5508732271264307,
+    "path_efficiency": 0.7115299071792317,
+    "maximum_abs_lateral_deviation_m": 0.18777479231357574,
+    "final_x_m": 0.000873215205501765,
+    "final_y_m": -0.1877468079328537,
+    "final_yaw_rad": -5.190292640122607e-15,
+    "minimum_measured_front_range_m": 0.17631515860557556,
+    "minimum_box_surface_clearance_m": 0.12273281574249267,
+    "box_collision_detected": false,
+    "obstacle_passed": true,
+    "obstacle_pass_threshold_m": 0.365000011920929
+  },
+  "commands": {
+    "message_count": 1787,
+    "motion_start_s": 45.277594831,
+    "last_motion_command_s": 56.889099091,
+    "peak_abs_linear_mps": 0.015,
+    "peak_abs_angular_rps": 0.45,
+    "max_linear_step_mps": 0.015,
+    "max_angular_step_rps": 0.0574124719998963,
+    "max_linear_slew_mps2": 1.819720308988787,
+    "max_angular_slew_rps2": 4.8815420345688025,
+    "angular_sign_changes": 1
+  },
+  "peer_state_samples": 582,
+  "peer_displacement_m": 0.0,
+  "final_command_zero": true
+}

@@ -1,0 +1,23 @@
+# ROS 2 bag recordings: binary, large (hundreds of MB), preserved on disk
+# under experiments/*/bags/ per project policy, never committed to git.
+*.db3
+
+# ROS/Webots run logs: regenerable diagnostic output, excluded per project policy.
+*.log
+
+# Python bytecode cache.
+__pycache__/
+*.pyc
+
+# ROS 2 colcon build artifacts (not present in this Windows copy today, guarded
+# in case a future colcon build is ever run against this tree directly).
+/build/
+/install/
+/log/
+
+# Claude Code runtime lock/session state — not project source.
+.claude/*.lock
+
+# OS/editor noise.
+.DS_Store
+Thumbs.db

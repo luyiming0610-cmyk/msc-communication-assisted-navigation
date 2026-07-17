@@ -1,0 +1,6 @@
+trial,preload_factor,full_load_factor,bag_state_time_factor,minimum_center_separation_m,minimum_safety_margin_m,collision_detected,invalid_state_total,motion_start_skew_s,avoidance_onset_skew_s,last_motion_command_skew_s,epuck1_angular_sign_changes,epuck2_angular_sign_changes,observation
+01,,,0.955955,0.143109,0.073109,false,0,0.001040,0.003033986,0.000009,1,1,"Direct observation: both passed right; no collision, spin, oscillation or wall impact; Webots display 0.92-1.08"
+02,1.005,1.045,0.961087,0.140975,0.070975,false,0,0.037401,0.000871807,0.000021,1,1,"Protocol gates passed"
+03,1.054,0.979,0.964070,0.140010,0.070010,false,0,0.113781,0.000667954,0.124990,1,1,"Protocol gates passed"
+04,0.953,0.990,0.966343,0.141087,0.071087,false,0,0.118012,0.000066733,0.000906,1,1,"Protocol gates passed"
+05,0.958,0.990,0.963654,0.143296,0.073296,false,0,0.001382,0.000011678,0.000004,1,1,"Protocol gates passed"

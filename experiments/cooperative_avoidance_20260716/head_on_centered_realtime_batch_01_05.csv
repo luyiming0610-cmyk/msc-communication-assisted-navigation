@@ -1,0 +1,6 @@
+trial,preload_factor,full_load_factor,bag_state_time_factor,minimum_center_separation_m,minimum_safety_margin_m,collision_detected,invalid_state_total,motion_start_skew_s,avoidance_onset_skew_s,last_motion_command_skew_s,epuck1_angular_sign_changes,epuck2_angular_sign_changes,observation
+01,,,0.957343,0.148258,0.078258,false,0,0.039762,0.000002900,0.038158,1,1,"Direct observation: normal reciprocal avoidance, no visible difference; Webots display 0.95-1.03"
+02,0.955,0.947,0.958546,0.147215,0.077215,false,0,0.093287,0.000559505,0.038080,1,1,"Protocol gates passed"
+03,0.961,0.958,0.955134,0.144697,0.074697,false,0,0.000016,0.001294305,0.115698,1,1,"Protocol gates passed"
+04,0.959,0.991,0.962711,0.147256,0.077256,false,0,0.339932,0.000002609,0.000003,1,1,"Initial motion scheduling difference only; avoidance onset and stop were synchronized"
+05,1.032,1.003,0.966062,0.147769,0.077769,false,0,0.000004,0.000012630,0.168728,1,1,"Protocol gates passed"

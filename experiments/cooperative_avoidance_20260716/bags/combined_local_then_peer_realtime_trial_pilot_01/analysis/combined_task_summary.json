@@ -1,0 +1,44 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/cooperative_avoidance_20260716/bags/combined_local_then_peer_realtime_trial_pilot_01",
+  "box": {
+    "x_m": -0.25,
+    "y_m": 0.0,
+    "size_m": 0.06
+  },
+  "robot_radius_m": 0.035,
+  "pass_x_m": -0.175,
+  "max_epuck1_x_m": -0.18012720346450806,
+  "epuck1_passed_box": false,
+  "minimum_box_clearance_m": {
+    "/epuck1/state": -0.002590216857137985,
+    "/epuck2/state": 0.12708700995741332
+  },
+  "minimum_box_clearance_state": {
+    "/epuck1/state": {
+      "time_s": 26.019106994,
+      "x_m": -0.30583491921424866,
+      "y_m": -0.049569133669137955
+    },
+    "/epuck2/state": {
+      "time_s": 54.497683086,
+      "x_m": -0.07662118971347809,
+      "y_m": -0.10559573769569397
+    }
+  },
+  "box_collision_detected": {
+    "/epuck1/state": true,
+    "/epuck2/state": false
+  },
+  "final_state": {
+    "/epuck1/state": {
+      "x_m": -0.18012720346450806,
+      "y_m": -0.19469256699085236,
+      "yaw_rad": -0.4490099847316742
+    },
+    "/epuck2/state": {
+      "x_m": -0.06555537134408951,
+      "y_m": -0.10145623981952667,
+      "yaw_rad": -0.33700236678123474
+    }
+  }
+}
