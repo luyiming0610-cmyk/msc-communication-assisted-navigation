@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-07-17",
+  "current_git_commit": "2558216",
+  "frozen_controller": {
+    "version": "controller_v4_timebase_fix_20260717",
+    "key_commits": ["980e7d0", "06e0f0f", "f1830c5"],
+    "status": "FROZEN -- no avoidance-algorithm changes planned unless a new blocking safety defect is found",
+    "test_suite_result": "126/126 passed (verified via colcon test in the rebuilt ROS workspace)"
+  },
+  "protocol_version": {
+    "value": "PROTOCOL_VERSION=1",
+    "sealed_at_commit": "b5a0351",
+    "message_file": "src/epuck2_comm_interfaces/msg/EpuckState.msg",
+    "sha256": "a7ec4184dec52b157a87beea20b44fb2dff5c6dee199d0c76b7c347c26abe15b",
+    "rule": "no field may be added, removed, or reordered; a structural change requires PROTOCOL_VERSION=2 as a distinct message"
+  },
+  "completed_batches": [
+    {
+      "name": "Phase 1 static wooden obstacle, locked batch",
+      "status": "PASS",
+      "trial_count": 5,
+      "evidence_level": "FORMAL_SIM",
+      "sealed": false,
+      "note": "controller_v1 era; still valid because Phase 1 runtime windows never reached the extended-tail window where the v1 defect manifests"
+    },
+    {
+      "name": "Phase 2/3 head-on / offset / crossing / ablation batches",
+      "status": "PASS",
+      "trial_count": 45,
+      "evidence_level": "FORMAL_SIM",
+      "sealed": false,
+      "note": "controller_v1 era; still valid for the same reason as Phase 1; see cooperative_avoidance_experiment_index_20260716.md for the authoritative per-trial table"
+    },
+    {
+      "name": "Phase 4 formal batch: staged local-obstacle then communication-assisted proximity/cooperative avoidance",
+      "status": "PASS",
+      "trial_count": 5,
+      "pass_count": 5,
+      "evidence_level": "FORMAL_SIM",
+      "sealed": true,
+      "sealed_at_commit": "e32560e",
+      "batch_summary_commit": "cbb1897",
+      "binding_note": "ALL 5/5 trials triggered via PROXIMITY_FALLBACK, none via PREDICTED_CPA -- must never be cited as evidence of preventing an otherwise-certain head-on collision"
+    },
+    {
+      "name": "Objective 5 communication-performance analyzer + network impairment relay implementation",
+      "status": "PASS",
+      "evidence_level": "UNIT_TEST",
+      "test_count": 126,
+      "sealed": false,
+      "commits": ["31ab4ec", "03ce36c"]
+    }
+  ],
+  "active_experiment": {
+    "name": "Objective 5 comm baseline measurement-chain isolation",
+    "status": "diagnostic in progress",
+    "finding_so_far": "root cause confirmed as-of-this-session: writing rosbag directly to /mnt/c (Windows NTFS mount from WSL2) loses ~40-55% of messages during the recording stage; a native WSL ext4 bag path (/home/eamon/epuck_comm_bags/...) achieves aligned-window PDR=1.0 in two independent diagnostic trials",
+    "not_yet_done": [
+      "run a full formal zero-impairment baseline pilot (with cooperative_avoider actually running, using the native-WSL-bag-path workflow and the complete original baseline acceptance checklist)",
+      "fix the sequence_counter tool's SIGINT summary-write bug (second distinct bug found, unresolved)",
+      "design and get sign-off on the delay/loss impairment matrix (A-F conditions) before running it"
+    ]
+  },
+  "next_action": "Commit the native-WSL-bag-path diagnostic findings, then re-run a full formal zero-impairment Objective 5 baseline pilot (with cooperative_avoider) using that workflow; report before proceeding to the delay/loss impairment matrix design",
+  "blocked_items": [
+    {
+      "item": "Objective 5 delay/loss impairment matrix (A-F conditions)",
+      "blocked_by": "must not start until a full formal zero-impairment baseline (with task-level cooperative_avoider behaviour, not just comm-layer-only) passes under the native-WSL-bag-path workflow"
+    },
+    {
+      "item": "Phase 4 formal Trials 06+ or any new avoidance scenario",
+      "blocked_by": "intentionally paused per route re-alignment against the official COMP5200M Spec/SP (see docs/ and HANDOFF_20260717.md) -- avoidance-algorithm scope is frozen, project effort has moved to Objective 5/6/7"
+    },
+    {
+      "item": "Objective 5 formal communication metrics (PDR, latency, bandwidth) suitable for the dissertation",
+      "blocked_by": "comm_baseline_v1 Trials 01-03 (measurement diagnostics, /mnt/c bag loss) and comm_baseline_native diagnostic Trials 01-02 (comm-layer-only, no task validation) are both explicitly NOT formal PDR evidence"
+    },
+    {
+      "item": "Physical Pi-puck validation (Objective 1/5/6/7)",
+      "blocked_by": "not started; requires two physical e-puck2/Pi-puck units and a verified NTP/chrony clock-sync procedure before any cross-device latency figure can be trusted (see analyze_comm_performance.py's verify_clock_sync() stub, intentionally unimplemented for the sim-only phase)"
+    }
+  ],
+  "formal_data_roots": [
+    "experiments/fusion_static_neighbor_20260716/bags/local_static_long_trial_0{2..7} (Phase 1, controller_v1)",
+    "experiments/cooperative_avoidance_20260716/bags/*_formal_trial_0{1..5} (Phase 2/3, controller_v1)",
+    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_combined_formal_trial0{1..5} (Phase 4, controller_v4, SEALED)"
+  ],
+  "diagnostic_data_roots": [
+    "experiments/controller_v2_local_latch_20260717/bags/ (controller_v2 development)",
+    "experiments/controller_v3_unified_encounter_20260717/bags/ (controller_v3 development)",
+    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_* (controller_v4 development, pilots a/a4/b/b2/b3)",
+    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_{head_on_cpa_pure_c1,combined_trial1,combined_trial2_timebasefix} (Phase 4 exclusionary pilots)",
+    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_trial{1,2,3} (Objective 5, /mnt/c bag-loss diagnostics)",
+    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_native_trial0{1,2} (Objective 5, native-WSL-path measurement-chain isolation)",
+    "experiments/cooperative_avoidance_20260716/bags/combined_* (controller_v1 combined-scenario defect evidence)"
+  ],
+  "paper_ready_outputs": [],
+  "known_limitations": [
+    "Phase 4's combined scenario (all 5/5 formal trials) triggers via PROXIMITY_FALLBACK, never PREDICTED_CPA -- the two robots' post-box trajectories are not on a strict head-on collision course; this is a genuine, reproducible property of the frozen geometry (epuck1's LOCAL_RECOVER restores heading, not lateral position), not a controller defect, and must not be described as preventing a certain collision",
+    "Old EpuckState-format bags (5 pre-protocol-freeze bags in cooperative_avoidance_20260716/, specifically head_on_cpa_only_trial_02..06_postfix) cannot be reprocessed by any analyzer assuming the current PROTOCOL_VERSION=1 message shape (Fast CDR deserialization exception); their original, contemporaneous analysis outputs remain valid historical evidence but must not be re-analyzed with current tooling",
+    "The /mnt/c rosbag-write-loss finding is confirmed via two independent native-path diagnostic trials (aligned-window PDR=1.0 both times) but a full formal zero-impairment baseline (with cooperative_avoider actually running) has not yet been completed under that workflow",
+    "sequence_counter (the third-party comm-diagnostic observer) has an unresolved bug: its SIGINT-triggered summary write does not reliably fire when launched via ros2 launch's process supervision -- root cause not yet identified",
+    "This experiment_registry.csv's rows for the 53 cooperative_avoidance_20260716 bags and 2 fusion_static_neighbor_20260716 trial-count fields are aggregated/summarized from directory names and prior-session records, NOT freshly re-verified per-bag against their individual summary.json files during this indexing pass",
+    "communication_baseline_20260716/ directory's purpose and contents were not investigated during this indexing pass beyond confirming it has no bags/ subdirectory",
+    "CPU/memory overhead for communication performance is not measured anywhere yet (analyze_comm_performance.py explicitly reports this as NOT MEASURED, pending a live psutil-style sampling companion)",
+    "Cross-device (physical Pi-puck) clock synchronization has no implementation yet -- verify_clock_sync() in analyze_comm_performance.py intentionally raises NotImplementedError until Objective 6 begins"
+  ]
+}
