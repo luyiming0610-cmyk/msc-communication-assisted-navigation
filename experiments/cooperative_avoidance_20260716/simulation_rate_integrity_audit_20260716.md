@@ -141,7 +141,10 @@ full-load gate, same protocol as this audit's controlled-realtime runs):
 
 All six values are within the locked 0.8-1.2 interval.
 
-### Open finding: `self.started_at` initialization race (not yet fixed)
+### `self.started_at` initialization race — FIXED (controller_v4_timebase_fix_20260717)
+
+The finding below is now fixed (git commit `980e7d0`, re-validated by a
+fresh combined-pilot regression at `06e0f0f`). Left in place for context.
 
 While reconciling `pilot_v4_b3`'s stop reason, the controller's own internal
 `elapsed >= max_runtime_s` check was observed to fire at `ros_time=70.000`
