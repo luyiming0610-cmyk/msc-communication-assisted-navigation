@@ -60,6 +60,13 @@ def main():
     cruise_resumed = bool(log_summary["cruise_resumed"])
     final_mode = log_summary["final_mode"]
     complete_message = log_summary["complete_message"] or ""
+    # controller_v4_timebase_fix_20260717: this used to be purely
+    # informational, which let a run report verdict=PASS while this field
+    # simultaneously read true -- self-contradictory, since a pilot whose
+    # own internal ceiling (not genuine task completion) produced the
+    # final log line has NOT demonstrated the behaviour it claims to. It
+    # is now an enforced FAIL reason (see reasons_fail below), so PASS and
+    # stopped_by_max_runtime_only=true can never both appear in one report.
     stopped_by_max_runtime_only = "maximum runtime reached" in complete_message and not failsafe and final_mode == "CRUISE"
     legacy_bypass = bool(log_summary["legacy_local_bypass_appeared"])
 
@@ -86,6 +93,13 @@ def main():
         reasons_fail.append(f"DID_NOT_END_IN_STABLE_CRUISE(final_mode={final_mode})")
     if legacy_bypass:
         reasons_fail.append("LEGACY_LOCAL_BYPASS_APPEARED")
+    if stopped_by_max_runtime_only:
+        reasons_fail.append(
+            "STOPPED_BY_MAX_RUNTIME_ONLY(the controller's own internal "
+            "elapsed>=max_runtime_s ceiling produced the final COMPLETE "
+            "line, not genuine task completion; verdict cannot be PASS "
+            "even if every ground-truth check above happens to pass)"
+        )
     if not realtime_ok:
         reasons_fail.append(
             f"REALTIME_FACTOR_OUT_OF_RANGE(preload={args.preload_factor},full_load={args.full_load_factor})"
@@ -108,6 +122,13 @@ def main():
         "collision": collision,
         "minimum_box_clearance_m": min_clearance,
         "min_clearance_threshold_m": args.min_clearance_threshold_m,
+        # controller_v4_timebase_fix_20260717: this is the ABSOLUTE maximum
+        # x_m reached by epuck1 anywhere in the full recorded bag (computed
+        # after the run, not a live snapshot). It is NOT the same quantity
+        # as any "x_m_at_detection_instant" that may appear in an early-
+        # success-watcher log line -- that is a live reading at one instant
+        # during the run's settle window and is typically smaller than the
+        # eventual maximum, since the robot keeps moving afterwards.
         "max_epuck1_x_m": task_summary["max_epuck1_x_m"],
         "epuck1_passed_box": passed_box,
         "returned_to_danger_zone_after_passing": returned_to_danger,

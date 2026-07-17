@@ -269,8 +269,18 @@ if task_complete_count < 1:
 if cooperative_complete_count < 1:
     reasons_fail.append("no robot logged cooperative recovery COMPLETE")
 
-if "COMPLETE: maximum runtime reached" in log_text:
-    reasons_fail.append("at least one robot stopped via maximum runtime, not task completion")
+# controller_v4_timebase_fix_20260717: explicit, enforced field -- a
+# genuinely-passing combined pilot must never show this as true. If it
+# ever does (even alongside every ground-truth check passing), that is
+# itself an automatic FAIL: the controller's own internal max_runtime_s
+# ceiling produced the final COMPLETE line for at least one robot, not
+# genuine task completion, and the report must not describe that as PASS.
+stopped_by_max_runtime_only = "COMPLETE: maximum runtime reached" in log_text
+if stopped_by_max_runtime_only:
+    reasons_fail.append(
+        "STOPPED_BY_MAX_RUNTIME_ONLY(at least one robot's own internal "
+        "elapsed>=max_runtime_s ceiling fired, not genuine task completion)"
+    )
 if "TASK_TIMEOUT" in log_text:
     reasons_fail.append("task monitor logged TASK_TIMEOUT")
 
@@ -341,6 +351,7 @@ result = {
     "fail_reasons": reasons_fail,
     "task_complete_count": task_complete_count,
     "cooperative_complete_count": cooperative_complete_count,
+    "stopped_by_max_runtime_only": stopped_by_max_runtime_only,
     "avoid_turn_count": avoid_turn_count,
     "epuck1_local_count": epuck1_local_count,
     "epuck2_local_count": epuck2_local_count,

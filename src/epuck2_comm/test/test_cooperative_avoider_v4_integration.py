@@ -267,3 +267,231 @@ def test_invalid_odometry_sample_never_reaches_the_encounter_ledger(monkeypatch)
         assert node.mode != "SAFE_STOP_INVALID_ODOM"
     finally:
         rclpy.shutdown()
+
+
+def test_started_at_is_not_captured_while_ros_clock_reads_zero(monkeypatch):
+    """controller_v4_timebase_fix_20260717: reproduces the exact pilot_v4_b3
+    race -- the ROS clock reads 0.0 for several ticks (as it does before a
+    node's clock subscription has received its first /clock sample under
+    use_sim_time=true) and then jumps straight to 16.26s (the real
+    first-activity ros_time observed in that pilot). started_at must be
+    captured at 16.26, never at 0.0 or anything in between."""
+    fake_clock = {"t": 0.0}
+
+    def fake_now_s(self):
+        return fake_clock["t"]
+
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
+
+    rclpy.init(
+        args=[
+            "--ros-args",
+            "-p", "armed:=true",
+            "-p", "enable_peer_avoidance:=false",
+            "-p", "startup_hold_s:=5.0",
+            "-p", "max_runtime_s:=70.0",
+        ]
+    )
+    try:
+        node = CooperativeAvoider()
+        assert node.started_at is None
+
+        # Clock reads exactly 0.0 for a few ticks: must stay in
+        # WAITING_FOR_CLOCK, started_at must stay None.
+        for _ in range(3):
+            node._control()
+            assert node.mode == "WAITING_FOR_CLOCK"
+            assert node.started_at is None
+
+        # Clock jumps straight to the real pilot_v4_b3 value.
+        fake_clock["t"] = 16.260
+        node._control()
+        assert node.started_at == 16.260, (
+            "started_at must be captured at the first valid (nonzero) "
+            "clock sample, not at 0.0 or silently left stale"
+        )
+        assert node.mode != "WAITING_FOR_CLOCK"
+    finally:
+        rclpy.shutdown()
+
+
+def test_max_runtime_is_measured_from_first_valid_clock_sample_not_from_zero(monkeypatch):
+    """controller_v4_timebase_fix_20260717: with the same 0.0 -> 16.26s
+    jump as pilot_v4_b3, max_runtime_s=70.0 must require a FULL 70s from
+    16.26 (i.e. must not complete until ros_time=86.26), not from an
+    effective zero baseline (which would complete at ros_time=70.0, exactly
+    the bug this fix closes)."""
+    fake_clock = {"t": 0.0}
+
+    def fake_now_s(self):
+        return fake_clock["t"]
+
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
+
+    rclpy.init(
+        args=[
+            "--ros-args",
+            "-p", "armed:=true",
+            "-p", "enable_peer_avoidance:=false",
+            "-p", "startup_hold_s:=0.0",
+            "-p", "max_runtime_s:=70.0",
+        ]
+    )
+    try:
+        node = CooperativeAvoider()
+        node._control()  # clock still 0.0 -> WAITING_FOR_CLOCK, started_at stays None
+
+        fake_clock["t"] = 16.260
+        node._control()
+        assert node.started_at == 16.260
+
+        # At the OLD (buggy) ros_time=70.0 -- which is what the bug's
+        # elapsed-from-zero accounting would have completed at -- the
+        # controller must NOT have completed yet under the fix.
+        fake_clock["t"] = 70.0
+        node._control()
+        assert node.mode != "COMPLETE", (
+            "max_runtime_s must be measured from the first valid clock "
+            "sample (16.26s), not from an effective zero baseline"
+        )
+
+        # Just under the true 70s budget from 16.26 (=86.26): still running.
+        fake_clock["t"] = 16.260 + 70.0 - 0.05
+        node._control()
+        assert node.mode != "COMPLETE"
+
+        # At or past the true budget: completes via max_runtime.
+        fake_clock["t"] = 16.260 + 70.0 + 0.05
+        node._control()
+        assert node.mode == "COMPLETE"
+    finally:
+        rclpy.shutdown()
+
+
+def test_startup_hold_measured_from_valid_clock_start(monkeypatch):
+    """controller_v4_timebase_fix_20260717: startup_hold_s must also be
+    measured relative to the first valid clock sample, not from zero."""
+    fake_clock = {"t": 0.0}
+
+    def fake_now_s(self):
+        return fake_clock["t"]
+
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
+
+    rclpy.init(
+        args=[
+            "--ros-args",
+            "-p", "armed:=true",
+            "-p", "enable_peer_avoidance:=false",
+            "-p", "startup_hold_s:=5.0",
+            "-p", "max_runtime_s:=1000.0",
+        ]
+    )
+    try:
+        node = CooperativeAvoider()
+        node._control()  # WAITING_FOR_CLOCK
+
+        fake_clock["t"] = 16.260
+        node._own_callback(_state(0.0, 0.0, 0.0, math.inf, math.inf, math.inf))
+        node._control()
+        assert node.started_at == 16.260
+        assert node.mode == "STARTUP_HOLD", (
+            "startup_hold_s must still gate motion measured from 16.26, "
+            "not have already elapsed against a zero baseline"
+        )
+
+        # Just under startup_hold_s later: still holding.
+        fake_clock["t"] = 16.260 + 5.0 - 0.05
+        node._own_callback(_state(0.0, 0.0, 0.0, math.inf, math.inf, math.inf))
+        node._control()
+        assert node.mode == "STARTUP_HOLD"
+
+        # Past startup_hold_s: normal operation begins.
+        fake_clock["t"] = 16.260 + 5.0 + 0.05
+        node._own_callback(_state(0.0, 0.0, 0.0, math.inf, math.inf, math.inf))
+        node._control()
+        assert node.mode != "STARTUP_HOLD"
+        assert node.mode != "WAITING_FOR_CLOCK"
+    finally:
+        rclpy.shutdown()
+
+
+def test_timebase_resets_safely_on_backward_ros_time_jump(monkeypatch):
+    """controller_v4_timebase_fix_20260717: a backward ROS-time jump
+    (simulation reset / fresh world reload reusing the same process) must
+    re-initialize started_at from the new, lower time rather than silently
+    keeping a stale (and now nonsensical, possibly negative) elapsed-time
+    baseline."""
+    fake_clock = {"t": 0.0}
+
+    def fake_now_s(self):
+        return fake_clock["t"]
+
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
+
+    rclpy.init(
+        args=[
+            "--ros-args",
+            "-p", "armed:=true",
+            "-p", "enable_peer_avoidance:=false",
+            "-p", "startup_hold_s:=0.0",
+            "-p", "max_runtime_s:=1000.0",
+        ]
+    )
+    try:
+        node = CooperativeAvoider()
+        fake_clock["t"] = 50.0
+        node._control()
+        assert node.started_at == 50.0
+        assert node.timebase_reset_count == 0
+
+        # Simulation resets: /clock jumps back down to near zero.
+        fake_clock["t"] = 1.0
+        node._control()
+        assert node.started_at == 1.0, "started_at must follow the reset, not stay at the stale 50.0"
+        assert node.timebase_reset_count == 1
+
+        # A second, larger backward jump increments the counter again.
+        fake_clock["t"] = 0.5
+        node._control()
+        assert node.started_at == 0.5
+        assert node.timebase_reset_count == 2
+
+        # Tiny forward jitter (well within tolerance) must NOT be treated
+        # as a backward jump.
+        fake_clock["t"] = 0.505
+        node._control()
+        assert node.timebase_reset_count == 2
+    finally:
+        rclpy.shutdown()
+
+
+def test_nonzero_first_clock_sample_behaves_exactly_as_before(monkeypatch):
+    """controller_v4_timebase_fix_20260717: on real hardware (or any clock
+    source that is never exactly 0.0, e.g. a Unix-epoch system clock),
+    started_at must be captured on the very first control tick, exactly as
+    it always was -- this fix must not add any delay or behaviour change
+    for the non-simulation case."""
+    fake_clock = {"t": 1_770_000_000.0}  # a large epoch-like value
+
+    def fake_now_s(self):
+        return fake_clock["t"]
+
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
+
+    rclpy.init(
+        args=[
+            "--ros-args",
+            "-p", "armed:=true",
+            "-p", "enable_peer_avoidance:=false",
+            "-p", "startup_hold_s:=0.0",
+            "-p", "max_runtime_s:=1000.0",
+        ]
+    )
+    try:
+        node = CooperativeAvoider()
+        node._control()
+        assert node.started_at == 1_770_000_000.0
+        assert node.mode != "WAITING_FOR_CLOCK"
+    finally:
+        rclpy.shutdown()

@@ -207,7 +207,17 @@ class CooperativeAvoider(Node):
         self.peer_state = None
         self.own_received = None
         self.peer_received = None
-        self.started_at = self._now_s()
+        # controller_v4_timebase_fix_20260717: started_at is intentionally
+        # NOT captured here. self.get_clock().now() can still read exactly
+        # 0.0 at __init__ time under use_sim_time=true, before this node's
+        # ROS-time clock subscription has received its first /clock sample
+        # -- capturing started_at then silently shrinks every relative
+        # timer (startup_hold_s, max_runtime_s, ...) by however much sim
+        # time had already elapsed before the clock synced (observed: ~16s
+        # in pilot_v4_b3). See _ensure_timebase().
+        self.started_at = None
+        self._last_seen_now_s = None
+        self.timebase_reset_count = 0
         self.mode = "WAITING"
         self.finished = False
         self.encounter_complete = False
@@ -558,6 +568,64 @@ class CooperativeAvoider(Node):
         self.finished = True
         self._publish(0.0, 0.0, force_zero=True)
 
+    # controller_v4_timebase_fix_20260717: tolerance for ROS-time jitter
+    # (e.g. floating-point noise between consecutive /clock samples) that
+    # must NOT be treated as a genuine backward time jump.
+    _TIMEBASE_BACKWARD_JUMP_TOLERANCE_S = 0.01
+
+    def _ensure_timebase(self, now: float) -> bool:
+        """controller_v4_timebase_fix_20260717: started_at must never be
+        captured before the ROS clock has a valid, nonzero sample --
+        capturing it at exactly 0.0 (rclpy's value before this node's
+        clock subscription receives its first /clock message under
+        use_sim_time=true) silently shrinks every relative timer
+        (startup_hold_s, max_runtime_s, the local-encounter/turn-ledger
+        timers) by however much sim time had already elapsed before the
+        clock synced.
+
+        Returns False while the timebase is not yet usable; the caller
+        must not compute any now-started_at elapsed value in that case
+        and must hold the robot stationary instead.
+
+        Also detects a backward ROS-time jump (a simulation reset or a
+        fresh world reload reusing the same process) and re-initializes
+        started_at from the new, lower time rather than silently keeping
+        stale elapsed-time accounting, logging TIMEBASE_RESET so this is
+        never a quiet behaviour change.
+
+        On real hardware (use_sim_time=false), the system clock is always
+        a large positive Unix-epoch value from the first tick, so the
+        `now <= 0.0` branch below never triggers and this adds one extra
+        tick of ~0.05s (one timer period) before started_at is set --
+        negligible and not a behaviour change.
+        """
+        if self.started_at is None:
+            if now <= 0.0:
+                return False
+            self.started_at = now
+            self._last_seen_now_s = now
+            self.get_logger().info(
+                f"TIMEBASE_INIT ros_time={now:.3f} wall_time={time.time():.3f}"
+            )
+            return True
+        if (
+            self._last_seen_now_s is not None
+            and now < self._last_seen_now_s - self._TIMEBASE_BACKWARD_JUMP_TOLERANCE_S
+        ):
+            previous_started_at = self.started_at
+            previous_now = self._last_seen_now_s
+            self.started_at = now
+            self.timebase_reset_count += 1
+            self.get_logger().warn(
+                "TIMEBASE_RESET backward ROS-time jump detected "
+                f"(previous_now={previous_now:.3f} new_now={now:.3f} "
+                f"previous_started_at={previous_started_at:.3f} "
+                f"new_started_at={now:.3f}) "
+                f"reset_count={self.timebase_reset_count}"
+            )
+        self._last_seen_now_s = now
+        return True
+
     def _control(self) -> None:
         """controller_v4_ros_time_consistency: thin wrapper so every mode
         change is logged (via _log_transition) regardless of which of
@@ -568,6 +636,10 @@ class CooperativeAvoider(Node):
 
     def _control_body(self) -> None:
         now = self._now_s()
+        if not self._ensure_timebase(now):
+            self.mode = "WAITING_FOR_CLOCK"
+            self._publish(0.0, 0.0, force_zero=True)
+            return
         elapsed = now - self.started_at
         if (
             self.stop_after_recovery

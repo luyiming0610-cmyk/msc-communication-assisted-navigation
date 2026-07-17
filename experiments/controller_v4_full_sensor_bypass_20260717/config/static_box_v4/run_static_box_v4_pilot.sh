@@ -289,9 +289,22 @@ try:
             if stable_cruise_since is None:
                 stable_cruise_since = time.monotonic()
             elif time.monotonic() - stable_cruise_since >= CONFIRM_S:
+                # controller_v4_timebase_fix_20260717: this is a LIVE
+                # snapshot of x_m at the instant detection confirmed (NOT
+                # the run's maximum x -- that is max_epuck1_x_m in
+                # static_v4_task_summary.json / static_v4_verdict.json,
+                # computed from the full bag afterwards and can differ,
+                # since the robot keeps moving during the CONFIRM_S=2.0s
+                # settle window and after this sentinel is written). Never
+                # conflate this field with max_epuck1_x_m when reading the
+                # execution log.
                 with open(sentinel, "w", encoding="utf-8") as fh:
-                    fh.write(f"x_m={state['x']:.5f} last_mode={last_mode}\n")
-                print(f"EARLY_SUCCESS x_m={state['x']:.5f} last_mode={last_mode}")
+                    fh.write(
+                        f"x_m_at_detection_instant={state['x']:.5f} last_mode={last_mode}\n"
+                    )
+                print(
+                    f"EARLY_SUCCESS x_m_at_detection_instant={state['x']:.5f} last_mode={last_mode}"
+                )
                 break
         else:
             stable_cruise_since = None
