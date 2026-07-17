@@ -1,0 +1,250 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_fusion_b2",
+  "controller_log": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/logs/controller_v4_full_sensor_bypass_20260717_static_box_fusion_b2.log",
+  "complete_message": "maximum runtime reached; commanding zero",
+  "mode_transitions": [
+    [
+      1784311207.618459,
+      "CRUISE",
+      null
+    ],
+    [
+      1784311210.8361034,
+      "LOCAL_DETECT_TURN",
+      null
+    ],
+    [
+      1784311213.0009127,
+      "LOCAL_SIDE_TRACK_CREEP",
+      null
+    ],
+    [
+      1784311233.426399,
+      "LOCAL_PASS_CONFIRM",
+      null
+    ],
+    [
+      1784311235.6273997,
+      "LOCAL_RECOVER",
+      null
+    ],
+    [
+      1784311241.6088111,
+      "CRUISE",
+      null
+    ]
+  ],
+  "fine_grained_transitions": [
+    {
+      "wall_time": 1784311207.096,
+      "ros_time": 18.02,
+      "mode_from": "WAITING",
+      "mode_to": "SAFE_STOP_STALE",
+      "phase": "CLOSED",
+      "encounter_elapsed_s": null,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": null,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": null,
+      "lateral_m": null,
+      "applied_cmd": [
+        0.0,
+        0.0
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311207.62,
+      "ros_time": 18.5,
+      "mode_from": "SAFE_STOP_STALE",
+      "mode_to": "CRUISE",
+      "phase": "CLOSED",
+      "encounter_elapsed_s": null,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": null,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": null,
+      "lateral_m": null,
+      "applied_cmd": [
+        0.002,
+        0.0
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311210.351,
+      "ros_time": 21.06,
+      "mode_from": "CRUISE",
+      "mode_to": "LOCAL_FRONT_WARN",
+      "phase": "DETECT_TURN",
+      "encounter_elapsed_s": 0.0,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": 25.0,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": 0.0,
+      "lateral_m": 0.0,
+      "applied_cmd": [
+        0.0,
+        -0.18
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311210.838,
+      "ros_time": 21.5,
+      "mode_from": "LOCAL_FRONT_WARN",
+      "mode_to": "LOCAL_DETECT_TURN",
+      "phase": "DETECT_TURN",
+      "encounter_elapsed_s": 0.44,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": 24.56,
+      "turn_ledger_rad": 0.1522,
+      "longitudinal_m": 0.002,
+      "lateral_m": 0.0,
+      "applied_cmd": [
+        0.0,
+        -0.45
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311212.774,
+      "ros_time": 23.3,
+      "mode_from": "LOCAL_DETECT_TURN",
+      "mode_to": "LOCAL_SIDE_TRACK_HOLD",
+      "phase": "SIDE_TRACK",
+      "encounter_elapsed_s": 2.24,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": 22.76,
+      "turn_ledger_rad": 0.9507,
+      "longitudinal_m": 0.002,
+      "lateral_m": 0.0,
+      "applied_cmd": [
+        0.0,
+        -0.29
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311212.863,
+      "ros_time": 23.36,
+      "mode_from": "LOCAL_SIDE_TRACK_HOLD",
+      "mode_to": "LOCAL_SIDE_TRACK_CREEP",
+      "phase": "SIDE_TRACK",
+      "encounter_elapsed_s": 2.3,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": 22.7,
+      "turn_ledger_rad": 0.9507,
+      "longitudinal_m": 0.002,
+      "lateral_m": 0.0,
+      "applied_cmd": [
+        0.003,
+        -0.05
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311233.207,
+      "ros_time": 41.8,
+      "mode_from": "LOCAL_SIDE_TRACK_CREEP",
+      "mode_to": "LOCAL_PASS_CONFIRM",
+      "phase": "PASS_CONFIRM",
+      "encounter_elapsed_s": 20.74,
+      "pass_confirm_elapsed_s": 0.0,
+      "duration_remaining_s": 4.26,
+      "turn_ledger_rad": 0.9992,
+      "longitudinal_m": 0.1,
+      "lateral_m": -0.154,
+      "applied_cmd": [
+        0.01,
+        0.0
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311235.422,
+      "ros_time": 43.8,
+      "mode_from": "LOCAL_PASS_CONFIRM",
+      "mode_to": "LOCAL_RECOVER",
+      "phase": "RECOVERY_ALLOWED",
+      "encounter_elapsed_s": 22.74,
+      "pass_confirm_elapsed_s": 2.0,
+      "duration_remaining_s": 2.26,
+      "turn_ledger_rad": 0.9992,
+      "longitudinal_m": 0.111,
+      "lateral_m": -0.171,
+      "applied_cmd": [
+        0.012,
+        0.12
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311241.493,
+      "ros_time": 49.4,
+      "mode_from": "LOCAL_RECOVER",
+      "mode_to": "CRUISE",
+      "phase": "CLOSED",
+      "encounter_elapsed_s": null,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": null,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": null,
+      "lateral_m": null,
+      "applied_cmd": [
+        0.012,
+        0.0618
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784311247.673,
+      "ros_time": 55.0,
+      "mode_from": "CRUISE",
+      "mode_to": "COMPLETE",
+      "phase": "CLOSED",
+      "encounter_elapsed_s": null,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": null,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": null,
+      "lateral_m": null,
+      "applied_cmd": [
+        0.0,
+        0.0
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    }
+  ],
+  "modes_seen_set": [
+    "CRUISE",
+    "LOCAL_DETECT_TURN",
+    "LOCAL_PASS_CONFIRM",
+    "LOCAL_RECOVER",
+    "LOCAL_SIDE_TRACK_CREEP"
+  ],
+  "legacy_local_bypass_appeared": false,
+  "detect_turn_occurred": true,
+  "side_track_occurred": true,
+  "pass_confirm_occurred": true,
+  "local_recover_occurred": true,
+  "cruise_resumed": true,
+  "failsafe_occurred": false,
+  "failsafe_causes": [],
+  "final_failsafe_cause": null,
+  "sensor_invalid_occurred": false,
+  "final_mode": "CRUISE",
+  "final_drift_events": 0,
+  "log_row_count": 73,
+  "fine_grained_transition_count": 10
+}
