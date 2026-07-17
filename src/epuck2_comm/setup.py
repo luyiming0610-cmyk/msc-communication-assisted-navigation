@@ -32,6 +32,8 @@ setup(
             "analyze_static_bag = epuck2_comm.analyze_static_bag:main",
             "analyze_trigger_reason = "
             "epuck2_comm.analyze_trigger_reason:main",
+            "analyze_comm_performance = "
+            "epuck2_comm.analyze_comm_performance:main",
         ],
     },
 )
