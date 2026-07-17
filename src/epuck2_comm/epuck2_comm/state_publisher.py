@@ -186,6 +186,22 @@ class StatePublisher(Node):
         right_distance_m = _finite_min((filtered_ir["ps0"], filtered_ir["ps1"], filtered_ir["ps2"]))
         obstacle_status = self._classify_obstacle(front_distance_m, left_distance_m, right_distance_m)
 
+        # controller_v4_full_sensor_bypass_20260717: zone split of the same
+        # 8 raw ps readings, adding the two sensors (ps3, ps4 -- the
+        # right-rear/left-rear pair) that front/left/right never read at
+        # all. Zone assignment follows the standard e-puck ring (ps0/ps7
+        # near front, ps1/ps6 front-diagonal, ps2/ps5 abeam, ps3/ps4 rear
+        # diagonal): left_front=ps7, left_mid=min(ps5,ps6), left_rear=ps4,
+        # right_front=ps0, right_mid=min(ps1,ps2), right_rear=ps3. This is
+        # forensic ps0-ps7 mapping, not a new calibration -- same
+        # ir_no_detection_m clear-space filtering as front/left/right.
+        left_front_m = filtered_ir["ps7"]
+        left_mid_m = _finite_min((filtered_ir["ps5"], filtered_ir["ps6"]))
+        left_rear_m = filtered_ir["ps4"]
+        right_front_m = filtered_ir["ps0"]
+        right_mid_m = _finite_min((filtered_ir["ps1"], filtered_ir["ps2"]))
+        right_rear_m = filtered_ir["ps3"]
+
         return RobotStateSnapshot(
             x_m=x_m,
             y_m=y_m,
@@ -197,6 +213,12 @@ class StatePublisher(Node):
             right_distance_m=right_distance_m,
             obstacle_status=obstacle_status,
             validity_flags=validity_flags,
+            left_front_m=left_front_m,
+            left_mid_m=left_mid_m,
+            left_rear_m=left_rear_m,
+            right_front_m=right_front_m,
+            right_mid_m=right_mid_m,
+            right_rear_m=right_rear_m,
         )
 
     def _classify_obstacle(self, front: float, left: float, right: float) -> int:
@@ -239,6 +261,12 @@ class StatePublisher(Node):
         msg.right_distance_m = snapshot.right_distance_m
         msg.obstacle_status = snapshot.obstacle_status
         msg.validity_flags = snapshot.validity_flags
+        msg.left_front_m = snapshot.left_front_m
+        msg.left_mid_m = snapshot.left_mid_m
+        msg.left_rear_m = snapshot.left_rear_m
+        msg.right_front_m = snapshot.right_front_m
+        msg.right_mid_m = snapshot.right_mid_m
+        msg.right_rear_m = snapshot.right_rear_m
         self.publisher.publish(msg)
 
         self.policy.mark_published(snapshot, now)

@@ -1,9 +1,23 @@
+"""controller_v1-era decide_local_obstacle() regression tests.
+
+controller_v4_full_sensor_bypass_20260717: the two LocalAvoidanceLatch smoke
+tests formerly here (test_latch_holds_turn_direction_during_short_range_dropout,
+test_latch_releases_after_clear_hold_interval) are retired -- LocalAvoidanceLatch
+(controller_v3's class) no longer exists; EncounterAvoidanceV4 replaces it with
+a materially different phase set and apply() signature. Equivalent-purpose
+coverage (turn-direction persistence through a raw dropout, and a clean close
+with no encounter ever opening) now lives in
+test_encounter_avoidance_v4.py::test_side_track_holds_turn_direction_through_raw_dropout
+and ::test_no_raw_trigger_never_opens_an_encounter. The old v3 tests remain
+recoverable via `git show d2ef811:src/epuck2_comm/test/test_local_obstacle_logic.py`.
+
+decide_local_obstacle() itself is unchanged since controller_v1 -- every test
+below is unmodified in intent across v1/v2/v3/v4.
+"""
+
 import math
 
-from epuck2_comm.local_obstacle_logic import (
-    LocalAvoidanceLatch,
-    decide_local_obstacle,
-)
+from epuck2_comm.local_obstacle_logic import decide_local_obstacle
 
 
 VALID_ALL = 1 | 2 | 4
@@ -57,22 +71,3 @@ def test_tof_only_front_detection_remains_available():
     decision = decide_local_obstacle(0.09, 0.01, 0.01, 1 | 4)
     assert decision.mode == "LOCAL_FRONT_DANGER"
     assert decision.angular_rps < 0.0
-
-
-def test_latch_holds_turn_direction_during_short_range_dropout():
-    latch = LocalAvoidanceLatch(clear_hold_s=1.0)
-    detected = decide_local_obstacle(0.12, math.inf, math.inf, VALID_ALL)
-    assert latch.apply(detected, 10.0, 0.0, 0.0, 0.0).mode == "LOCAL_FRONT_WARN"
-    clear = decide_local_obstacle(math.inf, math.inf, math.inf, VALID_ALL)
-    held = latch.apply(clear, 10.5, 0.0, 0.0, 0.0)
-    assert held.mode == "LOCAL_CLEARANCE"
-    assert held.angular_rps < 0.0
-
-
-def test_latch_releases_after_clear_hold_interval():
-    latch = LocalAvoidanceLatch(clear_hold_s=1.0)
-    detected = decide_local_obstacle(0.12, math.inf, math.inf, VALID_ALL)
-    latch.apply(detected, 10.0, 0.0, 0.0, 0.0)
-    clear = decide_local_obstacle(math.inf, math.inf, math.inf, VALID_ALL)
-    released = latch.apply(clear, 11.1, 0.0, 0.0, 0.0)
-    assert not released.active

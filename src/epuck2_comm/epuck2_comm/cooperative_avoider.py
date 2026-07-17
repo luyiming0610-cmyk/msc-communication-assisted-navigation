@@ -15,7 +15,7 @@ from .collision_math import (
     right_turn_target_reached,
     velocity_vector,
 )
-from .local_obstacle_logic import LocalAvoidanceLatch, decide_local_obstacle
+from .local_obstacle_logic import EncounterAvoidanceV4, ZoneSnapshot, decide_local_obstacle
 
 
 def clamp(value: float, lower: float, upper: float) -> float:
@@ -56,18 +56,22 @@ class CooperativeAvoider(Node):
         self.declare_parameter("local_clear_hold_s", 1.0)
         self.declare_parameter("local_bypass_distance_m", 0.08)
         self.declare_parameter("local_recovery_turn_rps", 0.18)
-        # controller_v3_unified_encounter_20260717: shared front+side
-        # encounter ledger and CONSTRAINED-state bounds.
-        # *** v3 pilot candidates, NOT validated constants. *** See
-        # controller_v3_unified_encounter_design_20260717.md sections 6.1,
-        # 6.7, and 9 — none of these have been confirmed safe by a real
-        # Webots pilot yet.
-        self.declare_parameter("local_encounter_max_turn_rad", 0.70)
-        self.declare_parameter("local_encounter_max_bypass_extension_m", 0.30)
-        self.declare_parameter("local_encounter_clear_confirm_s", 1.0)
-        self.declare_parameter("local_encounter_rearm_quiet_s", 1.5)
-        self.declare_parameter("local_encounter_constrained_speed_mps", 0.006)
-        self.declare_parameter("local_encounter_max_constrained_duration_s", 10.0)
+        # controller_v4_full_sensor_bypass_20260717: full front->mid->rear
+        # sensor-sequence + encounter-local lateral-displacement bypass.
+        # *** v4 pilot candidates, NOT validated constants. *** Only a real
+        # Webots pilot may certify a safe geometric margin -- see
+        # local_obstacle_logic.py's module docstring for the pilot_a3
+        # forensic finding that motivated this redesign.
+        self.declare_parameter("local_v4_max_inplace_turn_rad", 0.90)
+        self.declare_parameter("local_v4_max_turn_ledger_rad", 1.40)
+        self.declare_parameter("local_v4_max_bypass_extension_m", 0.40)
+        self.declare_parameter("local_v4_max_encounter_duration_s", 18.0)
+        self.declare_parameter("local_v4_pass_confirm_hold_s", 1.0)
+        self.declare_parameter("local_v4_rearm_quiet_s", 1.5)
+        self.declare_parameter("local_v4_side_track_creep_mps", 0.010)
+        self.declare_parameter("local_v4_side_track_warn_mps", 0.005)
+        self.declare_parameter("local_v4_required_lateral_offset_m", 0.070)
+        self.declare_parameter("local_v4_required_longitudinal_progress_m", 0.10)
         self.declare_parameter("rearm_distance_m", 0.45)
         self.declare_parameter("max_linear_accel_mps2", 0.05)
         self.declare_parameter("max_linear_decel_mps2", 0.10)
@@ -131,25 +135,37 @@ class CooperativeAvoider(Node):
         self.local_recovery_turn = float(
             self.get_parameter("local_recovery_turn_rps").value
         )
-        # controller_v3_unified_encounter_20260717: v3 pilot candidates,
+        # controller_v4_full_sensor_bypass_20260717: v4 pilot candidates,
         # NOT validated constants.
-        self.local_encounter_max_turn = float(
-            self.get_parameter("local_encounter_max_turn_rad").value
+        self.local_v4_max_inplace_turn = float(
+            self.get_parameter("local_v4_max_inplace_turn_rad").value
         )
-        self.local_encounter_max_bypass_extension = float(
-            self.get_parameter("local_encounter_max_bypass_extension_m").value
+        self.local_v4_max_turn_ledger = float(
+            self.get_parameter("local_v4_max_turn_ledger_rad").value
         )
-        self.local_encounter_clear_confirm = float(
-            self.get_parameter("local_encounter_clear_confirm_s").value
+        self.local_v4_max_bypass_extension = float(
+            self.get_parameter("local_v4_max_bypass_extension_m").value
         )
-        self.local_encounter_rearm_quiet = float(
-            self.get_parameter("local_encounter_rearm_quiet_s").value
+        self.local_v4_max_encounter_duration = float(
+            self.get_parameter("local_v4_max_encounter_duration_s").value
         )
-        self.local_encounter_constrained_speed = float(
-            self.get_parameter("local_encounter_constrained_speed_mps").value
+        self.local_v4_pass_confirm_hold = float(
+            self.get_parameter("local_v4_pass_confirm_hold_s").value
         )
-        self.local_encounter_max_constrained_duration = float(
-            self.get_parameter("local_encounter_max_constrained_duration_s").value
+        self.local_v4_rearm_quiet = float(
+            self.get_parameter("local_v4_rearm_quiet_s").value
+        )
+        self.local_v4_side_track_creep = float(
+            self.get_parameter("local_v4_side_track_creep_mps").value
+        )
+        self.local_v4_side_track_warn = float(
+            self.get_parameter("local_v4_side_track_warn_mps").value
+        )
+        self.local_v4_required_lateral_offset = float(
+            self.get_parameter("local_v4_required_lateral_offset_m").value
+        )
+        self.local_v4_required_longitudinal_progress = float(
+            self.get_parameter("local_v4_required_longitudinal_progress_m").value
         )
         self.rearm_distance = float(self.get_parameter("rearm_distance_m").value)
         self.max_linear_accel = float(
@@ -179,18 +195,21 @@ class CooperativeAvoider(Node):
         self.recovery_source = None
         self.last_log = 0.0
         self.last_publish_time = time.monotonic()
-        self.local_bypass_origin = None
-        self.local_latch = LocalAvoidanceLatch(
-            clear_hold_s=self.local_clear_hold,
+        self.local_latch = EncounterAvoidanceV4(
             clearance_speed_mps=min(self.avoidance_speed, 0.006),
-            clearance_turn_rps=min(self.turn_rate, 0.30),
-            local_bypass_distance_m=self.local_bypass_distance,
-            max_turn_ledger_rad=self.local_encounter_max_turn,
-            max_bypass_extension_m=self.local_encounter_max_bypass_extension,
-            side_clear_confirm_s=self.local_encounter_clear_confirm,
-            rearm_quiet_s=self.local_encounter_rearm_quiet,
-            constrained_speed_mps=self.local_encounter_constrained_speed,
-            max_constrained_duration_s=self.local_encounter_max_constrained_duration,
+            max_inplace_turn_rad=self.local_v4_max_inplace_turn,
+            max_turn_ledger_rad=self.local_v4_max_turn_ledger,
+            max_bypass_extension_m=self.local_v4_max_bypass_extension,
+            max_encounter_duration_s=self.local_v4_max_encounter_duration,
+            pass_confirm_hold_s=self.local_v4_pass_confirm_hold,
+            rearm_quiet_s=self.local_v4_rearm_quiet,
+            side_track_creep_mps=self.local_v4_side_track_creep,
+            side_track_warn_mps=self.local_v4_side_track_warn,
+            required_lateral_offset_m=self.local_v4_required_lateral_offset,
+            required_longitudinal_progress_m=self.local_v4_required_longitudinal_progress,
+            zone_danger_m=self.local_side_danger,
+            zone_warn_m=self.local_side_warn,
+            zone_release_m=self.local_side_release,
         )
         self.smoother = CommandSmoother(
             max_linear_accel_mps2=self.max_linear_accel,
@@ -233,14 +252,17 @@ class CooperativeAvoider(Node):
             f"recovery turn limit={self.local_recovery_turn:.3f}rad/s"
         )
         self.get_logger().info(
-            "controller_v3_unified_encounter_20260717: shared encounter "
-            "bounds (v3 pilot candidates, NOT validated constants) "
-            f"max_turn_ledger={self.local_encounter_max_turn:.3f}rad, "
-            f"max_bypass_extension={self.local_encounter_max_bypass_extension:.3f}m, "
-            f"clear_confirm={self.local_encounter_clear_confirm:.2f}s, "
-            f"rearm_quiet={self.local_encounter_rearm_quiet:.2f}s, "
-            f"constrained_speed={self.local_encounter_constrained_speed:.3f}m/s, "
-            f"max_constrained_duration={self.local_encounter_max_constrained_duration:.1f}s"
+            "controller_v4_full_sensor_bypass_20260717: full-sensor bypass "
+            "bounds (v4 pilot candidates, NOT validated constants) "
+            f"max_inplace_turn={self.local_v4_max_inplace_turn:.3f}rad, "
+            f"max_turn_ledger={self.local_v4_max_turn_ledger:.3f}rad, "
+            f"max_bypass_extension={self.local_v4_max_bypass_extension:.3f}m, "
+            f"max_encounter_duration={self.local_v4_max_encounter_duration:.1f}s, "
+            f"pass_confirm_hold={self.local_v4_pass_confirm_hold:.2f}s, "
+            f"rearm_quiet={self.local_v4_rearm_quiet:.2f}s, "
+            f"side_track_creep={self.local_v4_side_track_creep:.3f}m/s, "
+            f"required_lateral_offset={self.local_v4_required_lateral_offset:.3f}m, "
+            f"required_longitudinal_progress={self.local_v4_required_longitudinal_progress:.3f}m"
         )
         self.get_logger().info(
             "command smoothing: linear accel/decel="
@@ -313,16 +335,17 @@ class CooperativeAvoider(Node):
             side_speed_mps=self.avoidance_speed,
             danger_turn_rps=self.turn_rate,
         )
-        return self.local_latch.apply(
-            decision, now, self.own_state.x_m, self.own_state.y_m, self.own_state.yaw_rad
+        zones = ZoneSnapshot(
+            left_front_m=float(self.own_state.left_front_m),
+            left_mid_m=float(self.own_state.left_mid_m),
+            left_rear_m=float(self.own_state.left_rear_m),
+            right_front_m=float(self.own_state.right_front_m),
+            right_mid_m=float(self.own_state.right_mid_m),
+            right_rear_m=float(self.own_state.right_rear_m),
         )
-
-    def _bypass_progress(self) -> float:
-        if self.local_bypass_origin is None:
-            return 0.0
-        dx = float(self.own_state.x_m) - self.local_bypass_origin[0]
-        dy = float(self.own_state.y_m) - self.local_bypass_origin[1]
-        return math.hypot(dx, dy)
+        return self.local_latch.apply(
+            decision, zones, now, self.own_state.x_m, self.own_state.y_m, self.own_state.yaw_rad
+        )
 
     def _local_recover_command(self, heading_error: float, now: float):
         """LOCAL_RECOVER's heading-based turn, shared by two call sites.
@@ -343,7 +366,6 @@ class CooperativeAvoider(Node):
         mode = "LOCAL_RECOVER"
         if abs(heading_error) < 0.08:
             mode = "CRUISE"
-            self.local_bypass_origin = None
             self.recovery_source = "local"
             self.recovery_completed_at = now
         return mode, linear, angular
@@ -498,17 +520,13 @@ class CooperativeAvoider(Node):
             if local_decision.mode == "LOCAL_RECOVERY_READY":
                 # controller_v2_local_latch_20260717: hand off directly to
                 # the local-avoidance recovery turn, reusing the exact same
-                # formula LOCAL_RECOVER already uses below — no new
-                # local_bypass_origin is created and the generic fallback's
-                # own bypass leg is skipped entirely for this hand-off.
+                # formula LOCAL_RECOVER already uses below.
                 self.mode, linear, angular = self._local_recover_command(
                     heading_error, now
                 )
             else:
                 self.mode = local_decision.mode
                 linear, angular = local_decision.linear_mps, local_decision.angular_rps
-                if self.mode != "LOCAL_CLEARANCE":
-                    self.local_bypass_origin = None
         elif self.enable_peer_avoidance and self.mode in (
             "AVOID_TURN",
             "AVOID_PASS",
@@ -552,16 +570,6 @@ class CooperativeAvoider(Node):
                 pass_heading - self.own_state.yaw_rad
             )
             linear, angular = self.avoidance_speed * 0.5, -self.turn_rate
-        elif self.mode.startswith("LOCAL_") and self.mode != "LOCAL_RECOVER":
-            if self.local_bypass_origin is None:
-                self.local_bypass_origin = (
-                    float(self.own_state.x_m),
-                    float(self.own_state.y_m),
-                )
-            self.mode = "LOCAL_BYPASS"
-            linear, angular = self.avoidance_speed, 0.0
-            if self._bypass_progress() >= self.local_bypass_distance:
-                self.mode = "LOCAL_RECOVER"
         elif self.mode == "LOCAL_RECOVER":
             self.mode, linear, angular = self._local_recover_command(
                 heading_error, now
@@ -571,10 +579,17 @@ class CooperativeAvoider(Node):
             linear = self.nominal_speed
             angular = clamp(1.0 * heading_error, -0.25, 0.25)
 
+        # controller_v4_full_sensor_bypass_20260717: whenever the target
+        # linear command is exactly zero, bypass the command smoother's
+        # deceleration ramp entirely -- a same-tick safety stop (DETECT_TURN,
+        # LOCAL_SIDE_TRACK_HOLD, LOCAL_SIDE_TRACK's own danger-band tick,
+        # LOCAL_FRONT_DANGER) must never wait for max_linear_decel_mps2 to
+        # bring the wheels down. Generalises the old LOCAL_FRONT_DANGER-only
+        # special case, which never covered v4's new zero-linear phases.
         applied_linear, applied_angular = self._publish(
             linear,
             angular,
-            force_linear_zero=self.mode == "LOCAL_FRONT_DANGER",
+            force_linear_zero=linear <= 0.0,
         )
         self._log(now, metrics, applied_linear, applied_angular)
 

@@ -15,3 +15,11 @@ class RobotStateSnapshot:
     right_distance_m: float
     obstacle_status: int
     validity_flags: int
+    # controller_v4_full_sensor_bypass_20260717: zone-aggregated raw ps0-ps7
+    # coverage, filling the rear gap front/left/right never had.
+    left_front_m: float = float("inf")
+    left_mid_m: float = float("inf")
+    left_rear_m: float = float("inf")
+    right_front_m: float = float("inf")
+    right_mid_m: float = float("inf")
+    right_rear_m: float = float("inf")
