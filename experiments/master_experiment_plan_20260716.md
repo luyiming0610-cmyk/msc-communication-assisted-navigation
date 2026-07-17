@@ -166,6 +166,62 @@ it remains for manual, directly-observed execution (one interface command at a
 time) and must not be auto-run. The three v4 pilots above are exclusionary
 evidence only and are not pooled with any formal-trial statistics.
 
+### 2026-07-17 second update: started_at timebase fix, trigger-reason classification, and official Spec/SP re-alignment
+
+**Timebase fix.** A `self.started_at` clock-initialization race was found and
+fixed (`controller_v4_timebase_fix_20260717`, commit `980e7d0`; 5 new tests,
+96/96 passing at that point). Re-validated with a fresh combined-pilot
+regression, `combined_trial2_timebasefix` (commit `06e0f0f`): PASS,
+`stopped_by_max_runtime_only=false`, `TIMEBASE_INIT` confirmed logged at each
+robot's real first-valid clock sample. The v4 controller is now FROZEN at
+these commits (documentation state `f1830c5`); no further avoidance-algorithm
+changes are planned unless a new blocking safety defect is found.
+
+**Naming correction for the combined Phase 4 scenario.** The combined
+scenario's actual mechanism, confirmed by offline trigger-reason
+reconstruction (`analyze_trigger_reason`, commit `28f78d6`, analysis-only —
+the frozen controller was not touched or rerun), is: `epuck1` completes its
+local wooden-box bypass first (`startup_hold_s=5s`), `epuck2` then starts
+after a fixed delay (`startup_hold_s=42s`), and the two robots' subsequent
+mutual avoidance is triggered by `current_distance < trigger_distance_m`
+(`PROXIMITY_FALLBACK`), not by the predicted-collision condition
+(`tcpa<=4.0s and dcpa<safety_radius_m`, `PREDICTED_CPA`) at trigger time
+(combined `trial2_timebasefix`: `dcpa_at_trigger=0.211m`, well above the
+0.14m predicted-conflict threshold). This scenario must be described as
+**"staged local-obstacle avoidance followed by communication-assisted
+proximity/cooperative avoidance"** — never as "synchronized" or as a scenario
+"triggered by predicted CPA." Both trigger conditions are genuine,
+independently-coded parts of the same frozen controller
+(`collision_math.collision_risk`'s `predicted_conflict OR proximity_conflict`);
+which one fires first is a property of the approach geometry and speed, not a
+controller defect, and is now recorded explicitly per pilot rather than left
+implicit. Interestingly, even the box-free pure-CPA pilot (`pilot_v4_c`)
+triggers via `PROXIMITY_FALLBACK` at `t=11.220s` — full-resolution replay
+shows this is a genuine near-tie (`dcpa` crosses its own 0.14m threshold
+essentially one control tick, ~0.001s, after `current_distance` crosses
+0.34m), not a mislabeling. See
+`bags/*/analysis/trigger_reason_summary.{json,md}` and
+`trigger_classification.csv` for the full per-sample time series.
+
+**Scope re-anchor to the official specification.** Per the COMP5200M Project
+Specification (`LU26-Spec.pdf`) and Scoping and Planning Document
+(`LU2026-SP.pdf`), this project's core deliverables are the `e-puck2-Comm`
+library, its ROS2 Custom Msg protocol, the neighbor-state subscription
+abstraction, the simulation package, and an evaluation comparing packet
+delivery / coordination efficiency in simulation versus physical hardware
+(reality gap). The avoidance controller (v1-v4) is a task-specific validation
+vehicle for that library (matching the Spec's "Task-Specific Validation"
+objective), not the project's primary contribution. With `controller_v4`
+passing all exclusionary safety pilots and formal Phase 4 pending only manual
+Trial 01, further avoidance-algorithm scope is intentionally frozen. Work now
+shifts to: (a) an `EpuckState` protocol audit and formal communication
+metrics (delivery ratio, latency/age, sequence-loss, jitter, stale-state
+safety stops, bandwidth), (b) a minimal controlled communication-impairment
+matrix (no-peer / baseline / two delay levels / two loss levels), and
+(c) physical Pi-puck validation and reality-gap comparison. See
+`HANDOFF_20260717.md` for the full route and the Webots-vs-Gazebo deviation
+note.
+
 ## Phase 5 — Communication policy and impairment
 
 On a fixed representative scenario compare:
