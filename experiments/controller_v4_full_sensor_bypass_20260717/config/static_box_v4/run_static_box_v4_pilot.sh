@@ -8,22 +8,30 @@ set -eo pipefail
 # here unless passed explicitly: the node's own shipped (uncalibrated
 # candidate) defaults apply.
 #
-# Usage: run_static_box_v4_pilot.sh TRIAL_NAME PEER_AVOIDANCE(true|false)
+# Usage: run_static_box_v4_pilot.sh TRIAL_NAME PEER_AVOIDANCE(true|false) [MAX_RUNTIME_S]
 #
 # PEER_AVOIDANCE=false -> pilot_v4_a (local-only, isolates the local
 #   avoidance redesign from any CPA interaction).
 # PEER_AVOIDANCE=true  -> pilot_v4_b (static-neighbor fusion, matching
 #   pilot_a2/pilot_a3's own configuration).
+# MAX_RUNTIME_S (optional, default 55.0) -> a hard upper bound on the
+#   controller's own recording duration ONLY -- an observation-window size,
+#   not an avoidance-control parameter. World, initial pose, cruise speed,
+#   sensor thresholds, lateral targets, PASS_CONFIRM/LOCAL_RECOVER/CPA
+#   parameters and every safety ceiling are unaffected by this value.
 #
 # This pilot is EXCLUDED from all formal statistics. Its pass/fail verdict
 # is NOT this script's exit code or its final echo line -- see
-# analyze_static_v4_task.py's module docstring: "COMPLETE: maximum runtime
-# reached" is emitted whether or not the encounter actually resolved safely.
-# The real verdict is decided afterwards, by hand, against the pilot's own
-# acceptance checklist, using this script's analyzer outputs.
+# analyze_static_v4_verdict.py, which is the sole authoritative source:
+# "COMPLETE: maximum runtime reached" is emitted whether or not the
+# encounter actually resolved safely, and this script's watchdog also
+# stops the run EARLY (well before MAX_RUNTIME_S) the instant the real
+# success conditions -- stable CRUISE with epuck1's true x past the pass
+# threshold -- are observed, via _early_success_watcher.py below, rather
+# than always waiting out the full observation window.
 
-if (( $# != 2 )); then
-  echo "Usage: $0 TRIAL_NAME PEER_AVOIDANCE(true|false)" >&2
+if (( $# < 2 || $# > 3 )); then
+  echo "Usage: $0 TRIAL_NAME PEER_AVOIDANCE(true|false) [MAX_RUNTIME_S]" >&2
   exit 2
 fi
 
@@ -39,10 +47,13 @@ EXECUTION_LOG="$EXPERIMENT_DIR/logs/${STEM}_execution.log"
 SIM_LOG="$EXPERIMENT_DIR/logs/${STEM}_simulation.log"
 STATE1_LOG="$EXPERIMENT_DIR/logs/${STEM}_state_epuck1.log"
 STATE2_LOG="$EXPERIMENT_DIR/logs/${STEM}_state_epuck2.log"
+EARLY_SUCCESS_LOG="$EXPERIMENT_DIR/logs/${STEM}_early_success_watcher.log"
+EARLY_SUCCESS_SENTINEL="$EXPERIMENT_DIR/logs/${STEM}.early_success_sentinel"
 
-MAX_RUNTIME_S=55.0
+MAX_RUNTIME_S="${3:-55.0}"
 POST_RECOVERY_HOLD_S=3.0
-WATCHDOG_S=90
+WATCHDOG_S=$(python3 -c "print(int(${MAX_RUNTIME_S}) + 35)")
+PASS_X_M="-0.175"
 
 source /opt/ros/humble/setup.bash
 source "$HOME/epuck_ws/install/setup.bash"
@@ -149,13 +160,16 @@ STATE1_PID=""
 STATE2_PID=""
 BAG_PID=""
 CONTROLLER_PID=""
+EARLY_SUCCESS_PID=""
 
 cleanup() {
+  stop_pid "$EARLY_SUCCESS_PID" || true
   stop_pid "$CONTROLLER_PID" || true
   stop_pid "$BAG_PID" || true
   stop_pid "$STATE2_PID" || true
   stop_pid "$STATE1_PID" || true
   stop_pid "$SIM_PID" || true
+  rm -f "$EARLY_SUCCESS_SENTINEL"
 }
 trap cleanup EXIT
 
@@ -225,9 +239,80 @@ CONTROLLER_PID=$!
 FULL_LOAD_OUTPUT="$(verify_realtime_factor FULL_LOAD | tee -a "$EXECUTION_LOG")"
 FULL_LOAD_FACTOR="$(grep -o 'FULL_LOAD_REALTIME_FACTOR=[0-9.]*' <<<"$FULL_LOAD_OUTPUT" | cut -d= -f2)"
 
+rm -f "$EARLY_SUCCESS_SENTINEL"
+CONTROLLER_LOG="$CONTROLLER_LOG" EARLY_SUCCESS_SENTINEL="$EARLY_SUCCESS_SENTINEL" PASS_X_M="$PASS_X_M" \
+  python3 - >"$EARLY_SUCCESS_LOG" 2>&1 <<'PY' &
+# controller_v4_ros_time_consistency pilot_v4_b3: stop the run the instant
+# genuine success is observed instead of always waiting out MAX_RUNTIME_S.
+# Reads the controller's OWN log for a stable CRUISE mode (not mid-avoidance)
+# and cross-checks the real /epuck1/state x_m against the pass threshold --
+# this reads state, it never feeds anything back into the controller.
+import os
+import re
+import time
+
+import rclpy
+from epuck2_comm_interfaces.msg import EpuckState
+
+controller_log = os.environ["CONTROLLER_LOG"]
+sentinel = os.environ["EARLY_SUCCESS_SENTINEL"]
+pass_x = float(os.environ["PASS_X_M"])
+MODE_RE = re.compile(r"mode=(\S+)")
+
+rclpy.init()
+node = rclpy.create_node("pilot_v4_b3_early_success_watcher")
+state = {"x": None}
+
+
+def cb(msg):
+    state["x"] = float(msg.x_m)
+
+
+node.create_subscription(EpuckState, "/epuck1/state", cb, 20)
+
+stable_cruise_since = None
+CONFIRM_S = 2.0  # matches "局部传感器连续清空至少2.0s"-equivalent settle window
+try:
+    while True:
+        rclpy.spin_once(node, timeout_sec=0.2)
+        last_mode = None
+        try:
+            with open(controller_log, encoding="utf-8", errors="replace") as fh:
+                for line in fh.readlines()[-8:]:
+                    m = MODE_RE.search(line)
+                    if m:
+                        last_mode = m.group(1)
+        except FileNotFoundError:
+            pass
+
+        if last_mode == "CRUISE" and state["x"] is not None and state["x"] >= pass_x:
+            if stable_cruise_since is None:
+                stable_cruise_since = time.monotonic()
+            elif time.monotonic() - stable_cruise_since >= CONFIRM_S:
+                with open(sentinel, "w", encoding="utf-8") as fh:
+                    fh.write(f"x_m={state['x']:.5f} last_mode={last_mode}\n")
+                print(f"EARLY_SUCCESS x_m={state['x']:.5f} last_mode={last_mode}")
+                break
+        else:
+            stable_cruise_since = None
+except KeyboardInterrupt:
+    pass
+finally:
+    node.destroy_node()
+    rclpy.shutdown()
+PY
+EARLY_SUCCESS_PID=$!
+
 deadline=$((SECONDS + WATCHDOG_S))
 recording_complete=0
+early_success=0
 while (( SECONDS < deadline )); do
+  if [[ -f "$EARLY_SUCCESS_SENTINEL" ]]; then
+    recording_complete=1
+    early_success=1
+    echo "[$(date -Iseconds)] early success detected: $(cat "$EARLY_SUCCESS_SENTINEL")" | tee -a "$EXECUTION_LOG"
+    break
+  fi
   if grep -q 'COMPLETE:' "$CONTROLLER_LOG" 2>/dev/null; then
     recording_complete=1
     break
@@ -238,8 +323,13 @@ while (( SECONDS < deadline )); do
   fi
   sleep 0.5
 done
+stop_pid "$EARLY_SUCCESS_PID"
+EARLY_SUCCESS_PID=""
+
 if (( recording_complete == 0 )); then
-  echo "TASK_TIMEOUT: no COMPLETE line within ${WATCHDOG_S}s watchdog" | tee -a "$EXECUTION_LOG" >&2
+  echo "TASK_TIMEOUT: no COMPLETE line and no early-success sentinel within ${WATCHDOG_S}s watchdog" | tee -a "$EXECUTION_LOG" >&2
+elif (( early_success == 1 )); then
+  echo "[$(date -Iseconds)] stopped early on observed success (this only means the run finished, not that the pilot passed -- see acceptance checklist)" | tee -a "$EXECUTION_LOG"
 else
   echo "[$(date -Iseconds)] controller reached its COMPLETE line (this only means the run finished, not that the pilot passed -- see acceptance checklist)" | tee -a "$EXECUTION_LOG"
 fi
