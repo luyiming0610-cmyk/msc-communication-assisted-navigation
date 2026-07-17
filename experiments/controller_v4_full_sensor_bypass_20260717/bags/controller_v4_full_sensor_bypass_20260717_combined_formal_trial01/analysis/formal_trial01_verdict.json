@@ -1,0 +1,30 @@
+{
+  "verdict": "PASS",
+  "fail_reasons": [],
+  "task_complete_count": 1,
+  "cooperative_complete_count": 1,
+  "stopped_by_max_runtime_only": false,
+  "timebase_init_count": 2,
+  "timebase_reset_count": 0,
+  "avoid_turn_count": 6,
+  "epuck1_local_count": 59,
+  "epuck2_local_count": 0,
+  "local_before_peer_order_ok": true,
+  "collision_detected": false,
+  "minimum_center_separation_m": 0.26661229281487075,
+  "collision_distance_m": 0.07,
+  "epuck1_passed_box": true,
+  "epuck1_box_clearance_m": 0.11506896750381418,
+  "box_collision_detected": {
+    "/epuck1/state": false,
+    "/epuck2/state": false
+  },
+  "trigger_reason": "PROXIMITY_FALLBACK",
+  "trigger_distance_m": 0.33729418802379474,
+  "tcpa_at_trigger_s": 4.0,
+  "dcpa_at_trigger_m": 0.19786654634917689,
+  "closing_speed_at_trigger_mps": 0.04299549782555576,
+  "realtime_factor_ok": true,
+  "note_realtime_factor": "NOT measured via the automated verify_realtime_factor gate (manual step-by-step trial did not run it). User directly observed the Webots on-screen realtime-factor display throughout the run and explicitly confirmed it stayed within the required 0.8-1.2 range (chat confirmation: user asked 'is this the range' referring to 0.8-1.2, and confirmed yes). Treated as valid direct-observation evidence for this manually-observed trial, not a substitute for the automated dual-gate measurement used in Trials 02-05.",
+  "note_manual_trial": "This was run via manual step-by-step commands (formal Trial 01), not the automated run_combined_v4_pilot.sh script, per explicit user instruction for direct observation."
+}
