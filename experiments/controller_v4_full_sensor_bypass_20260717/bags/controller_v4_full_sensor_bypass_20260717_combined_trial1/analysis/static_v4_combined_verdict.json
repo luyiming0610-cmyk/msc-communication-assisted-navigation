@@ -1,0 +1,22 @@
+{
+  "verdict": "PASS",
+  "fail_reasons": [],
+  "task_complete_count": 1,
+  "cooperative_complete_count": 1,
+  "avoid_turn_count": 4,
+  "epuck1_local_count": 61,
+  "epuck2_local_count": 0,
+  "local_before_peer_order_ok": true,
+  "collision_detected": false,
+  "minimum_center_separation_m": 0.2752002625545046,
+  "collision_distance_m": 0.07,
+  "epuck1_passed_box": true,
+  "epuck1_box_clearance_m": 0.12037150806261696,
+  "box_collision_detected": {
+    "/epuck1/state": false,
+    "/epuck2/state": false
+  },
+  "preload_realtime_factor": 1.004,
+  "full_load_realtime_factor": 0.912,
+  "realtime_factor_ok": true
+}

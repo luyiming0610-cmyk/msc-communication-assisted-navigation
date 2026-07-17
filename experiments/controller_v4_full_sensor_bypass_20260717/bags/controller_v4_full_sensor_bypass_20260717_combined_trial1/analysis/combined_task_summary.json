@@ -1,0 +1,44 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_combined_trial1",
+  "box": {
+    "x_m": -0.25,
+    "y_m": 0.0,
+    "size_m": 0.06
+  },
+  "robot_radius_m": 0.035,
+  "pass_x_m": -0.175,
+  "max_epuck1_x_m": 0.32260662317276,
+  "epuck1_passed_box": true,
+  "minimum_box_clearance_m": {
+    "/epuck1/state": 0.12037150806261696,
+    "/epuck2/state": 0.19776549408306043
+  },
+  "minimum_box_clearance_state": {
+    "/epuck1/state": {
+      "time_s": 23.707817473,
+      "x_m": -0.4093724191188812,
+      "y_m": -0.1160411685705185
+    },
+    "/epuck2/state": {
+      "time_s": 52.099960575,
+      "x_m": 0.01260096114128828,
+      "y_m": 0.03875032067298889
+    }
+  },
+  "box_collision_detected": {
+    "/epuck1/state": false,
+    "/epuck2/state": false
+  },
+  "final_state": {
+    "/epuck1/state": {
+      "x_m": 0.32260662317276,
+      "y_m": -0.2364616096019745,
+      "yaw_rad": 6.279698983036042e-16
+    },
+    "/epuck2/state": {
+      "x_m": 0.01260096114128828,
+      "y_m": 0.03875032067298889,
+      "yaw_rad": 3.104093551635742
+    }
+  }
+}
