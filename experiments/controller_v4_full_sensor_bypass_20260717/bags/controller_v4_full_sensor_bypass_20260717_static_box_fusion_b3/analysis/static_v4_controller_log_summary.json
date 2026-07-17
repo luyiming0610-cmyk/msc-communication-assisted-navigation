@@ -1,0 +1,237 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_fusion_b3",
+  "controller_log": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/logs/controller_v4_full_sensor_bypass_20260717_static_box_fusion_b3.log",
+  "complete_message": "maximum runtime reached; commanding zero",
+  "mode_transitions": [
+    [
+      1784318581.480427,
+      "CRUISE",
+      null
+    ],
+    [
+      1784318584.5963979,
+      "LOCAL_FRONT_WARN",
+      null
+    ],
+    [
+      1784318585.121061,
+      "LOCAL_DETECT_TURN",
+      null
+    ],
+    [
+      1784318586.7131011,
+      "LOCAL_SIDE_TRACK_CREEP",
+      null
+    ],
+    [
+      1784318605.3974783,
+      "LOCAL_PASS_CONFIRM",
+      null
+    ],
+    [
+      1784318607.50676,
+      "LOCAL_RECOVER",
+      null
+    ],
+    [
+      1784318613.2518187,
+      "CRUISE",
+      null
+    ]
+  ],
+  "fine_grained_transitions": [
+    {
+      "wall_time": 1784318581.482,
+      "ros_time": 19.2,
+      "mode_from": "SAFE_STOP_STALE",
+      "mode_to": "CRUISE",
+      "phase": "CLOSED",
+      "encounter_elapsed_s": null,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": null,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": null,
+      "lateral_m": null,
+      "applied_cmd": [
+        0.002,
+        0.0
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784318584.198,
+      "ros_time": 21.8,
+      "mode_from": "CRUISE",
+      "mode_to": "LOCAL_FRONT_WARN",
+      "phase": "DETECT_TURN",
+      "encounter_elapsed_s": 0.0,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": 25.0,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": 0.0,
+      "lateral_m": 0.0,
+      "applied_cmd": [
+        0.0,
+        -0.12
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784318584.672,
+      "ros_time": 22.26,
+      "mode_from": "LOCAL_FRONT_WARN",
+      "mode_to": "LOCAL_DETECT_TURN",
+      "phase": "DETECT_TURN",
+      "encounter_elapsed_s": 0.46,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": 24.54,
+      "turn_ledger_rad": 0.1434,
+      "longitudinal_m": 0.002,
+      "lateral_m": 0.0,
+      "applied_cmd": [
+        0.0,
+        -0.45
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784318586.502,
+      "ros_time": 24.0,
+      "mode_from": "LOCAL_DETECT_TURN",
+      "mode_to": "LOCAL_SIDE_TRACK_HOLD",
+      "phase": "SIDE_TRACK",
+      "encounter_elapsed_s": 2.2,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": 22.8,
+      "turn_ledger_rad": 0.9463,
+      "longitudinal_m": 0.002,
+      "lateral_m": 0.0,
+      "applied_cmd": [
+        0.0,
+        -0.29
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784318586.56,
+      "ros_time": 24.06,
+      "mode_from": "LOCAL_SIDE_TRACK_HOLD",
+      "mode_to": "LOCAL_SIDE_TRACK_CREEP",
+      "phase": "SIDE_TRACK",
+      "encounter_elapsed_s": 2.26,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": 22.74,
+      "turn_ledger_rad": 0.9463,
+      "longitudinal_m": 0.002,
+      "lateral_m": 0.0,
+      "applied_cmd": [
+        0.003,
+        -0.05
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 0
+    },
+    {
+      "wall_time": 1784318604.931,
+      "ros_time": 41.76,
+      "mode_from": "LOCAL_SIDE_TRACK_CREEP",
+      "mode_to": "LOCAL_PASS_CONFIRM",
+      "phase": "PASS_CONFIRM",
+      "encounter_elapsed_s": 19.96,
+      "pass_confirm_elapsed_s": 0.0,
+      "duration_remaining_s": 5.04,
+      "turn_ledger_rad": 0.9463,
+      "longitudinal_m": 0.1,
+      "lateral_m": -0.146,
+      "applied_cmd": [
+        0.01,
+        0.0
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 1
+    },
+    {
+      "wall_time": 1784318607.025,
+      "ros_time": 43.76,
+      "mode_from": "LOCAL_PASS_CONFIRM",
+      "mode_to": "LOCAL_RECOVER",
+      "phase": "RECOVERY_ALLOWED",
+      "encounter_elapsed_s": 21.96,
+      "pass_confirm_elapsed_s": 2.0,
+      "duration_remaining_s": 3.04,
+      "turn_ledger_rad": 0.9463,
+      "longitudinal_m": 0.111,
+      "lateral_m": -0.162,
+      "applied_cmd": [
+        0.012,
+        0.18
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 1
+    },
+    {
+      "wall_time": 1784318612.783,
+      "ros_time": 49.26,
+      "mode_from": "LOCAL_RECOVER",
+      "mode_to": "CRUISE",
+      "phase": "CLOSED",
+      "encounter_elapsed_s": null,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": null,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": null,
+      "lateral_m": null,
+      "applied_cmd": [
+        0.012,
+        0.06
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 1
+    },
+    {
+      "wall_time": 1784318634.479,
+      "ros_time": 70.0,
+      "mode_from": "CRUISE",
+      "mode_to": "COMPLETE",
+      "phase": "CLOSED",
+      "encounter_elapsed_s": null,
+      "pass_confirm_elapsed_s": null,
+      "duration_remaining_s": null,
+      "turn_ledger_rad": 0.0,
+      "longitudinal_m": null,
+      "lateral_m": null,
+      "applied_cmd": [
+        0.0,
+        0.0
+      ],
+      "failsafe_cause": "NONE",
+      "drift_events": 1
+    }
+  ],
+  "modes_seen_set": [
+    "CRUISE",
+    "LOCAL_DETECT_TURN",
+    "LOCAL_FRONT_WARN",
+    "LOCAL_PASS_CONFIRM",
+    "LOCAL_RECOVER",
+    "LOCAL_SIDE_TRACK_CREEP"
+  ],
+  "legacy_local_bypass_appeared": false,
+  "detect_turn_occurred": true,
+  "side_track_occurred": true,
+  "pass_confirm_occurred": true,
+  "local_recover_occurred": true,
+  "cruise_resumed": true,
+  "failsafe_occurred": false,
+  "failsafe_causes": [],
+  "final_failsafe_cause": null,
+  "sensor_invalid_occurred": false,
+  "final_mode": "CRUISE",
+  "final_drift_events": 1,
+  "log_row_count": 102,
+  "fine_grained_transition_count": 9
+}
