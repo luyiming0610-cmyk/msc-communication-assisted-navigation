@@ -44,6 +44,7 @@
       null
     ]
   ],
+  "fine_grained_transitions": [],
   "modes_seen_set": [
     "CRUISE",
     "LOCAL_DETECT_TURN",
@@ -55,12 +56,16 @@
   ],
   "legacy_local_bypass_appeared": false,
   "detect_turn_occurred": true,
-  "side_track_occurred": false,
+  "side_track_occurred": true,
   "pass_confirm_occurred": true,
   "local_recover_occurred": true,
   "cruise_resumed": true,
   "failsafe_occurred": false,
+  "failsafe_causes": [],
+  "final_failsafe_cause": null,
   "sensor_invalid_occurred": false,
   "final_mode": "CRUISE",
-  "log_row_count": 95
+  "final_drift_events": 0,
+  "log_row_count": 95,
+  "fine_grained_transition_count": 0
 }

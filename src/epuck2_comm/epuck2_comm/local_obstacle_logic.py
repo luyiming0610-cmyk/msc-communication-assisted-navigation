@@ -246,6 +246,15 @@ DEFAULT_LEDGER_COMMAND_GATE_RPS = 0.02
 # sampling rate changes materially. ***
 DEFAULT_LEDGER_YAW_NOISE_BAND_RAD = 0.01
 
+# controller_v4_ros_time_consistency: persistent-drift safety escalation.
+# *** UNCALIBRATED pilot candidates. *** A streak of consecutive drift
+# events (yaw outside the noise band despite a ~0 applied command, with no
+# normal tick breaking the streak) reaching either threshold latches
+# FAILSAFE with failsafe_cause="PERSISTENT_DRIFT" -- a WARN log alone is
+# never the final word on real, sustained unexplained motion.
+DEFAULT_DRIFT_SAFETY_COUNT_THRESHOLD = 5
+DEFAULT_DRIFT_SAFETY_DURATION_S = 1.0
+
 _TRACKING_ZONES = {
     "LEFT": ("left_front_m", "left_mid_m", "left_rear_m"),
     "RIGHT": ("right_front_m", "right_mid_m", "right_rear_m"),
@@ -301,6 +310,13 @@ class EncounterAvoidanceV4:
     pass_confirm_hold_no_evidence_s: float = DEFAULT_PASS_CONFIRM_HOLD_NO_EVIDENCE_S
     ledger_command_gate_rps: float = DEFAULT_LEDGER_COMMAND_GATE_RPS
     ledger_yaw_noise_band_rad: float = DEFAULT_LEDGER_YAW_NOISE_BAND_RAD
+    # controller_v4_ros_time_consistency: a persistent drift/instability
+    # streak (yaw moving outside the noise band despite a ~0 applied
+    # command, on CONSECUTIVE ticks with no intervening normal tick) must
+    # escalate to a safety stop, not stay a WARN-forever diagnostic.
+    # *** UNCALIBRATED pilot candidates. ***
+    drift_safety_count_threshold: int = DEFAULT_DRIFT_SAFETY_COUNT_THRESHOLD
+    drift_safety_duration_s: float = DEFAULT_DRIFT_SAFETY_DURATION_S
     zone_danger_m: float = 0.042
     zone_warn_m: float = 0.052
     zone_release_m: float = 0.058
@@ -313,8 +329,11 @@ class EncounterAvoidanceV4:
     turn_ledger_used_rad: float = 0.0
     turn_sign: float = -1.0
     tracking_side: str = "LEFT"
-    last_commanded_angular_rps: float = 0.0
     drift_events: int = 0
+    _last_own_angular_rps: float = 0.0
+    drift_streak_count: int = 0
+    drift_streak_start_s: float = field(default=None)
+    failsafe_cause: str = ""
     last_raw_mode: str = ""
     last_active_s: float = field(default=None)
     front_seen: bool = False
@@ -337,16 +356,40 @@ class EncounterAvoidanceV4:
         own_x: float,
         own_y: float,
         own_yaw_rad: float,
+        applied_angular_rps=None,
     ) -> LocalObstacleDecision:
-        """Thin wrapper around _apply_inner() that captures whatever angular
-        command is about to be returned -- regardless of which of
-        _apply_inner()'s many return sites produced it -- so the NEXT call's
-        _update_ledger() can command-gate against it."""
-        result = self._apply_inner(decision, zones, now_s, own_x, own_y, own_yaw_rad)
-        self.last_commanded_angular_rps = result.angular_rps
+        """controller_v4_ros_time_consistency: ``applied_angular_rps`` is the
+        ACTUAL smoothed/published angular velocity from the caller's own
+        command smoother as of the PREVIOUS control tick (not this latch's
+        own prior intent) -- the caller reads its smoother's current output
+        before publishing this tick's command, since the smoother update
+        happens downstream of this call. This fixes pilot_v4_a4's false
+        drift positives: DETECT_TURN -> SIDE_TRACK/CREEP hands off a fresh
+        decision.angular_rps=0 instantly, but the real robot (and its
+        smoothed cmd_vel) take ~0.1-0.15s to actually decelerate to zero --
+        that residual real motion is genuine intentional turning still in
+        progress, not drift, and is now recognised as such because the
+        gate compares against what was truly commanded to the motors, not
+        against the latch's own instantaneous phase-transition intent.
+
+        ``applied_angular_rps=None`` (the default) falls back to whatever
+        this latch itself returned on the PREVIOUS call (its own output,
+        not the caller's raw input decision -- these can diverge, e.g.
+        DETECT_TURN's in-place-turn fallback keeps commanding a nonzero
+        turn on ticks where the raw input decision itself is already
+        "clear"). Production code (cooperative_avoider.py) always passes
+        the real smoother reading explicitly and should never rely on this
+        fallback; it exists so callers that genuinely don't have a
+        smoother in the loop (unit tests exercising phases/PASS_CONFIRM/
+        etc. rather than the ledger's command-gating nuance specifically)
+        get the same self-consistent behaviour as before without having to
+        thread a smoother value through every call.
+        """
+        result = self._apply_core(decision, zones, now_s, own_x, own_y, own_yaw_rad, applied_angular_rps)
+        self._last_own_angular_rps = result.angular_rps
         return result
 
-    def _apply_inner(
+    def _apply_core(
         self,
         decision: LocalObstacleDecision,
         zones: ZoneSnapshot,
@@ -354,6 +397,7 @@ class EncounterAvoidanceV4:
         own_x: float,
         own_y: float,
         own_yaw_rad: float,
+        applied_angular_rps,
     ) -> LocalObstacleDecision:
         if decision.safety_stop:
             return decision
@@ -373,7 +417,9 @@ class EncounterAvoidanceV4:
                 return decision
             self._open_encounter(now_s, own_x, own_y, own_yaw_rad, decision)
 
-        self._update_ledger(own_yaw_rad)
+        if applied_angular_rps is None:
+            applied_angular_rps = self._last_own_angular_rps
+        self._update_ledger(own_yaw_rad, now_s, applied_angular_rps)
         if self._check_failsafe_ceilings(now_s, own_x, own_y):
             return LocalObstacleDecision(
                 True, True, "LOCAL_ENCOUNTER_FAILSAFE", 0.0, 0.0
@@ -425,7 +471,9 @@ class EncounterAvoidanceV4:
         self.mid_seen = False
         self.rear_seen = False
         self.pass_confirm_since_s = None
-        self.last_commanded_angular_rps = 0.0
+        self.drift_streak_count = 0
+        self.drift_streak_start_s = None
+        self.failsafe_cause = ""
 
     def _close(self) -> None:
         self.phase = "CLOSED"
@@ -442,44 +490,79 @@ class EncounterAvoidanceV4:
         self.mid_seen = False
         self.rear_seen = False
         self.pass_confirm_since_s = None
-        self.last_commanded_angular_rps = 0.0
+        self.drift_streak_count = 0
+        self.drift_streak_start_s = None
+        self.failsafe_cause = ""
 
-    def _update_ledger(self, own_yaw_rad: float) -> None:
-        """Command-gated turn-ledger update (pilot_v4_a attempt #3 fix).
+    def _update_ledger(self, own_yaw_rad: float, now_s: float, applied_angular_rps: float) -> None:
+        """Command-gated turn-ledger update.
 
-        Trusts a real yaw delta as intentional turning only when the
-        PREVIOUS tick's own commanded angular_rps was non-trivial
-        (>=ledger_command_gate_rps); when the previous command was ~0
-        (CREEP/PASS_CONFIRM/HOLD), a delta within the measured
-        ledger_yaw_noise_band_rad is ordinary measurement noise and is not
-        accumulated, but a delta OUTSIDE that band despite a ~0 command is
-        never silently folded into the ledger either -- exactly the shape
-        of a single bad /epuck1/state sample (a dropped-odometry glitch
-        reporting yaw=0, as found in attempt #3's own bag) -- it increments
-        drift_events instead, a diagnostic signal the caller can surface,
-        without corrupting the safety-relevant ledger. Always accumulates
-        by absolute value (never net-cancels opposite-direction turns) and
-        handles +/-pi wraparound via normalize_angle, unchanged.
+        controller_v4_ros_time_consistency: gates against
+        ``applied_angular_rps`` -- the caller's ACTUAL smoothed/published
+        angular velocity as of the previous tick, not this latch's own
+        prior intent (see apply()'s docstring) -- fixing pilot_v4_a4's
+        false drift positives during the DETECT_TURN -> SIDE_TRACK/CREEP
+        handoff, where the smoother's ~0.1-0.15s deceleration tail is real,
+        still-in-progress intentional turning, not drift.
+
+        Trusts a real yaw delta as intentional turning whenever the applied
+        angular was non-trivial (>=ledger_command_gate_rps); when it was ~0,
+        a delta within the measured ledger_yaw_noise_band_rad is ordinary
+        measurement noise and is not accumulated, but a delta OUTSIDE that
+        band despite a ~0 applied command is never silently folded into the
+        ledger either -- exactly the shape of a single bad /epuck1/state
+        sample (a dropped-odometry glitch reporting yaw=0, as found in
+        pilot_v4_a attempt #3's own bag) -- it increments drift_events and
+        extends the current drift streak instead, escalating to a FAILSAFE
+        (failsafe_cause="PERSISTENT_DRIFT") once the streak's count or
+        duration crosses its own threshold, rather than staying a WARN
+        forever. Always accumulates by absolute value (never net-cancels
+        opposite-direction turns) and handles +/-pi wraparound via
+        normalize_angle, unchanged.
         """
         delta = normalize_angle(float(own_yaw_rad) - self.previous_yaw)
         self.previous_yaw = float(own_yaw_rad)
         abs_delta = abs(delta)
-        if abs(self.last_commanded_angular_rps) >= self.ledger_command_gate_rps:
+        if abs(applied_angular_rps) >= self.ledger_command_gate_rps:
             self.turn_ledger_used_rad += abs_delta
+            self.drift_streak_count = 0
+            self.drift_streak_start_s = None
             return
         if abs_delta <= self.ledger_yaw_noise_band_rad:
+            self.drift_streak_count = 0
+            self.drift_streak_start_s = None
             return
         self.drift_events += 1
-
-    def _check_failsafe_ceilings(self, now_s, own_x, own_y) -> bool:
-        distance = math.hypot(own_x - self.origin[0], own_y - self.origin[1])
-        time_in_encounter = now_s - self.encounter_opened_s
+        if self.drift_streak_count == 0:
+            self.drift_streak_start_s = now_s
+        self.drift_streak_count += 1
+        streak_duration = now_s - self.drift_streak_start_s
         if (
-            self.turn_ledger_used_rad >= self.max_turn_ledger_rad
-            or distance >= self.max_bypass_extension_m
-            or time_in_encounter >= self.max_encounter_duration_s
+            self.drift_streak_count >= self.drift_safety_count_threshold
+            or streak_duration >= self.drift_safety_duration_s
         ):
             self.phase = "FAILSAFE"
+            self.failsafe_cause = "PERSISTENT_DRIFT"
+
+    def _check_failsafe_ceilings(self, now_s, own_x, own_y) -> bool:
+        if self.phase == "FAILSAFE":
+            # _update_ledger() may already have latched FAILSAFE this same
+            # tick (failsafe_cause="PERSISTENT_DRIFT") before any of the
+            # three ceilings below were ever checked -- respect that first.
+            return True
+        distance = math.hypot(own_x - self.origin[0], own_y - self.origin[1])
+        time_in_encounter = now_s - self.encounter_opened_s
+        if self.turn_ledger_used_rad >= self.max_turn_ledger_rad:
+            self.phase = "FAILSAFE"
+            self.failsafe_cause = "TURN_LEDGER_CEILING"
+            return True
+        if distance >= self.max_bypass_extension_m:
+            self.phase = "FAILSAFE"
+            self.failsafe_cause = "BYPASS_EXTENSION_CEILING"
+            return True
+        if time_in_encounter >= self.max_encounter_duration_s:
+            self.phase = "FAILSAFE"
+            self.failsafe_cause = "DURATION_CEILING"
             return True
         return False
 

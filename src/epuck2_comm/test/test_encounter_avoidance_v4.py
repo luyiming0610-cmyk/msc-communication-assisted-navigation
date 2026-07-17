@@ -422,27 +422,31 @@ def test_nan_and_negative_zone_values_treated_as_no_detection():
     assert not latch.mid_seen
 
 
-# -- command-gated turn ledger (pilot_v4_a attempt #3 fix) -------------------
+# -- command-gated turn ledger (pilot_v4_a attempt #3/#4 fixes) --------------
+#
+# apply()'s applied_angular_rps now comes from the CALLER's own command
+# smoother (see cooperative_avoider.py), not the latch's own prior intent --
+# every test below must supply it explicitly to describe what the caller's
+# smoother would really have been outputting at that tick.
 
 
 def test_zero_command_yaw_noise_does_not_accumulate_over_20s():
-    """20s of angular_cmd=0 (CREEP) with yaw noise matching attempt #3's own
-    measured characteristic (p99=0.0022rad/tick, well inside the default
-    0.01rad noise band): the ledger must not grow."""
+    """20s of applied_angular_rps=0 (CREEP) with yaw noise matching attempt
+    #3's own measured characteristic (p99=0.0022rad/tick, well inside the
+    default 0.01rad noise band): the ledger must not grow."""
     import random
 
     latch = EncounterAvoidanceV4(max_turn_ledger_rad=100.0, max_inplace_turn_rad=10.0)
-    latch.apply(_left_side(), _zones(), 0.0, 0.0, 0.0, 0.0)
+    latch.apply(_left_side(), _zones(), 0.0, 0.0, 0.0, 0.0, applied_angular_rps=-0.30)
     t = 0.05
-    latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.0)
-    assert latch.last_commanded_angular_rps == 0.0
+    latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.0, applied_angular_rps=0.0)
 
     rng = random.Random(20260717)
     yaw = 0.0
     for _ in range(400):  # 20s at 0.05s/tick
         t += 0.05
         yaw += rng.uniform(-0.0022, 0.0022)
-        latch.apply(_clear(), _zones(), t, 0.0, 0.0, yaw)
+        latch.apply(_clear(), _zones(), t, 0.0, 0.0, yaw, applied_angular_rps=0.0)
     assert latch.turn_ledger_used_rad < 0.05
     assert latch.drift_events == 0
 
@@ -450,85 +454,263 @@ def test_zero_command_yaw_noise_does_not_accumulate_over_20s():
 def test_intentional_single_direction_turn_is_counted():
     latch = EncounterAvoidanceV4(max_inplace_turn_rad=10.0, max_turn_ledger_rad=100.0)
     t = 0.0
-    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, 0.0)
+    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, 0.0, applied_angular_rps=-0.45)
     yaw = 0.0
     for _ in range(10):
         t += 0.05
         yaw -= 0.045
-        latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, yaw)
+        latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, yaw, applied_angular_rps=-0.45)
     assert latch.turn_ledger_used_rad == pytest.approx(abs(yaw), abs=1e-6)
 
 
 def test_alternating_turns_accumulate_absolute_value_not_net():
     latch = EncounterAvoidanceV4(max_inplace_turn_rad=10.0, max_turn_ledger_rad=100.0)
     t = 0.0
-    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, 0.0)
+    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, 0.0, 0.0, 0.0, applied_angular_rps=-0.45)
     yaw = 0.0
     sequence = [-0.05] * 5 + [0.05] * 5
     for delta in sequence:
         t += 0.05
         yaw += delta
         angular = -0.45 if delta < 0 else 0.45
-        latch.apply(_front_warn(angular_rps=angular), _zones(), t, 0.0, 0.0, yaw)
+        latch.apply(_front_warn(angular_rps=angular), _zones(), t, 0.0, 0.0, yaw, applied_angular_rps=angular)
     assert yaw == pytest.approx(0.0, abs=1e-9)  # net yaw change is zero
     assert latch.turn_ledger_used_rad == pytest.approx(0.5, abs=1e-6)  # but path length is not
 
 
-def test_persistent_drift_despite_zero_command_triggers_diagnostic_not_ledger():
-    """A yaw delta outside the noise band despite a ~0 commanded angular
-    (attempt #3's own dropped-odometry glitch shape) must be flagged as a
-    drift event, never silently folded into the safety-relevant ledger."""
-    latch = EncounterAvoidanceV4(max_turn_ledger_rad=100.0, max_inplace_turn_rad=10.0)
-    latch.apply(_left_side(), _zones(), 0.0, 0.0, 0.0, 0.0)
+def test_smoother_deceleration_tail_is_counted_as_real_turning_not_drift():
+    """The core pilot_v4_a4 fix: DETECT_TURN hands off to SIDE_TRACK/CREEP
+    with a fresh decision.angular_rps=0 instantly, but the real command
+    smoother takes ~0.1-0.15s to actually decelerate to zero. That residual
+    applied_angular_rps must be recognised as genuine, still-in-progress
+    turning (added to the ledger) -- not misread as drift, because the gate
+    now compares against what the caller's smoother ACTUALLY applied, not
+    the latch's own instantaneous new intent."""
+    latch = EncounterAvoidanceV4(max_inplace_turn_rad=10.0, max_turn_ledger_rad=100.0)
+    latch.apply(_front_warn(angular_rps=-0.45), _zones(), 0.0, 0.0, 0.0, 0.0, applied_angular_rps=-0.45)
+    # Side triggers -> SIDE_TRACK; the latch's own new decision commands
+    # angular=0 (CREEP), but the smoother is still ramping down from -0.45.
     t = 0.05
-    latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.0)
+    latch.apply(_left_side(angular_rps=0.0), _zones(), t, 0.0, 0.0, -0.05, applied_angular_rps=-0.45)
+    assert latch.phase == "SIDE_TRACK"
+    # smoother ramping toward 0 over 3 ticks; yaw keeps moving roughly in
+    # proportion to the still-nonzero applied command, and once the
+    # smoother has genuinely reached 0 the residual yaw change is tiny
+    # (within the noise band), not another full-magnitude turn step.
+    decel_tail = [(-0.29, -0.02), (-0.10, -0.01), (0.0, -0.001)]
+    yaw = -0.05
+    for applied, dyaw in decel_tail:
+        t += 0.05
+        yaw += dyaw
+        latch.apply(_clear(), _zones(), t, 0.0, 0.0, yaw, applied_angular_rps=applied)
+    assert latch.drift_events == 0, "decel-tail motion must never be misread as drift"
+    assert latch.turn_ledger_used_rad > 0.0, "decel-tail motion must be counted as real turning"
+
+
+def test_persistent_drift_despite_zero_command_triggers_diagnostic_not_ledger():
+    """A single yaw delta outside the noise band despite a genuinely ~0
+    applied angular (attempt #3's own dropped-odometry glitch shape) must
+    be flagged as a drift event, never silently folded into the
+    safety-relevant ledger -- and a single, non-persistent event must NOT
+    escalate to FAILSAFE on its own."""
+    latch = EncounterAvoidanceV4(max_turn_ledger_rad=100.0, max_inplace_turn_rad=10.0)
+    latch.apply(_left_side(), _zones(), 0.0, 0.0, 0.0, 0.0, applied_angular_rps=-0.30)
+    t = 0.05
+    latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.0, applied_angular_rps=0.0)
     assert latch.drift_events == 0
 
     t += 0.05
-    d = latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.96)  # mirrors the real glitch magnitude
+    d = latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.96, applied_angular_rps=0.0)  # mirrors the real glitch magnitude
     assert latch.drift_events == 1
     assert latch.turn_ledger_used_rad < 0.05
     assert d.mode != "LOCAL_ENCOUNTER_FAILSAFE"
 
+    # Normal tick afterward: the streak must reset, not keep accumulating.
+    t += 0.05
+    latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.961, applied_angular_rps=0.0)
+    assert latch.drift_streak_count == 0
+
+
+def test_persistent_drift_streak_escalates_to_failsafe():
+    """Repeated drift events on CONSECUTIVE ticks (no normal tick breaking
+    the streak) must escalate to a hard-latched safety stop once the count
+    or duration threshold is crossed -- never stay a WARN forever."""
+    latch = EncounterAvoidanceV4(
+        max_turn_ledger_rad=100.0, max_inplace_turn_rad=10.0,
+        drift_safety_count_threshold=3, drift_safety_duration_s=100.0,
+    )
+    latch.apply(_left_side(), _zones(), 0.0, 0.0, 0.0, 0.0, applied_angular_rps=-0.30)
+    t = 0.05
+    latch.apply(_clear(), _zones(), t, 0.0, 0.0, 0.0, applied_angular_rps=0.0)
+    yaw = 0.0
+    d = None
+    for i in range(5):
+        t += 0.05
+        yaw += 0.5  # always outside the noise band, applied command stays 0
+        d = latch.apply(_clear(), _zones(), t, 0.0, 0.0, yaw, applied_angular_rps=0.0)
+        if latch.phase == "FAILSAFE":
+            break
+    assert latch.phase == "FAILSAFE"
+    assert latch.failsafe_cause == "PERSISTENT_DRIFT"
+    assert d.mode == "LOCAL_ENCOUNTER_FAILSAFE"
+    assert d.safety_stop
+
 
 def test_attempt_c_glitch_replay_does_not_trigger_premature_ledger_failsafe():
     """Replays attempt #3's actual shape: DETECT_TURN to ~-0.96rad, settle
-    into CREEP (commanded 0), then the exact single-tick glitch recorded in
-    that pilot's bag (yaw snaps to 0.0 for one sample, then reverts) partway
-    through a long creep. The ledger must stay well under the real cap and
-    FAILSAFE must not fire from this alone."""
+    into CREEP (applied command genuinely 0 by this point), then the exact
+    single-tick glitch recorded in that pilot's bag (yaw snaps to 0.0 for
+    one sample, then reverts) partway through a long creep. The ledger must
+    stay well under the real cap and FAILSAFE must not fire from this
+    alone."""
     latch = EncounterAvoidanceV4(max_turn_ledger_rad=1.40, max_inplace_turn_rad=0.90)
     t = 0.0
     yaw = -0.19
-    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, -0.49, 0.0, yaw)
+    latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, -0.49, 0.0, yaw, applied_angular_rps=-0.45)
     while abs(yaw) < 0.96:
         t += 0.0563
         yaw -= 0.045
-        latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, -0.49, 0.0, yaw)
+        latch.apply(_front_warn(angular_rps=-0.45), _zones(), t, -0.49, 0.0, yaw, applied_angular_rps=-0.45)
     # A brief raw side trigger (matches the real run) forces the SIDE_TRACK
-    # transition, then raw clears into CREEP (commanded 0).
+    # transition, then raw clears into CREEP (applied command settles to 0).
     t += 0.1
-    latch.apply(_left_side(), _zones(), t, -0.49, -0.02, yaw)
+    latch.apply(_left_side(), _zones(), t, -0.49, -0.02, yaw, applied_angular_rps=-0.45)
     assert latch.phase == "SIDE_TRACK"
     t += 0.1
-    latch.apply(_clear(), _zones(), t, -0.49, -0.02, yaw)
-    assert latch.last_commanded_angular_rps == 0.0
+    latch.apply(_clear(), _zones(), t, -0.49, -0.02, yaw, applied_angular_rps=0.0)
 
     # Long creep, genuinely tiny noise, matching attempt #3's real measured
     # per-tick statistics.
     for i in range(170):
         t += 0.1
         yaw += 0.0005 if i % 2 == 0 else -0.0005
-        latch.apply(_clear(), _zones(), t, -0.45, -0.10, yaw)
+        latch.apply(_clear(), _zones(), t, -0.45, -0.10, yaw, applied_angular_rps=0.0)
 
     ledger_before_glitch = latch.turn_ledger_used_rad
     # The recorded glitch: one sample snaps to yaw=0.0, next sample reverts.
     t += 0.1
-    latch.apply(_clear(), _zones(), t, -0.44, -0.11, 0.0)
+    latch.apply(_clear(), _zones(), t, -0.44, -0.11, 0.0, applied_angular_rps=0.0)
     t += 0.1
-    latch.apply(_clear(), _zones(), t, -0.44, -0.11, yaw)
+    latch.apply(_clear(), _zones(), t, -0.44, -0.11, yaw, applied_angular_rps=0.0)
 
     assert latch.turn_ledger_used_rad < 1.40, "the ledger must not breach its cap from a single glitch sample"
     assert latch.turn_ledger_used_rad == pytest.approx(ledger_before_glitch, abs=0.02)
     assert latch.phase != "FAILSAFE"
     assert latch.drift_events >= 1
+
+
+# -- ROS-time consistency (controller_v4_ros_time_consistency) --------------
+#
+# EncounterAvoidanceV4 itself calls no clock at all (see its module
+# docstring) -- now_s is purely a parameter. These tests exercise exactly
+# that property: since the latch only ever compares now_s deltas, it is
+# structurally realtime-factor-invariant and wall-clock-invariant by
+# construction, not by coincidence. Real wall-clock delay inserted between
+# calls (time.sleep) must have zero effect as long as the passed now_s values
+# don't reflect it -- this is what "PASS_CONFIRM measured strictly in
+# ROS/sim time, immune to a fast wall clock" and "sim-pause pauses the state
+# machine's own timers" mean in practice for a clock-agnostic pure latch.
+
+
+def test_realtime_factor_does_not_change_state_transitions():
+    """The same relative-time sequence of ticks (0.05s apart in sim/ROS
+    time) must produce the identical sequence of phase transitions
+    regardless of what real/wall-clock factor those ticks were actually
+    generated at -- because the latch never reads a wall clock at all."""
+    def run(sleep_per_tick):
+        import time as _time
+
+        latch = EncounterAvoidanceV4(
+            required_lateral_offset_m=0.05, required_longitudinal_progress_m=0.03,
+            pass_confirm_hold_s=0.2,
+        )
+        robot = _Robot()
+        t = 0.0
+        phases = []
+        t += 0.05
+        d = latch.apply(_left_side(), _zones(), t, robot.x, robot.y, robot.yaw)
+        robot.step(d.linear_mps, d.angular_rps, 0.05)
+        phases.append(latch.phase)
+        for _ in range(200):
+            if sleep_per_tick:
+                _time.sleep(sleep_per_tick)  # real wall-clock delay -- must not matter
+            t += 0.05
+            robot.x += 0.006
+            robot.y -= 0.006
+            d = latch.apply(_clear(), _zones(), t, robot.x, robot.y, robot.yaw)
+            phases.append(latch.phase)
+            if d.mode == "LOCAL_RECOVERY_READY":
+                break
+        return phases
+
+    # realtime_factor "0.5x slow wall clock" simulated via a tiny real sleep
+    # between ticks -- the passed now_s sequence itself is identical either
+    # way, so the outcome must be identical too.
+    phases_fast = run(sleep_per_tick=0.0)
+    phases_slow = run(sleep_per_tick=0.002)
+    assert phases_fast == phases_slow
+    assert phases_fast[-1] in ("PASS_CONFIRM", "FAILSAFE"), (
+        "sanity: the scripted trajectory should reach a definite terminal "
+        "state either way -- the actual assertion is phases_fast == phases_slow above"
+    )
+
+
+def test_pass_confirm_hold_measured_strictly_by_now_s_not_wall_clock():
+    """A real wall-clock delay between two apply() calls must not advance
+    PASS_CONFIRM's hold timer if the passed now_s values don't reflect it
+    -- proving the hold is measured strictly in the caller's clock
+    (ROS/sim time), never actual elapsed wall-clock seconds."""
+    import time as _time
+
+    latch = EncounterAvoidanceV4(
+        required_lateral_offset_m=0.02, required_longitudinal_progress_m=0.01,
+        pass_confirm_hold_s=5.0,
+    )
+    robot = _Robot()
+    t = 0.05
+    latch.apply(_left_side(), _zones(), t, robot.x, robot.y, robot.yaw)
+    for _ in range(5):
+        t += 0.05
+        robot.x += 0.02
+        robot.y -= 0.02
+        latch.apply(_clear(), _zones(), t, robot.x, robot.y, robot.yaw)
+    assert latch.phase == "PASS_CONFIRM"
+    pass_confirm_since = latch.pass_confirm_since_s
+
+    # Real wall-clock sleep far longer than pass_confirm_hold_s -- but the
+    # NEXT apply() call's now_s only advances by 0.05s in the latch's own
+    # clock domain, so the hold must NOT be considered satisfied yet.
+    _time.sleep(0.05)
+    t_almost_same = pass_confirm_since + 0.05
+    d = latch.apply(_clear(), _zones(), t_almost_same, robot.x, robot.y, robot.yaw)
+    assert d.mode != "LOCAL_RECOVERY_READY", (
+        "a real wall-clock delay must never substitute for now_s actually "
+        "advancing by pass_confirm_hold_s"
+    )
+
+    # Now advance now_s itself past the hold threshold: only THAT triggers
+    # the hand-off, confirming the timer tracks now_s, not wall time.
+    t_past_hold = pass_confirm_since + 5.01
+    d = latch.apply(_clear(), _zones(), t_past_hold, robot.x, robot.y, robot.yaw)
+    assert d.mode == "LOCAL_RECOVERY_READY"
+
+
+def test_simulation_pause_freezes_all_encounter_timers():
+    """If now_s does not advance at all between calls (a paused
+    simulation), none of the latch's elapsed-time-gated transitions may
+    progress, no matter how many ticks are processed at that frozen
+    instant."""
+    latch = EncounterAvoidanceV4(
+        max_encounter_duration_s=1.0, max_turn_ledger_rad=100.0, max_inplace_turn_rad=100.0,
+    )
+    t = 5.0
+    latch.apply(_left_side(), _zones(), t, 0.0, 0.0, 0.0)
+    for _ in range(50):
+        # now_s frozen at the exact same value every call -- simulation is
+        # "paused" from the latch's point of view.
+        d = latch.apply(_left_side(), _zones(), t, 0.0, 0.0, 0.0)
+        assert d.mode != "LOCAL_ENCOUNTER_FAILSAFE", (
+            "a frozen now_s (paused sim) must never let the duration "
+            "ceiling elapse on its own"
+        )
+    assert latch.phase != "FAILSAFE"

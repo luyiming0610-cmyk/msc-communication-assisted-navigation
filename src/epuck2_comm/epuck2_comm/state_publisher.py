@@ -30,6 +30,14 @@ def _finite_min(values) -> float:
 
 
 class StatePublisher(Node):
+    def _now_s(self) -> float:
+        """controller_v4_ros_time_consistency: ROS node clock (follows
+        Webots sim time under use_sim_time=true) for sensor/odom freshness
+        gating -- these flags (FLAG_ODOM_VALID/FLAG_IR_VALID/FLAG_TOF_VALID)
+        feed cooperative_avoider.py's own safety checks, so both nodes must
+        agree on which clock domain "fresh" is measured in."""
+        return self.get_clock().now().nanoseconds / 1.0e9
+
     def __init__(self):
         super().__init__("state_publisher")
 
@@ -123,11 +131,11 @@ class StatePublisher(Node):
 
     def _odom_callback(self, msg: Odometry) -> None:
         self.odom = msg
-        self.odom_received_at = time.monotonic()
+        self.odom_received_at = self._now_s()
 
     def _range_callback(self, sensor_name: str, msg: Range) -> None:
         self.ranges[sensor_name] = float(msg.range)
-        self.range_received_at[sensor_name] = time.monotonic()
+        self.range_received_at[sensor_name] = self._now_s()
 
     def _is_fresh(self, received_at: Optional[float], timeout_s: float, now: float) -> bool:
         return received_at is not None and now - received_at <= timeout_s
@@ -240,7 +248,7 @@ class StatePublisher(Node):
         return EpuckState.OBSTACLE_CLEAR
 
     def _timer_callback(self) -> None:
-        now = time.monotonic()
+        now = self._now_s()
         snapshot = self._snapshot(now)
         if not self.policy.should_publish(snapshot, now):
             return

@@ -170,7 +170,8 @@ SIM_PID=$!
 
 wait_for_topics 90 /epuck1/odom /epuck2/odom /epuck1/tof /epuck2/tof /epuck1/ps0 /epuck2/ps0
 echo "[$(date -Iseconds)] odometry and local sensors ready" | tee -a "$EXECUTION_LOG"
-verify_realtime_factor PRELOAD | tee -a "$EXECUTION_LOG"
+PRELOAD_OUTPUT="$(verify_realtime_factor PRELOAD | tee -a "$EXECUTION_LOG")"
+PRELOAD_FACTOR="$(grep -o 'PRELOAD_REALTIME_FACTOR=[0-9.]*' <<<"$PRELOAD_OUTPUT" | cut -d= -f2)"
 
 ros2 run epuck2_comm state_publisher --ros-args \
   -r __ns:=/epuck1 -p robot_id:=1 -p use_sim_time:=true \
@@ -221,7 +222,8 @@ stdbuf -oL -eL ros2 run epuck2_comm cooperative_avoider --ros-args \
   >"$CONTROLLER_LOG" 2>&1 &
 CONTROLLER_PID=$!
 
-verify_realtime_factor FULL_LOAD | tee -a "$EXECUTION_LOG"
+FULL_LOAD_OUTPUT="$(verify_realtime_factor FULL_LOAD | tee -a "$EXECUTION_LOG")"
+FULL_LOAD_FACTOR="$(grep -o 'FULL_LOAD_REALTIME_FACTOR=[0-9.]*' <<<"$FULL_LOAD_OUTPUT" | cut -d= -f2)"
 
 deadline=$((SECONDS + WATCHDOG_S))
 recording_complete=0
@@ -264,10 +266,21 @@ sleep 2
 python3 -m epuck2_comm.analyze_cooperative_bag "$BAG_DIR" >>"$EXECUTION_LOG" 2>&1
 python3 "$CONFIG_DIR/analyze_static_v4_task.py" "$BAG_DIR" "$CONTROLLER_LOG" >>"$EXECUTION_LOG" 2>&1
 python3 "$CONFIG_DIR/analyze_static_v4_controller_log.py" "$BAG_DIR" "$CONTROLLER_LOG" >>"$EXECUTION_LOG" 2>&1
+python3 "$CONFIG_DIR/analyze_static_v4_verdict.py" "$BAG_DIR" \
+  --repo-dir "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm" \
+  --preload-factor "${PRELOAD_FACTOR:-0}" \
+  --full-load-factor "${FULL_LOAD_FACTOR:-0}" \
+  >>"$EXECUTION_LOG" 2>&1
+VERDICT="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['verdict'])" "$BAG_DIR/analysis/static_v4_verdict.json")"
 
 if (( recording_complete == 0 )); then
-  echo "$STEM RECORDING_TASK_TIMEOUT" | tee -a "$EXECUTION_LOG"
+  echo "$STEM RECORDING_TASK_TIMEOUT (verdict=$VERDICT)" | tee -a "$EXECUTION_LOG"
   exit 1
 fi
-echo "[$(date -Iseconds)] $STEM RECORDING_COMPLETE (verdict pending manual checklist review)" | tee -a "$EXECUTION_LOG"
+# controller_v4_ros_time_consistency: this line reports the recording's own
+# completion, NOT the pilot's pass/fail -- $VERDICT (computed by
+# analyze_static_v4_verdict.py from the ground-truth collision/clearance/
+# FAILSAFE/PASS_CONFIRM/RECOVER checks, never from this script's exit code
+# or "maximum runtime reached") is the only authoritative answer.
+echo "[$(date -Iseconds)] $STEM RECORDING_COMPLETE verdict=$VERDICT (see analysis/static_v4_verdict.json for fail_reasons)" | tee -a "$EXECUTION_LOG"
 trap - EXIT

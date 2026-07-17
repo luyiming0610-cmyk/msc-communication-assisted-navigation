@@ -26,6 +26,7 @@ from epuck2_comm_interfaces.msg import EpuckState
 VALID_ALL = (
     EpuckState.FLAG_ODOM_VALID | EpuckState.FLAG_IR_VALID | EpuckState.FLAG_TOF_VALID
 )
+VALID_NO_ODOM = EpuckState.FLAG_IR_VALID | EpuckState.FLAG_TOF_VALID  # 0x06, missing FLAG_ODOM_VALID
 
 
 def _state(x, y, yaw, front, left, right, **zones):
@@ -51,10 +52,10 @@ def _state(x, y, yaw, front, left, right, **zones):
 def test_command_smoothing_never_delays_a_same_tick_safety_stop(monkeypatch):
     fake_clock = {"t": 3000.0}
 
-    def fake_monotonic():
+    def fake_now_s(self):
         return fake_clock["t"]
 
-    monkeypatch.setattr("epuck2_comm.cooperative_avoider.time.monotonic", fake_monotonic)
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
 
     rclpy.init(
         args=[
@@ -95,10 +96,10 @@ def test_command_smoothing_never_delays_a_same_tick_safety_stop(monkeypatch):
 def test_legacy_local_bypass_fallback_never_appears_for_a_clean_front_only_encounter(monkeypatch):
     fake_clock = {"t": 4000.0}
 
-    def fake_monotonic():
+    def fake_now_s(self):
         return fake_clock["t"]
 
-    monkeypatch.setattr("epuck2_comm.cooperative_avoider.time.monotonic", fake_monotonic)
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
 
     rclpy.init(
         args=[
@@ -148,10 +149,10 @@ def test_legacy_local_bypass_fallback_never_appears_for_a_clean_front_only_encou
 def test_full_encounter_reaches_pass_confirm_and_recovers_to_cruise(monkeypatch):
     fake_clock = {"t": 5000.0}
 
-    def fake_monotonic():
+    def fake_now_s(self):
         return fake_clock["t"]
 
-    monkeypatch.setattr("epuck2_comm.cooperative_avoider.time.monotonic", fake_monotonic)
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
 
     rclpy.init(
         args=[
@@ -209,5 +210,60 @@ def test_full_encounter_reaches_pass_confirm_and_recovers_to_cruise(monkeypatch)
         assert node.mode == "CRUISE"
         assert node.recovery_source == "local"
         assert "LOCAL_BYPASS" not in modes
+    finally:
+        rclpy.shutdown()
+
+
+def test_invalid_odometry_sample_never_reaches_the_encounter_ledger(monkeypatch):
+    """controller_v4_ros_time_consistency: a single sample with
+    validity_flags missing FLAG_ODOM_VALID (0x06, the exact reset-artifact
+    signature found mid-run in pilot_v4_a attempt #3) must be caught by
+    _state_usable() and never reach _local_decision()/EncounterAvoidanceV4
+    at all -- confirmed here by checking the latch's own turn_ledger_used_rad
+    is completely unaffected by the glitch's bogus (0,0,0) pose, and that
+    self.mode correctly shows SAFE_STOP_INVALID_ODOM for that one tick."""
+    fake_clock = {"t": 6000.0}
+
+    def fake_now_s(self):
+        return fake_clock["t"]
+
+    monkeypatch.setattr("epuck2_comm.cooperative_avoider.CooperativeAvoider._now_s", fake_now_s)
+
+    rclpy.init(
+        args=[
+            "--ros-args",
+            "-p", "armed:=true",
+            "-p", "enable_peer_avoidance:=false",
+            "-p", "startup_hold_s:=0.0",
+            "-p", "max_runtime_s:=1000.0",
+        ]
+    )
+    try:
+        node = CooperativeAvoider()
+
+        def tick(x, y, yaw, front, left, right, validity=VALID_ALL, dt=0.05):
+            fake_clock["t"] += dt
+            msg = _state(x, y, yaw, front, left, right)
+            msg.validity_flags = validity
+            node._own_callback(msg)
+            node._control()
+
+        # Open a real encounter with genuine turning.
+        tick(-0.50, 0.0, 0.0, 0.08, math.inf, math.inf)
+        tick(-0.49, 0.0, -0.10, math.inf, 0.045, math.inf)
+        assert node.local_latch.phase in ("DETECT_TURN", "SIDE_TRACK")
+        ledger_before = node.local_latch.turn_ledger_used_rad
+
+        # The glitch: x=0,y=0,yaw=0, validity=0x06 (odom invalid).
+        tick(0.0, 0.0, 0.0, math.inf, math.inf, math.inf, validity=VALID_NO_ODOM)
+        assert node.mode == "SAFE_STOP_INVALID_ODOM"
+        assert node.local_latch.turn_ledger_used_rad == ledger_before, (
+            "the invalid-odom glitch sample must never reach the ledger at all"
+        )
+
+        # A subsequent genuinely valid sample must resume normally, with the
+        # ledger continuing from where it was (not corrupted by the glitch).
+        tick(-0.48, 0.0, -0.15, math.inf, 0.045, math.inf)
+        assert node.mode != "SAFE_STOP_INVALID_ODOM"
     finally:
         rclpy.shutdown()

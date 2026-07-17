@@ -25,6 +25,20 @@ def clamp(value: float, lower: float, upper: float) -> float:
 class CooperativeAvoider(Node):
     """Decentralized communication-assisted reciprocal collision avoider."""
 
+    def _now_s(self) -> float:
+        """controller_v4_ros_time_consistency: the ONLY time source for all
+        robot-behaviour timing (startup hold, staleness, encounter/
+        PASS_CONFIRM/recovery durations, max_runtime, command-smoother dt).
+        Uses the ROS node clock, which follows Webots simulation time when
+        use_sim_time=true (as every pilot run script sets) and falls back to
+        the system clock automatically on real hardware. Never
+        time.monotonic()/time.time() for anything that gates motion or a
+        state-machine transition -- wall-clock is reserved exclusively for
+        the external shell-script watchdog (grep COMPLETE / kill hung
+        processes), which lives entirely outside this process.
+        """
+        return self.get_clock().now().nanoseconds / 1.0e9
+
     def __init__(self):
         super().__init__("cooperative_avoider")
         self.declare_parameter("robot_id", 1)
@@ -193,7 +207,7 @@ class CooperativeAvoider(Node):
         self.peer_state = None
         self.own_received = None
         self.peer_received = None
-        self.started_at = time.monotonic()
+        self.started_at = self._now_s()
         self.mode = "WAITING"
         self.finished = False
         self.encounter_complete = False
@@ -203,7 +217,7 @@ class CooperativeAvoider(Node):
         self.recovery_source = None
         self.last_log = 0.0
         self._last_logged_drift_events = 0
-        self.last_publish_time = time.monotonic()
+        self.last_publish_time = self._now_s()
         self.local_latch = EncounterAvoidanceV4(
             clearance_speed_mps=min(self.avoidance_speed, 0.006),
             max_inplace_turn_rad=self.local_v4_max_inplace_turn,
@@ -288,11 +302,11 @@ class CooperativeAvoider(Node):
 
     def _own_callback(self, message: EpuckState) -> None:
         self.own_state = message
-        self.own_received = time.monotonic()
+        self.own_received = self._now_s()
 
     def _peer_callback(self, message: EpuckState) -> None:
         self.peer_state = message
-        self.peer_received = time.monotonic()
+        self.peer_received = self._now_s()
 
     def _publish(
         self,
@@ -301,7 +315,7 @@ class CooperativeAvoider(Node):
         force_zero: bool = False,
         force_linear_zero: bool = False,
     ):
-        now = time.monotonic()
+        now = self._now_s()
         dt = min(0.20, max(0.0, now - self.last_publish_time))
         self.last_publish_time = now
         target_linear = float(clamp(linear, 0.0, self.nominal_speed))
@@ -354,8 +368,15 @@ class CooperativeAvoider(Node):
             right_mid_m=float(self.own_state.right_mid_m),
             right_rear_m=float(self.own_state.right_rear_m),
         )
+        # controller_v4_ros_time_consistency: self.smoother.angular_rps at
+        # this point still holds the PREVIOUS tick's actually-applied
+        # (post-smoothing) angular velocity -- this tick's own _publish()
+        # call, which would update it, has not run yet. Passing it lets the
+        # ledger's command gate trust the smoother's own deceleration tail
+        # as real motion instead of misreading it as drift.
         return self.local_latch.apply(
-            decision, zones, now, self.own_state.x_m, self.own_state.y_m, self.own_state.yaw_rad
+            decision, zones, now, self.own_state.x_m, self.own_state.y_m, self.own_state.yaw_rad,
+            applied_angular_rps=self.smoother.angular_rps,
         )
 
     def _local_recover_command(self, heading_error: float, now: float):
@@ -470,6 +491,65 @@ class CooperativeAvoider(Node):
             f"cmd=({linear:.3f},{angular:.3f}){raw_mode_suffix}{drift_suffix}"
         )
 
+    def _log_transition(self, previous_mode: str) -> None:
+        """controller_v4_ros_time_consistency: fires on EVERY mode change
+        (not throttled like _log()), so a fast sequence of transitions is
+        never collapsed into a single 0.5s-throttled row. Records both
+        wall_time (time.time(), purely for post-hoc human/log correlation
+        -- NEVER used to gate any decision) and ros_time (self._now_s(),
+        the actual clock the state machine runs on) side by side, plus the
+        full ledger/progress/zone/command snapshot and an explicit,
+        never-generic FAILSAFE cause enum.
+        """
+        if self.mode == previous_mode:
+            return
+        now = self._now_s()
+        latch = self.local_latch
+        encounter_elapsed = (
+            now - latch.encounter_opened_s if latch.encounter_opened_s is not None else None
+        )
+        pass_confirm_elapsed = (
+            now - latch.pass_confirm_since_s if latch.pass_confirm_since_s is not None else None
+        )
+        duration_remaining = (
+            latch.max_encounter_duration_s - encounter_elapsed
+            if encounter_elapsed is not None
+            else None
+        )
+        longitudinal = lateral = None
+        if latch.origin is not None and self.own_state is not None:
+            longitudinal, lateral = latch._encounter_local_offset(
+                self.own_state.x_m, self.own_state.y_m
+            )
+        zones_str = "zones=unavailable"
+        if self.own_state is not None:
+            zones_str = (
+                "zones=("
+                f"lf={float(self.own_state.left_front_m):.3f},"
+                f"lm={float(self.own_state.left_mid_m):.3f},"
+                f"lr={float(self.own_state.left_rear_m):.3f},"
+                f"rf={float(self.own_state.right_front_m):.3f},"
+                f"rm={float(self.own_state.right_mid_m):.3f},"
+                f"rr={float(self.own_state.right_rear_m):.3f})"
+            )
+
+        def _fmt(value, unit=""):
+            return "None" if value is None else f"{value:.3f}{unit}"
+
+        self.get_logger().info(
+            f"TRANSITION wall_time={time.time():.3f} ros_time={now:.3f} "
+            f"mode={previous_mode}->{self.mode} phase={latch.phase} "
+            f"encounter_elapsed={_fmt(encounter_elapsed, 's')} "
+            f"pass_confirm_elapsed={_fmt(pass_confirm_elapsed, 's')} "
+            f"duration_remaining={_fmt(duration_remaining, 's')} "
+            f"turn_ledger={latch.turn_ledger_used_rad:.4f}rad "
+            f"longitudinal={_fmt(longitudinal, 'm')} lateral={_fmt(lateral, 'm')} "
+            f"{zones_str} "
+            f"applied_cmd=({self.smoother.linear_mps:.4f},{self.smoother.angular_rps:.4f}) "
+            f"failsafe_cause={latch.failsafe_cause or 'NONE'} "
+            f"drift_events={latch.drift_events}"
+        )
+
     def _complete(self, message: str) -> None:
         self.mode = "COMPLETE"
         if not self.complete_logged:
@@ -479,7 +559,15 @@ class CooperativeAvoider(Node):
         self._publish(0.0, 0.0, force_zero=True)
 
     def _control(self) -> None:
-        now = time.monotonic()
+        """controller_v4_ros_time_consistency: thin wrapper so every mode
+        change is logged (via _log_transition) regardless of which of
+        _control_body()'s several early-return branches produced it."""
+        previous_mode = self.mode
+        self._control_body()
+        self._log_transition(previous_mode)
+
+    def _control_body(self) -> None:
+        now = self._now_s()
         elapsed = now - self.started_at
         if (
             self.stop_after_recovery

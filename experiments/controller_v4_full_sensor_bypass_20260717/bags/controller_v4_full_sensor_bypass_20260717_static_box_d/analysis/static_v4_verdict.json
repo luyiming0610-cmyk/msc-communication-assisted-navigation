@@ -1,0 +1,32 @@
+{
+  "bag_path": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_d",
+  "controller_version": "controller_v4_ros_time_consistency",
+  "git_commit": "d67c1ab6e58b14b55dccb716ac19edfb4d74d789",
+  "verdict": "PASS",
+  "fail_reasons": [],
+  "stop_reason": {
+    "complete_message": "maximum runtime reached; commanding zero",
+    "final_mode": "CRUISE",
+    "final_failsafe_cause": null,
+    "stopped_by_max_runtime_only": true
+  },
+  "collision": false,
+  "minimum_box_clearance_m": 0.1275565047747542,
+  "min_clearance_threshold_m": 0.005,
+  "max_epuck1_x_m": 0.04229002818465233,
+  "epuck1_passed_box": true,
+  "returned_to_danger_zone_after_passing": false,
+  "pass_confirm_occurred": true,
+  "local_recover_occurred": true,
+  "cruise_resumed": true,
+  "failsafe_occurred": false,
+  "failsafe_causes": [],
+  "sensor_invalid_occurred": false,
+  "legacy_local_bypass_appeared": false,
+  "preload_realtime_factor": 0.899,
+  "full_load_realtime_factor": 0.908,
+  "realtime_factor_ok": true,
+  "excluded_reset_artifact_samples": 2,
+  "excluded_out_of_window_samples": 323,
+  "note": "This is the ONLY authoritative verdict field for this pilot. A script exit code of 0, or 'COMPLETE: maximum runtime reached' appearing in the log, must NEVER be read as PASS on their own -- see fail_reasons above for what was actually checked."
+}
