@@ -27,6 +27,8 @@ setup(
             "state_publisher = epuck2_comm.state_publisher:main",
             "state_monitor = epuck2_comm.state_monitor:main",
             "cooperative_avoider = epuck2_comm.cooperative_avoider:main",
+            "network_impairment_relay = "
+            "epuck2_comm.network_impairment_relay:main",
             "analyze_cooperative_bag = "
             "epuck2_comm.analyze_cooperative_bag:main",
             "analyze_static_bag = epuck2_comm.analyze_static_bag:main",
