@@ -13,6 +13,7 @@ implementation and baseline diagnostics.
 - `combined_formal_trial01_INCOMPLETE_no_controller_log` — excluded first attempt (09_legacy_and_excluded)
 - `comm_baseline_trial{1,2,3}` — Objective 5 diagnostic, `/mnt/c` bag-loss issue (04_objective5_comm_baseline)
 - `comm_baseline_native_trial0{1,2}` — Objective 5 diagnostic, native-WSL-path root-cause isolation (04_objective5_comm_baseline)
+- `objective5_comm_baseline_zero_impairment_formal_trial01` — **Objective 5 formal, PASS**: genuine `cooperative_avoider` task completion under zero impairment, native WSL bag path (04_objective5_comm_baseline)
 
 **Config**: `config/static_box_v4/`, `config/head_on_cpa_v4/`, `config/combined_v4/`, `config/comm_baseline_v1/`
 
@@ -27,10 +28,22 @@ naming rule. Objective 5 comm-baseline diagnostics found and traced a
 `/mnt/c` rosbag-write message-loss issue (see
 `config/comm_baseline_v1/analyze_measurement_chain.py` and the two
 `comm_baseline_native_trial0{1,2}` diagnostic trials, both PASS with
-aligned-window PDR=1.0).
+aligned-window PDR=1.0). That fix was then validated at the task level:
+`objective5_comm_baseline_zero_impairment_formal_trial01` PASSED —
+aligned-window PDR=1.0 both robots, zero sequence gaps/duplicates/
+out-of-order, `sequence_counter` `complete=true` both robots, realtime
+factor 0.963/0.951, genuine `cooperative_avoider` task completion (not
+`max_runtime`/FAILSAFE/TASK_TIMEOUT). Message age/latency from this
+trial is **N/A**, not a real number — `EpuckState.stamp` is never
+populated by `state_publisher.py`, so the analyzer's "age" figures
+reduce to absolute epoch bag-receive time. See
+`objective5_comm_baseline_zero_impairment_formal_trial01/analysis/objective5_formal_baseline_verdict.json`
+for the full machine-readable verdict.
 
 **Included in dissertation**: Phase 4 formal batch YES (with the
-`PROXIMITY_FALLBACK` limitation noted). Everything else in this directory
+`PROXIMITY_FALLBACK` limitation noted).
+`objective5_comm_baseline_zero_impairment_formal_trial01` YES (PDR/rate/
+bandwidth only; message age is N/A). Everything else in this directory
 is development/diagnostic evidence, NOT formal statistics.
 
 **How to reproduce**: each pilot config directory's `run_*.sh` script is

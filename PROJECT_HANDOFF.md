@@ -99,9 +99,14 @@ documented configuration, typically part of an n≥5 batch.
 
 **Diagnostic/pilot** (`evidence_level=PILOT`): exploratory, debugging,
 measurement-chain-isolation, or pre-validation runs. **Never pooled with
-formal statistics, regardless of PASS/FAIL.** Currently this includes ALL
-of the Objective 5 comm-baseline work — there is no formal PDR/latency
-number yet.
+formal statistics, regardless of PASS/FAIL.** Most of the Objective 5
+comm-baseline work is still diagnostic-only; the exception is
+`objective5_comm_baseline_zero_impairment_formal_trial01`
+(`evidence_level=FORMAL_SIM`, PASS) — a genuine task-level run (real
+`cooperative_avoider` task completion, native WSL bag path, PDR=1.0,
+zero gaps/duplicates/out-of-order) that is now formal Objective 5
+evidence for PDR/rate/bandwidth. Message age/latency from that trial is
+**N/A**, not a real number — see known limitation 3 below.
 
 Full machine-readable record: `experiments/experiment_registry.csv` (one
 row per experiment/batch — `status`, `evidence_level`,
@@ -111,20 +116,20 @@ row per experiment/batch — `status`, `evidence_level`,
 
 1. Phase 4's combined scenario (5/5 formal) triggers via `PROXIMITY_FALLBACK` in every trial, never `PREDICTED_CPA` — must be named "staged local-obstacle avoidance followed by communication-assisted proximity/cooperative avoidance," never described as preventing a certain collision.
 2. 5 pre-protocol-freeze bags cannot be reprocessed by current analyzers (old `EpuckState` wire shape) — original historical analysis remains valid, re-analysis does not work.
-3. `/mnt/c` rosbag-write message loss is confirmed via two native-path diagnostic trials but not yet validated with a full task-level (controller-running) formal baseline.
-4. `sequence_counter`'s SIGINT-triggered summary write has an unresolved bug (does not reliably fire under `ros2 launch` process supervision).
+3. `/mnt/c` rosbag-write message loss (confirmed via two native-path diagnostic trials) is fully resolved for formal work by using the native WSL ext4 bag path — `objective5_comm_baseline_zero_impairment_formal_trial01` validated this at the task level (PASS). Separately, `analyze_comm_performance.py`'s `mean_message_age_s`/`p95_message_age_s` are **not reliable**: `EpuckState.stamp` is never populated by `state_publisher.py`, so the "age" reduces to absolute epoch bag-receive time, not a true latency delta — treat message age/latency as N/A until `state_publisher` sets `stamp`. PDR/rate/bandwidth are unaffected.
+4. `sequence_counter` was rewritten this session (periodic atomic checkpoints + a `finally`-block final write, no custom SIGINT handler) and verified working in the formal baseline PASS (`complete=true` both robots). A related orchestration-script bug — the shell script signaling only the relay+counter launch-service's own PID, not its child processes — caused the first 3 attempts at the formal baseline to fail with `complete=false`; fixed by running that process tree under `setsid` and signaling the whole process group on shutdown (`run_objective5_comm_baseline_formal_trial.sh`'s `stop_pid_group`).
 5. Webots R2025a is used, not Gazebo as the Spec names — this is a disclosed, deliberate deviation (protocol/library are simulator-agnostic; see `HANDOFF_20260717.md` for the full risk note and the recommendation to confirm with the supervisor). Do not silently redo the platform in Gazebo.
 6. No CPU/memory overhead measurement exists yet (would need a live psutil-style sampling companion).
 7. No physical-hardware clock-sync procedure exists yet (`verify_clock_sync()` intentionally raises `NotImplementedError` until Objective 6 begins).
 
 ## Current single next step
 
-Commit the native-WSL-bag-path measurement-chain diagnostic (code +
-findings), then run a **full formal zero-impairment Objective 5 baseline
-pilot** — this time with `cooperative_avoider` actually running (not just
-the comm layer in isolation) — using the native-WSL-bag-path workflow and
-the complete original baseline acceptance checklist. Report results before
-designing or running the delay/loss impairment matrix (A-F conditions).
+The formal zero-impairment Objective 5 baseline
+(`objective5_comm_baseline_zero_impairment_formal_trial01`) has PASSED.
+Next: design the delay/loss impairment matrix (A-F conditions: no-peer /
+baseline / medium-delay / high-delay / medium-loss / high-loss) and
+submit it for explicit user confirmation before running any of it — do
+not auto-run the matrix after a baseline PASS.
 
 ## What to read first, in order
 

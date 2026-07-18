@@ -1,0 +1,27 @@
+{
+  "state_raw": {
+    "first_sequence": 0,
+    "last_sequence": 813,
+    "received_count": 814,
+    "unique_sequence_count": 814,
+    "expected_count": 814,
+    "sequence_gap_count": 0,
+    "duplicate_count": 0,
+    "out_of_order_count": 0,
+    "first_ros_time_s": 11.7,
+    "last_ros_time_s": 101.42
+  },
+  "state": {
+    "first_sequence": 0,
+    "last_sequence": 813,
+    "received_count": 814,
+    "unique_sequence_count": 814,
+    "expected_count": 814,
+    "sequence_gap_count": 0,
+    "duplicate_count": 0,
+    "out_of_order_count": 0,
+    "first_ros_time_s": 12.56,
+    "last_ros_time_s": 101.42
+  },
+  "complete": true
+}

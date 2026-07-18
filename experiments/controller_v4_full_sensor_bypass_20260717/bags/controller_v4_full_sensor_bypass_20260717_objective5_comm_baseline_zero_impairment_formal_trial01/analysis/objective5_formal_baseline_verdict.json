@@ -1,0 +1,115 @@
+{
+  "verdict": "PASS",
+  "fail_reasons": [],
+  "per_robot": {
+    "epuck1": {
+      "bag_raw": {
+        "received_count": 795,
+        "unique_sequence_count": 795,
+        "first_sequence": 32,
+        "last_sequence": 826,
+        "duplicate_count": 0,
+        "out_of_order_count": 0
+      },
+      "bag_relayed": {
+        "received_count": 782,
+        "unique_sequence_count": 782,
+        "first_sequence": 32,
+        "last_sequence": 813,
+        "duplicate_count": 0,
+        "out_of_order_count": 0
+      },
+      "relay": {
+        "forwarded": 807,
+        "dropped": 0,
+        "first_sequence": 7,
+        "last_sequence": 813
+      },
+      "counter_relayed": {
+        "first_sequence": 7,
+        "last_sequence": 813,
+        "received_count": 807,
+        "unique_sequence_count": 807,
+        "expected_count": 807,
+        "sequence_gap_count": 0,
+        "duplicate_count": 0,
+        "out_of_order_count": 0,
+        "first_ros_time_s": 12.5,
+        "last_ros_time_s": 101.42
+      },
+      "counter_complete": true,
+      "relay_config": {
+        "delay_s": 0.0,
+        "jitter_s": 0.0,
+        "drop_probability": 0.0,
+        "immediate_passthrough": true
+      },
+      "aligned_window_pdr_bag_vs_relay": 1.0
+    },
+    "epuck2": {
+      "bag_raw": {
+        "received_count": 795,
+        "unique_sequence_count": 795,
+        "first_sequence": 32,
+        "last_sequence": 826,
+        "duplicate_count": 0,
+        "out_of_order_count": 0
+      },
+      "bag_relayed": {
+        "received_count": 783,
+        "unique_sequence_count": 783,
+        "first_sequence": 31,
+        "last_sequence": 813,
+        "duplicate_count": 0,
+        "out_of_order_count": 0
+      },
+      "relay": {
+        "forwarded": 814,
+        "dropped": 0,
+        "first_sequence": 0,
+        "last_sequence": 813
+      },
+      "counter_relayed": {
+        "first_sequence": 0,
+        "last_sequence": 813,
+        "received_count": 814,
+        "unique_sequence_count": 814,
+        "expected_count": 814,
+        "sequence_gap_count": 0,
+        "duplicate_count": 0,
+        "out_of_order_count": 0,
+        "first_ros_time_s": 12.56,
+        "last_ros_time_s": 101.42
+      },
+      "counter_complete": true,
+      "relay_config": {
+        "delay_s": 0.0,
+        "jitter_s": 0.0,
+        "drop_probability": 0.0,
+        "immediate_passthrough": true
+      },
+      "aligned_window_pdr_bag_vs_relay": 1.0
+    }
+  },
+  "complete_count": 2,
+  "communication_metrics": {
+    "/epuck1/state": {
+      "packet_delivery_ratio": 1.0,
+      "actual_rate_hz": 8.693662865285894,
+      "mean_message_age_s": 1784361703.0596159,
+      "p95_message_age_s": 1784361704.7174997,
+      "mean_bandwidth_bytes_per_s": 696.4265769131036
+    },
+    "/epuck2/state": {
+      "packet_delivery_ratio": 1.0,
+      "actual_rate_hz": 8.693616011217658,
+      "mean_message_age_s": 1784361703.0541277,
+      "p95_message_age_s": 1784361704.717978,
+      "mean_bandwidth_bytes_per_s": 696.4203241114654
+    }
+  },
+  "bag_record_drop_warn_error_lines": [],
+  "preload_realtime_factor": 0.963,
+  "full_load_realtime_factor": 0.951,
+  "realtime_factor_ok": true
+}

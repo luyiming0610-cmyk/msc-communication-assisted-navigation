@@ -42,13 +42,14 @@ task-specific validation vehicle.
 - Registry rows: `phase1_*`, `phase2_3_*`, `v4_pure_cpa_*`, `v4_combined_pilot_*`, `v4_phase4_formal_trial0{1..5}`, `phase4_formal_batch_5of5`
 
 ### 04_objective5_comm_baseline
-Zero-delay/zero-loss communication baseline. **Currently all diagnostic,
-none formal yet.**
+Zero-delay/zero-loss communication baseline. One formal result now exists;
+the rest of this category remains diagnostic-only.
 - `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_comm_baseline_trial{1,2,3}` — FAIL, `/mnt/c` rosbag-write message loss (~40-55%), superseded by the native-path diagnostic
 - `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_comm_baseline_native_trial0{1,2}` — PASS (comm-layer-only, no `cooperative_avoider`), aligned-window PDR=1.0, confirms root cause is `/mnt/c` I/O not the relay/transport
-- `src/epuck2_comm/epuck2_comm/{analyze_comm_performance,network_impairment,network_impairment_relay,sequence_counter}.py` — the tooling itself, 39 unit tests, all passing
-- **Not yet done**: a full formal zero-impairment baseline with `cooperative_avoider` actually running, using the native-WSL-path workflow
-- Registry rows: `comm_baseline_v1_trial{1,2,3}`, `comm_baseline_native_diag_trial0{1,2}`
+- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_objective5_comm_baseline_zero_impairment_formal_trial01` — **PASS, FORMAL_SIM.** Genuine `cooperative_avoider` task completion under zero impairment, native WSL ext4 bag path. Aligned-window PDR=1.0 both robots; `sequence_gap_count`=`duplicate_count`=`out_of_order_count`=0 both robots; `sequence_counter` `complete=true` both robots; realtime factor 0.963 (preload) / 0.951 (full load); message rate ≈8.69 Hz/robot; mean bandwidth ≈696 bytes/s/robot; no bag/QoS drop-warn-error lines. **Message age/latency is N/A** — `EpuckState.stamp` is never populated by `state_publisher.py`, so the analyzer's "age" figures are actually absolute epoch bag-receive time, not a real latency delta. The first 3 attempts at this exact trial failed for orchestration-script reasons (WSL interop, then two distinct process-shutdown bugs in `run_objective5_comm_baseline_formal_trial.sh`), not communication-result reasons — see that script and `experiment_registry.csv`'s row for the full account.
+- `src/epuck2_comm/epuck2_comm/{analyze_comm_performance,network_impairment,network_impairment_relay,sequence_counter}.py` — the tooling itself, 131/131 unit tests passing (including 10 new `sequence_counter` reliability tests added this pass)
+- **Not yet done**: the delay/loss impairment matrix (A-F conditions) — design only, submitted for user confirmation, not run
+- Registry rows: `comm_baseline_v1_trial{1,2,3}`, `comm_baseline_native_diag_trial0{1,2}`, `objective5_comm_baseline_zero_impairment_formal_trial01`
 
 ### 05_objective5_impairment_matrix
 Delay, loss, combined-impairment experiments. **Not started.** Blocked on
