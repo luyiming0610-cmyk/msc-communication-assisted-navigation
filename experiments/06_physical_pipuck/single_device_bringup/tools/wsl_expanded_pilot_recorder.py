@@ -14,13 +14,34 @@ Tier B (state_publisher output -> bag, via EpuckState.sequence) and tier C
 (raw sensor topic rates/gaps) are computed by the offline analyzer directly
 from the rosbag, not by this live recorder -- avoids two different tools
 disagreeing about the same bag-derived numbers.
+
+Shutdown design (fixed after a real run hit a trailing "rcl_shutdown
+already called" exception -- root-caused, not guessed):
+rclpy.init()'s DEFAULT signal handling installs its own SIGINT handler
+that can invalidate the rclpy context from a different execution path
+while this script's main loop is still inside rclpy.spin_once() --
+confirmed directly by a traceback raised FROM WITHIN spin_once() itself,
+not from a plain Python KeyboardInterrupt at a loop boundary. The fix is
+to become the single lifecycle owner: disable rclpy's automatic signal
+handling (SignalHandlerOptions.NO) and install one plain `signal.signal`
+handler that only ever sets a flag; the main loop polls that flag between
+spin_once() calls, so a SIGINT can never land inside an in-flight rclpy
+call. Shutdown itself is centralized in _shutdown_once(), guarded by a
+local flag AND an rclpy.ok() check, called from exactly one place
+(the `finally` block) on all three exit paths: SIGINT (flag set),
+external context invalidation (rclpy.ok() goes false, loop exits on its
+own), or a genuine unhandled exception (still re-raised after cleanup --
+never swallowed).
 """
 import argparse
 import json
+import signal
+import sys
 import time
 
 import rclpy
 from rclpy.node import Node
+from rclpy.signals import SignalHandlerOptions
 from std_msgs.msg import String
 
 
@@ -34,6 +55,7 @@ class ExpandedPilotRecorder(Node):
             "state_seq_first,state_seq_last,state_unique_received,"
             "state_missing,state_out_of_order,state_delivery_ratio\n"
         )
+        self._csv.flush()
         self._cmd_vel_checkpoints_path = cmd_vel_checkpoints_path
         self._checkpoints = []
         self.create_subscription(String, "/epuck_bridge/status", self._on_status, 10)
@@ -73,6 +95,38 @@ class ExpandedPilotRecorder(Node):
         self._csv.close()
 
 
+def run(node: ExpandedPilotRecorder, checkpoint_schedule_s, stop_requested, spin_once_fn=None):
+    """The testable core loop, independent of argparse/signal setup. Returns
+    the list of checkpoint labels actually recorded (for tests to assert
+    against). `stop_requested` is a callable returning True once a stop has
+    been requested (real SIGINT flag in production; a fake counter/flag in
+    tests). `spin_once_fn` defaults to a real rclpy.spin_once call but can
+    be swapped in tests to avoid needing a live ROS graph."""
+    if spin_once_fn is None:
+        def spin_once_fn():
+            rclpy.spin_once(node, timeout_sec=0.2)
+
+    labels = ["start", "mid", "end"]
+    start = time.monotonic()
+    next_idx = 0
+    recorded = []
+    while rclpy.ok() and not stop_requested():
+        spin_once_fn()
+        elapsed = time.monotonic() - start
+        if next_idx < len(checkpoint_schedule_s) and elapsed >= checkpoint_schedule_s[next_idx]:
+            label = labels[next_idx] if next_idx < len(labels) else f"checkpoint{next_idx}"
+            node.record_cmd_vel_checkpoint(label)
+            recorded.append(label)
+            next_idx += 1
+    if next_idx < len(checkpoint_schedule_s):
+        try:
+            node.record_cmd_vel_checkpoint("end_on_interrupt")
+            recorded.append("end_on_interrupt")
+        except Exception:
+            pass
+    return recorded
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--status-csv", required=True)
@@ -81,36 +135,36 @@ def main():
                          help="Seconds after start at which to sample /cmd_vel publisher count (start/mid/end).")
     args = parser.parse_args()
 
-    rclpy.init()
+    # Single lifecycle owner: disable rclpy's own automatic SIGINT handling
+    # (it was racing this script's manual spin_once loop -- see module
+    # docstring) and install a plain flag-setting handler instead.
+    rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
+    stop_flag = {"set": False}
+
+    def _on_sigint(signum, frame):
+        stop_flag["set"] = True
+
+    signal.signal(signal.SIGINT, _on_sigint)
+
     node = ExpandedPilotRecorder(args.status_csv, args.cmd_vel_checkpoints_json)
-    labels = ["start", "mid", "end"]
-    start = time.monotonic()
-    next_idx = 0
-    try:
-        while rclpy.ok():
-            rclpy.spin_once(node, timeout_sec=0.2)
-            elapsed = time.monotonic() - start
-            if next_idx < len(args.checkpoint_schedule_s) and elapsed >= args.checkpoint_schedule_s[next_idx]:
-                label = labels[next_idx] if next_idx < len(labels) else f"checkpoint{next_idx}"
-                node.record_cmd_vel_checkpoint(label)
-                next_idx += 1
-    except KeyboardInterrupt:
-        pass
-    finally:
-        # Best-effort final checkpoint if we were interrupted before reaching
-        # the last scheduled one -- never leave "end" unsampled.
-        if next_idx < len(args.checkpoint_schedule_s):
-            try:
-                node.record_cmd_vel_checkpoint("end_on_interrupt")
-            except Exception:
-                pass
+    shutdown_done = {"done": False}
+
+    def _shutdown_once():
+        if shutdown_done["done"]:
+            return
+        shutdown_done["done"] = True
         node.close()
         node.destroy_node()
-        try:
+        if rclpy.ok():
             rclpy.shutdown()
-        except Exception:
-            pass
+
+    try:
+        run(node, args.checkpoint_schedule_s, lambda: stop_flag["set"])
+    finally:
+        _shutdown_once()
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
