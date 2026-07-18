@@ -1,0 +1,12 @@
+{
+  "correction_type": "post-hoc DATA_VALIDITY/TASK_OUTCOME correction",
+  "reason": "orchestrator relay_status parsing bug (ros2 topic echo trailing --- marker, fixed in commit be90f3a) caused a false DATA_VALIDITY=INVALID even though both relays actual pending_queue_depth was 0 (visible directly in execution.log: epuck1 received=898 forwarded=898 pending_queue_depth=0; epuck2 received=919 forwarded=919 pending_queue_depth=0)",
+  "corrected_verdict": {
+    "data_validity": "VALID",
+    "data_validity_reasons": [],
+    "task_outcome": "SUCCESS",
+    "task_outcome_reason": "complete_count=2 >= expected 2"
+  },
+  "original_trial_verdict_preserved_at": "/mnt/c/Users/\u8def\u4e00\u9e23/Desktop/\u786c\u4ef6\u5b9e\u9a8c\u6bd5\u8bbe/e-puck2-Comm/experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionA_exclusionary_pilot01_analysis/trial_verdict.json",
+  "note": "this correction is derived from the SAME already-recorded run -- Webots was NOT re-run. Preserved as a separate file, original trial_verdict.json (showing the parsing-bug-affected INVALID) is untouched."
+}
