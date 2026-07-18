@@ -4,6 +4,17 @@
   "n_trials": 5,
   "pass_count": 5,
   "pass_rate": 1.0,
+  "trigger_mechanism_audit": {
+    "audit_report": "objective5_condition_A_trigger_mechanism_audit.json (full detail), objective5_condition_A_trigger_mechanism_audit.md (readable)",
+    "audit_method": "offline, no Webots run -- controller.log regex counts + analyze_trigger_reason.py run directly against each trial's preserved bag",
+    "local_tof_ir_layer_enabled": true,
+    "local_tof_ir_layer_engaged_in_any_trial": false,
+    "peer_communication_avoidance_enabled": true,
+    "first_trigger_reason_all_5_trials": "PREDICTED_CPA",
+    "trials_pure_communication_cpa_avoidance": 5,
+    "trials_local_fallback_or_safe_degradation": 0,
+    "note": "The LOCAL ToF/IR safety layer remained enabled (never disabled to produce these results) but never actually engaged in any of the 5 trials -- every LOCAL_* event counter is 0 in every trial. All 5 trials are pure communication-CPA avoidance."
+  },
   "trial_ids": [
     "objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
     "objective5_impairment_matrix_v1_condition_A_trial02_attempt01",

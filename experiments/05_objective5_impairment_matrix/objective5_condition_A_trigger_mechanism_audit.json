@@ -1,0 +1,309 @@
+{
+  "audit_type": "OFFLINE_MECHANISM_AUDIT",
+  "webots_run_for_this_audit": false,
+  "controller_geometry_or_thresholds_modified": false,
+  "condition": "A",
+  "n_trials_audited": 5,
+  "trials": [
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
+      "frozen_config": {
+        "enable_peer_avoidance": true,
+        "enable_local_avoidance": true,
+        "require_local_sensors": true,
+        "source": "run_comm_baseline_formal_controllers.py make_controller() parameters dict, cross-checked against cooperative_avoider.py declare_parameter defaults (all match)",
+        "local_sensor_topics_confirmed_present": {
+          "topics_checked": [
+            "/epuck1/tof",
+            "/epuck2/tof",
+            "/epuck1/ps0",
+            "/epuck2/ps0"
+          ],
+          "evidence": "run_objective5_impairment_matrix_trial.sh line 334's wait_for_topics call gates simulation startup on these exact topics existing in `ros2 topic list`; all 5 trials' execution.log show the gate passed ('odometry and local sensors ready') before proceeding.",
+          "caveat": "Only /psN0 (ps0) and /tof are explicitly gated by name; ps1-ps7's individual existence is not independently confirmed by this specific check (NOT_MEASURABLE beyond ps0/tof from this evidence alone). None of /psN or /tof are recorded in the rosbag itself (only fused /epuckN/state_raw, /epuckN/state, /epuckN/cmd_vel, /epuckN/relay_status are recorded) -- state_publisher.py consumes the raw sensors internally and republishes a fused EpuckState."
+        },
+        "any_safety_layer_disabling_parameter_found": false
+      },
+      "event_counts": {
+        "AVOID_TURN": 8,
+        "AVOID_PASS": 84,
+        "RECOVER": 12,
+        "LOCAL_FRONT_DANGER": 0,
+        "LOCAL_FRONT_WARN": 0,
+        "LOCAL_LEFT_SIDE": 0,
+        "LOCAL_RIGHT_SIDE": 0,
+        "LOCAL_NARROW": 0,
+        "LOCAL_CLEARANCE": "NOT_MEASURABLE (not implemented in current controller_v4 code -- confirmed absent from local_obstacle_logic.py and cooperative_avoider.py by source audit, not merely absent from this log)",
+        "LOCAL_BYPASS": "NOT_MEASURABLE (removed legacy mechanism, confirmed absent from current controller_v4 code by source audit -- only appears in a docstring as a historical note)",
+        "LOCAL_RECOVER": 0,
+        "LOCAL_RECOVERY_READY": 0,
+        "SAFE_STOP_STALE": 4,
+        "SAFE_STOP_INVALID_ODOM": 0,
+        "SAFE_STOP_LOCAL_SENSORS": 0,
+        "SENSOR_INVALID": 0,
+        "extra_v4_modes_observed_for_completeness": {
+          "LOCAL_SIDE_TRACK": 0,
+          "LOCAL_SIDE_TRACK_HOLD": 0,
+          "LOCAL_SIDE_TRACK_CREEP": 0,
+          "LOCAL_CLEAR": 0
+        }
+      },
+      "first_avoid_turn_controller_log_line": 77,
+      "safe_stop_stale_characterization": "All 4 SAFE_STOP_STALE occurrences are a benign startup transient: 2 per robot, each a WAITING->SAFE_STOP_STALE->STARTUP_HOLD transition pair within ~100ms, at ros_time approximately 22-23s, before either robot has received its first peer state message -- confirmed by direct inspection of controller.log context lines. This is NOT a mid-task safety-layer intervention and does not affect the PREDICTED_CPA trigger or task outcome.",
+      "first_trigger_reason": "PREDICTED_CPA",
+      "first_trigger_evidence": {
+        "trigger_time_s": 21.120881996,
+        "trigger_distance_m": 0.3399048000574112,
+        "tcpa_at_trigger_s": 4.0,
+        "dcpa_at_trigger_m": 0.13894480466842718,
+        "closing_speed_at_trigger_mps": 0.050239998847246066,
+        "minimum_center_separation_m": 0.1430942842844398,
+        "source": "analyze_trigger_reason.py classify_trigger(), run directly against this trial's preserved bag (read-only, no Webots)"
+      },
+      "local_layer_engaged": false,
+      "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE: PREDICTED_CPA triggered the encounter, and every LOCAL_* engagement counter is 0. Consistent with the ideal Condition A result -- communication CPA intervened, LOCAL never engaged."
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial02_attempt01",
+      "frozen_config": {
+        "enable_peer_avoidance": true,
+        "enable_local_avoidance": true,
+        "require_local_sensors": true,
+        "source": "run_comm_baseline_formal_controllers.py make_controller() parameters dict, cross-checked against cooperative_avoider.py declare_parameter defaults (all match)",
+        "local_sensor_topics_confirmed_present": {
+          "topics_checked": [
+            "/epuck1/tof",
+            "/epuck2/tof",
+            "/epuck1/ps0",
+            "/epuck2/ps0"
+          ],
+          "evidence": "run_objective5_impairment_matrix_trial.sh line 334's wait_for_topics call gates simulation startup on these exact topics existing in `ros2 topic list`; all 5 trials' execution.log show the gate passed ('odometry and local sensors ready') before proceeding.",
+          "caveat": "Only /psN0 (ps0) and /tof are explicitly gated by name; ps1-ps7's individual existence is not independently confirmed by this specific check (NOT_MEASURABLE beyond ps0/tof from this evidence alone). None of /psN or /tof are recorded in the rosbag itself (only fused /epuckN/state_raw, /epuckN/state, /epuckN/cmd_vel, /epuckN/relay_status are recorded) -- state_publisher.py consumes the raw sensors internally and republishes a fused EpuckState."
+        },
+        "any_safety_layer_disabling_parameter_found": false
+      },
+      "event_counts": {
+        "AVOID_TURN": 8,
+        "AVOID_PASS": 86,
+        "RECOVER": 11,
+        "LOCAL_FRONT_DANGER": 0,
+        "LOCAL_FRONT_WARN": 0,
+        "LOCAL_LEFT_SIDE": 0,
+        "LOCAL_RIGHT_SIDE": 0,
+        "LOCAL_NARROW": 0,
+        "LOCAL_CLEARANCE": "NOT_MEASURABLE (not implemented in current controller_v4 code -- confirmed absent from local_obstacle_logic.py and cooperative_avoider.py by source audit, not merely absent from this log)",
+        "LOCAL_BYPASS": "NOT_MEASURABLE (removed legacy mechanism, confirmed absent from current controller_v4 code by source audit -- only appears in a docstring as a historical note)",
+        "LOCAL_RECOVER": 0,
+        "LOCAL_RECOVERY_READY": 0,
+        "SAFE_STOP_STALE": 4,
+        "SAFE_STOP_INVALID_ODOM": 0,
+        "SAFE_STOP_LOCAL_SENSORS": 0,
+        "SENSOR_INVALID": 0,
+        "extra_v4_modes_observed_for_completeness": {
+          "LOCAL_SIDE_TRACK": 0,
+          "LOCAL_SIDE_TRACK_HOLD": 0,
+          "LOCAL_SIDE_TRACK_CREEP": 0,
+          "LOCAL_CLEAR": 0
+        }
+      },
+      "first_avoid_turn_controller_log_line": 74,
+      "safe_stop_stale_characterization": "All 4 SAFE_STOP_STALE occurrences are a benign startup transient: 2 per robot, each a WAITING->SAFE_STOP_STALE->STARTUP_HOLD transition pair within ~100ms, at ros_time approximately 22-23s, before either robot has received its first peer state message -- confirmed by direct inspection of controller.log context lines. This is NOT a mid-task safety-layer intervention and does not affect the PREDICTED_CPA trigger or task outcome.",
+      "first_trigger_reason": "PREDICTED_CPA",
+      "first_trigger_evidence": {
+        "trigger_time_s": 22.493370382,
+        "trigger_distance_m": 0.358242392539978,
+        "tcpa_at_trigger_s": 4.0,
+        "dcpa_at_trigger_m": 0.13969839364290307,
+        "closing_speed_at_trigger_mps": 0.054635999724268816,
+        "minimum_center_separation_m": 0.15064050840214138,
+        "source": "analyze_trigger_reason.py classify_trigger(), run directly against this trial's preserved bag (read-only, no Webots)"
+      },
+      "local_layer_engaged": false,
+      "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE: PREDICTED_CPA triggered the encounter, and every LOCAL_* engagement counter is 0. Consistent with the ideal Condition A result -- communication CPA intervened, LOCAL never engaged."
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial03_attempt01",
+      "frozen_config": {
+        "enable_peer_avoidance": true,
+        "enable_local_avoidance": true,
+        "require_local_sensors": true,
+        "source": "run_comm_baseline_formal_controllers.py make_controller() parameters dict, cross-checked against cooperative_avoider.py declare_parameter defaults (all match)",
+        "local_sensor_topics_confirmed_present": {
+          "topics_checked": [
+            "/epuck1/tof",
+            "/epuck2/tof",
+            "/epuck1/ps0",
+            "/epuck2/ps0"
+          ],
+          "evidence": "run_objective5_impairment_matrix_trial.sh line 334's wait_for_topics call gates simulation startup on these exact topics existing in `ros2 topic list`; all 5 trials' execution.log show the gate passed ('odometry and local sensors ready') before proceeding.",
+          "caveat": "Only /psN0 (ps0) and /tof are explicitly gated by name; ps1-ps7's individual existence is not independently confirmed by this specific check (NOT_MEASURABLE beyond ps0/tof from this evidence alone). None of /psN or /tof are recorded in the rosbag itself (only fused /epuckN/state_raw, /epuckN/state, /epuckN/cmd_vel, /epuckN/relay_status are recorded) -- state_publisher.py consumes the raw sensors internally and republishes a fused EpuckState."
+        },
+        "any_safety_layer_disabling_parameter_found": false
+      },
+      "event_counts": {
+        "AVOID_TURN": 8,
+        "AVOID_PASS": 86,
+        "RECOVER": 10,
+        "LOCAL_FRONT_DANGER": 0,
+        "LOCAL_FRONT_WARN": 0,
+        "LOCAL_LEFT_SIDE": 0,
+        "LOCAL_RIGHT_SIDE": 0,
+        "LOCAL_NARROW": 0,
+        "LOCAL_CLEARANCE": "NOT_MEASURABLE (not implemented in current controller_v4 code -- confirmed absent from local_obstacle_logic.py and cooperative_avoider.py by source audit, not merely absent from this log)",
+        "LOCAL_BYPASS": "NOT_MEASURABLE (removed legacy mechanism, confirmed absent from current controller_v4 code by source audit -- only appears in a docstring as a historical note)",
+        "LOCAL_RECOVER": 0,
+        "LOCAL_RECOVERY_READY": 0,
+        "SAFE_STOP_STALE": 4,
+        "SAFE_STOP_INVALID_ODOM": 0,
+        "SAFE_STOP_LOCAL_SENSORS": 0,
+        "SENSOR_INVALID": 0,
+        "extra_v4_modes_observed_for_completeness": {
+          "LOCAL_SIDE_TRACK": 0,
+          "LOCAL_SIDE_TRACK_HOLD": 0,
+          "LOCAL_SIDE_TRACK_CREEP": 0,
+          "LOCAL_CLEAR": 0
+        }
+      },
+      "first_avoid_turn_controller_log_line": 73,
+      "safe_stop_stale_characterization": "All 4 SAFE_STOP_STALE occurrences are a benign startup transient: 2 per robot, each a WAITING->SAFE_STOP_STALE->STARTUP_HOLD transition pair within ~100ms, at ros_time approximately 22-23s, before either robot has received its first peer state message -- confirmed by direct inspection of controller.log context lines. This is NOT a mid-task safety-layer intervention and does not affect the PREDICTED_CPA trigger or task outcome.",
+      "first_trigger_reason": "PREDICTED_CPA",
+      "first_trigger_evidence": {
+        "trigger_time_s": 21.55384815,
+        "trigger_distance_m": 0.350832000374794,
+        "tcpa_at_trigger_s": 4.0,
+        "dcpa_at_trigger_m": 0.1398240029811866,
+        "closing_speed_at_trigger_mps": 0.052751999348401926,
+        "minimum_center_separation_m": 0.14781142476139542,
+        "source": "analyze_trigger_reason.py classify_trigger(), run directly against this trial's preserved bag (read-only, no Webots)"
+      },
+      "local_layer_engaged": false,
+      "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE: PREDICTED_CPA triggered the encounter, and every LOCAL_* engagement counter is 0. Consistent with the ideal Condition A result -- communication CPA intervened, LOCAL never engaged."
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial04_attempt01",
+      "frozen_config": {
+        "enable_peer_avoidance": true,
+        "enable_local_avoidance": true,
+        "require_local_sensors": true,
+        "source": "run_comm_baseline_formal_controllers.py make_controller() parameters dict, cross-checked against cooperative_avoider.py declare_parameter defaults (all match)",
+        "local_sensor_topics_confirmed_present": {
+          "topics_checked": [
+            "/epuck1/tof",
+            "/epuck2/tof",
+            "/epuck1/ps0",
+            "/epuck2/ps0"
+          ],
+          "evidence": "run_objective5_impairment_matrix_trial.sh line 334's wait_for_topics call gates simulation startup on these exact topics existing in `ros2 topic list`; all 5 trials' execution.log show the gate passed ('odometry and local sensors ready') before proceeding.",
+          "caveat": "Only /psN0 (ps0) and /tof are explicitly gated by name; ps1-ps7's individual existence is not independently confirmed by this specific check (NOT_MEASURABLE beyond ps0/tof from this evidence alone). None of /psN or /tof are recorded in the rosbag itself (only fused /epuckN/state_raw, /epuckN/state, /epuckN/cmd_vel, /epuckN/relay_status are recorded) -- state_publisher.py consumes the raw sensors internally and republishes a fused EpuckState."
+        },
+        "any_safety_layer_disabling_parameter_found": false
+      },
+      "event_counts": {
+        "AVOID_TURN": 8,
+        "AVOID_PASS": 86,
+        "RECOVER": 11,
+        "LOCAL_FRONT_DANGER": 0,
+        "LOCAL_FRONT_WARN": 0,
+        "LOCAL_LEFT_SIDE": 0,
+        "LOCAL_RIGHT_SIDE": 0,
+        "LOCAL_NARROW": 0,
+        "LOCAL_CLEARANCE": "NOT_MEASURABLE (not implemented in current controller_v4 code -- confirmed absent from local_obstacle_logic.py and cooperative_avoider.py by source audit, not merely absent from this log)",
+        "LOCAL_BYPASS": "NOT_MEASURABLE (removed legacy mechanism, confirmed absent from current controller_v4 code by source audit -- only appears in a docstring as a historical note)",
+        "LOCAL_RECOVER": 0,
+        "LOCAL_RECOVERY_READY": 0,
+        "SAFE_STOP_STALE": 4,
+        "SAFE_STOP_INVALID_ODOM": 0,
+        "SAFE_STOP_LOCAL_SENSORS": 0,
+        "SENSOR_INVALID": 0,
+        "extra_v4_modes_observed_for_completeness": {
+          "LOCAL_SIDE_TRACK": 0,
+          "LOCAL_SIDE_TRACK_HOLD": 0,
+          "LOCAL_SIDE_TRACK_CREEP": 0,
+          "LOCAL_CLEAR": 0
+        }
+      },
+      "first_avoid_turn_controller_log_line": 76,
+      "safe_stop_stale_characterization": "All 4 SAFE_STOP_STALE occurrences are a benign startup transient: 2 per robot, each a WAITING->SAFE_STOP_STALE->STARTUP_HOLD transition pair within ~100ms, at ros_time approximately 22-23s, before either robot has received its first peer state message -- confirmed by direct inspection of controller.log context lines. This is NOT a mid-task safety-layer intervention and does not affect the PREDICTED_CPA trigger or task outcome.",
+      "first_trigger_reason": "PREDICTED_CPA",
+      "first_trigger_evidence": {
+        "trigger_time_s": 21.550472159,
+        "trigger_distance_m": 0.3587448000907898,
+        "tcpa_at_trigger_s": 4.0,
+        "dcpa_at_trigger_m": 0.13015279918909145,
+        "closing_speed_at_trigger_mps": 0.05714800022542467,
+        "minimum_center_separation_m": 0.15030056489146615,
+        "source": "analyze_trigger_reason.py classify_trigger(), run directly against this trial's preserved bag (read-only, no Webots)"
+      },
+      "local_layer_engaged": false,
+      "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE: PREDICTED_CPA triggered the encounter, and every LOCAL_* engagement counter is 0. Consistent with the ideal Condition A result -- communication CPA intervened, LOCAL never engaged."
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial05_attempt01",
+      "frozen_config": {
+        "enable_peer_avoidance": true,
+        "enable_local_avoidance": true,
+        "require_local_sensors": true,
+        "source": "run_comm_baseline_formal_controllers.py make_controller() parameters dict, cross-checked against cooperative_avoider.py declare_parameter defaults (all match)",
+        "local_sensor_topics_confirmed_present": {
+          "topics_checked": [
+            "/epuck1/tof",
+            "/epuck2/tof",
+            "/epuck1/ps0",
+            "/epuck2/ps0"
+          ],
+          "evidence": "run_objective5_impairment_matrix_trial.sh line 334's wait_for_topics call gates simulation startup on these exact topics existing in `ros2 topic list`; all 5 trials' execution.log show the gate passed ('odometry and local sensors ready') before proceeding.",
+          "caveat": "Only /psN0 (ps0) and /tof are explicitly gated by name; ps1-ps7's individual existence is not independently confirmed by this specific check (NOT_MEASURABLE beyond ps0/tof from this evidence alone). None of /psN or /tof are recorded in the rosbag itself (only fused /epuckN/state_raw, /epuckN/state, /epuckN/cmd_vel, /epuckN/relay_status are recorded) -- state_publisher.py consumes the raw sensors internally and republishes a fused EpuckState."
+        },
+        "any_safety_layer_disabling_parameter_found": false
+      },
+      "event_counts": {
+        "AVOID_TURN": 7,
+        "AVOID_PASS": 85,
+        "RECOVER": 11,
+        "LOCAL_FRONT_DANGER": 0,
+        "LOCAL_FRONT_WARN": 0,
+        "LOCAL_LEFT_SIDE": 0,
+        "LOCAL_RIGHT_SIDE": 0,
+        "LOCAL_NARROW": 0,
+        "LOCAL_CLEARANCE": "NOT_MEASURABLE (not implemented in current controller_v4 code -- confirmed absent from local_obstacle_logic.py and cooperative_avoider.py by source audit, not merely absent from this log)",
+        "LOCAL_BYPASS": "NOT_MEASURABLE (removed legacy mechanism, confirmed absent from current controller_v4 code by source audit -- only appears in a docstring as a historical note)",
+        "LOCAL_RECOVER": 0,
+        "LOCAL_RECOVERY_READY": 0,
+        "SAFE_STOP_STALE": 4,
+        "SAFE_STOP_INVALID_ODOM": 0,
+        "SAFE_STOP_LOCAL_SENSORS": 0,
+        "SENSOR_INVALID": 0,
+        "extra_v4_modes_observed_for_completeness": {
+          "LOCAL_SIDE_TRACK": 0,
+          "LOCAL_SIDE_TRACK_HOLD": 0,
+          "LOCAL_SIDE_TRACK_CREEP": 0,
+          "LOCAL_CLEAR": 0
+        }
+      },
+      "first_avoid_turn_controller_log_line": 78,
+      "safe_stop_stale_characterization": "All 4 SAFE_STOP_STALE occurrences are a benign startup transient: 2 per robot, each a WAITING->SAFE_STOP_STALE->STARTUP_HOLD transition pair within ~100ms, at ros_time approximately 22-23s, before either robot has received its first peer state message -- confirmed by direct inspection of controller.log context lines. This is NOT a mid-task safety-layer intervention and does not affect the PREDICTED_CPA trigger or task outcome.",
+      "first_trigger_reason": "PREDICTED_CPA",
+      "first_trigger_evidence": {
+        "trigger_time_s": 20.668632477,
+        "trigger_distance_m": 0.3387744128704071,
+        "tcpa_at_trigger_s": 4.0,
+        "dcpa_at_trigger_m": 0.1378144174814231,
+        "closing_speed_at_trigger_mps": 0.05023999884724608,
+        "minimum_center_separation_m": 0.14178534915907265,
+        "source": "analyze_trigger_reason.py classify_trigger(), run directly against this trial's preserved bag (read-only, no Webots)"
+      },
+      "local_layer_engaged": false,
+      "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE: PREDICTED_CPA triggered the encounter, and every LOCAL_* engagement counter is 0. Consistent with the ideal Condition A result -- communication CPA intervened, LOCAL never engaged."
+    }
+  ],
+  "cross_trial_summary": {
+    "trials_with_pure_communication_cpa_avoidance": 5,
+    "trials_with_local_fallback_or_safe_degradation": 0,
+    "all_five_trials_pure_communication_cpa": true
+  },
+  "safety_margin_note": {
+    "tightest_trial": "objective5_impairment_matrix_v1_condition_A_trial05_attempt01",
+    "tightest_margin_m": 0.0017853491590726356,
+    "note": "Trial 05's safety margin (~1.785mm above safety_radius_m=0.14) is low but positive and satisfies the frozen PASS threshold. For Conditions B-G: if communication impairment causes a collision or a negative safety margin in any future trial, that must be recorded as the genuine TASK_OUTCOME (UNSAFE_FAILURE) for that trial -- never masked by adjusting safety_radius_m, trigger thresholds, or robot geometry after seeing an unfavorable result."
+  }
+}

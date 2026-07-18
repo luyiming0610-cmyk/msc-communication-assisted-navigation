@@ -6,6 +6,21 @@ the user and individually observed; Trials 02-05 ran automatically
 under explicit user authorization, each gated by the same strict
 per-trial criteria, with no per-trial manual observation.
 
+## Trigger mechanism (offline audit, no Webots run -- see `objective5_condition_A_trigger_mechanism_audit.{json,md}` for full detail)
+
+The local ToF/IR safety layer (`enable_local_avoidance=True`,
+`require_local_sensors=True`) **remained enabled, simultaneously with
+communication-CPA avoidance (`enable_peer_avoidance=True`), in every
+trial** -- it was never disabled to produce these results. Despite
+being enabled and available (local sensor topics confirmed present in
+all 5 trials), **the LOCAL layer never actually engaged in any of the
+5 trials** -- every `LOCAL_*` event counter is 0 in every trial.
+Communication CPA (`PREDICTED_CPA`, confirmed via
+`analyze_trigger_reason.py` run against each trial's bag) triggered the
+avoidance encounter in all 5 trials. **All 5 trials: pure
+communication-CPA avoidance, not `LOCAL_FALLBACK` and not
+`SAFE_DEGRADATION`.**
+
 ## Pass rate
 
 | trial | verdict | DATA_VALIDITY | TASK_OUTCOME | min_interrobot_distance_m | safety_margin_m |
