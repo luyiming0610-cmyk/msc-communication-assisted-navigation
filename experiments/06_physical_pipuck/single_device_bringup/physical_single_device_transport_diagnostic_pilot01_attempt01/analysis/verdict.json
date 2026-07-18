@@ -1,0 +1,267 @@
+{
+  "verdict": "PASS_WITH_LIMITATION",
+  "verdict_meaning": "PASS_WITH_LIMITATION: base Pi-TCP-WSL transport link met all measurable stability criteria, but this is NOT a formal communication-performance PASS -- PDR/sequence integrity are structurally NOT_MEASURABLE with the current base bridge, and no cross-device clock sync means no one-way latency is valid.",
+  "experiment_kind": "DIAGNOSTIC_PHYSICAL",
+  "scope_note": "This pilot validates ONLY the base Pi-TCP-WSL transport link. It does NOT validate the current EpuckState protocol (no converter exists yet) and does NOT validate avoidance behaviour (no controller was run).",
+  "wsl_sampler_healthy": true,
+  "pi_sampler_healthy": true,
+  "fail_reasons": [],
+  "not_measurable": [
+    "sequence_gap_count/duplicate_count/out_of_order_count/aligned_window_pdr: the currently-running BASE wsl_epuck_tcp_bridge.py does not expose the Pi's internal per-state 'seq' field on any WSL ROS topic or in /epuck_bridge/status (it is used only for internal de-duplication in _publish_latest_state, then discarded) -- there is no paired source sequence number available to compute true PDR without modifying the bridge, which was explicitly out of scope for this pilot."
+  ],
+  "not_valid": [
+    "one_way_latency_ms: no cross-device clock synchronization procedure (NTP/chrony) has been run or verified between the Pi and the laptop/WSL -- wall_clock_delta_ms exists only as a clock-offset diagnostic and is never used here to compute a one-way latency. RTT (last_rtt_ms) and last_state_age_s ARE valid, because both are computed entirely within WSL's own clock (time.monotonic()/time.time() in wsl_epuck_tcp_bridge.py) and never subtract a Pi-side timestamp from a WSL-side one."
+  ],
+  "timestamp_integrity": [
+    {
+      "label": "wsl_transport_status",
+      "path": "/home/eamon/epuck_comm_bags/physical_single_device_transport_diagnostic_pilot01_attempt01_diag/wsl_transport_status.csv",
+      "valid_rows": 296,
+      "monotonic_non_decreasing": true,
+      "duplicate_timestamp_count": 0,
+      "first_time_unix_s": 1784377146.122,
+      "last_time_unix_s": 1784377441.122,
+      "span_s": 295.0,
+      "max_gap_s": 1.002000093460083,
+      "min_gap_s": 0.997999906539917,
+      "mean_gap_s": 1.0
+    },
+    {
+      "label": "wsl_system_metrics",
+      "path": "/home/eamon/epuck_comm_bags/physical_single_device_transport_diagnostic_pilot01_attempt01_diag/wsl_system_metrics.csv",
+      "valid_rows": 306,
+      "monotonic_non_decreasing": true,
+      "duplicate_timestamp_count": 0,
+      "first_time_unix_s": 1784377146.314,
+      "last_time_unix_s": 1784377445.545,
+      "span_s": 299.2310001850128,
+      "max_gap_s": 1.003999948501587,
+      "min_gap_s": 0.3529999256134033,
+      "mean_gap_s": 0.9810852465082387
+    },
+    {
+      "label": "pi_system_metrics",
+      "path": "/home/eamon/epuck_comm_bags/physical_single_device_transport_diagnostic_pilot01_attempt01_diag/pi_system_metrics.csv",
+      "valid_rows": 501,
+      "monotonic_non_decreasing": true,
+      "duplicate_timestamp_count": 0,
+      "first_time_unix_s": 1784377120.471,
+      "last_time_unix_s": 1784377624.016,
+      "span_s": 503.54500007629395,
+      "max_gap_s": 1.0139999389648438,
+      "min_gap_s": 1.0059998035430908,
+      "mean_gap_s": 1.007090000152588
+    }
+  ],
+  "run_window": {
+    "run_start_unix_s": 1784377146.122,
+    "run_end_unix_s": 1784377441.122,
+    "main_window_start_unix_s": 1784377173.902174,
+    "main_window_end_unix_s": 1784377413.902174,
+    "main_window_span_s": 240.0,
+    "note": "main_window bounds were computed from the REAL measured overlap of Pi/WSL/bag timestamps, not a fixed offset assumption -- see the overlap-window calculation in the session record."
+  },
+  "full_run": {
+    "sample_count": 296,
+    "connected_fraction": 1.0,
+    "reconnect_count": 0,
+    "rtt_ms": {
+      "sample_count": 296,
+      "mean": 54.06980975337282,
+      "median": 31.125140000085594,
+      "p95": 115.69930125028804,
+      "p99": 130.38991844964585,
+      "max": 355.3862150001805
+    },
+    "state_age_s": {
+      "sample_count": 296,
+      "mean": 0.05584018214328869,
+      "median": 0.0519176721572876,
+      "p95": 0.10406237840652466,
+      "p99": 0.12133994102478142,
+      "max": 0.4846198558807373
+    },
+    "rx_count_delta": 2815,
+    "crc_errors_delta": 0,
+    "scan_msgs_via_wsl_topic": 2741,
+    "odom_msgs_via_wsl_topic": 2741,
+    "nonzero_cmd_vel_observed": 0
+  },
+  "main_window": {
+    "sample_count": 240,
+    "connected_fraction": 1.0,
+    "reconnect_count": 0,
+    "rtt_ms": {
+      "sample_count": 240,
+      "mean": 52.54225128333587,
+      "median": 8.503562999976566,
+      "p95": 116.58297035025949,
+      "p99": 129.63318268965392,
+      "max": 355.3862150001805
+    },
+    "state_age_s": {
+      "sample_count": 240,
+      "mean": 0.0563848614692688,
+      "median": 0.05238223075866699,
+      "p95": 0.10407196283340454,
+      "p99": 0.17762587547302097,
+      "max": 0.4846198558807373
+    },
+    "rx_count_delta": 2286,
+    "crc_errors_delta": 0,
+    "scan_msgs_via_wsl_topic": 2227,
+    "odom_msgs_via_wsl_topic": 2227,
+    "nonzero_cmd_vel_observed": 0
+  },
+  "bag_topics_full_run": {
+    "/scan": {
+      "message_count": 2775,
+      "duration_s": 298.939896715,
+      "avg_rate_hz": 9.28280243117097
+    },
+    "/odom": {
+      "message_count": 2775,
+      "duration_s": 298.939679557,
+      "avg_rate_hz": 9.282809174453805
+    },
+    "/epuck_bridge/status": {
+      "message_count": 299,
+      "duration_s": 297.998788169,
+      "avg_rate_hz": 1.0033597849076896
+    },
+    "/cmd_vel": {
+      "message_count": 0,
+      "duration_s": 0.0,
+      "avg_rate_hz": null
+    }
+  },
+  "bag_topics_main_window": {
+    "/scan": {
+      "message_count": 2227,
+      "duration_s": 239.900132597,
+      "avg_rate_hz": 9.283029466853446
+    },
+    "/odom": {
+      "message_count": 2227,
+      "duration_s": 239.900392249,
+      "avg_rate_hz": 9.28301941952862
+    },
+    "/epuck_bridge/status": {
+      "message_count": 240,
+      "duration_s": 238.998258229,
+      "avg_rate_hz": 1.0041914187091698
+    },
+    "/cmd_vel": {
+      "message_count": 0,
+      "duration_s": 0.0,
+      "avg_rate_hz": null
+    }
+  },
+  "cmd_vel_nonzero_in_bag_full_run": 0,
+  "cmd_vel_nonzero_in_bag_main_window": 0,
+  "bag_record_warning_lines": [],
+  "wsl_system_metrics_full_run": {
+    "cpu_percent": {
+      "sample_count": 306,
+      "mean": 2.801764705882353,
+      "median": 2.49,
+      "p95": 6.0075,
+      "p99": 7.107499999999995,
+      "max": 19.9
+    },
+    "mem_used_mb": {
+      "sample_count": 306,
+      "mean": 599.2285620915032,
+      "median": 600.66,
+      "p95": 603.56,
+      "p99": 603.59,
+      "max": 603.59
+    }
+  },
+  "wsl_system_metrics_main_window": {
+    "cpu_percent": {
+      "sample_count": 244,
+      "mean": 2.6611065573770496,
+      "median": 2.255,
+      "p95": 5.5685,
+      "p99": 6.145399999999999,
+      "max": 8.5
+    },
+    "mem_used_mb": {
+      "sample_count": 244,
+      "mean": 599.7843032786885,
+      "median": 600.66,
+      "p95": 603.56,
+      "p99": 603.59,
+      "max": 603.59
+    }
+  },
+  "pi_system_metrics_full_run": {
+    "cpu_percent": {
+      "sample_count": 501,
+      "mean": 8.120479041916168,
+      "median": 8.16,
+      "p95": 9.37,
+      "p99": 10.03,
+      "max": 10.5
+    },
+    "mem_used_mb": {
+      "sample_count": 501,
+      "mean": 165.20670658682633,
+      "median": 165.16,
+      "p95": 165.65,
+      "p99": 165.73,
+      "max": 165.75
+    },
+    "wifi_link_quality": {
+      "sample_count": 501,
+      "mean": 69.72654690618762,
+      "median": 70.0,
+      "p95": 70.0,
+      "p99": 70.0,
+      "max": 70.0
+    },
+    "wifi_signal_dbm": {
+      "sample_count": 501,
+      "mean": -29.518962075848304,
+      "median": -27.0,
+      "p95": -24.0,
+      "p99": -24.0,
+      "max": -23.0
+    }
+  },
+  "pi_system_metrics_main_window": {
+    "cpu_percent": {
+      "sample_count": 238,
+      "mean": 8.339621848739496,
+      "median": 8.39,
+      "p95": 9.642499999999997,
+      "p99": 10.1571,
+      "max": 10.5
+    },
+    "mem_used_mb": {
+      "sample_count": 238,
+      "mean": 165.07344537815126,
+      "median": 165.06,
+      "p95": 165.25,
+      "p99": 165.38,
+      "max": 165.41
+    },
+    "wifi_link_quality": {
+      "sample_count": 238,
+      "mean": 70.0,
+      "median": 70.0,
+      "p95": 70.0,
+      "p99": 70.0,
+      "max": 70.0
+    },
+    "wifi_signal_dbm": {
+      "sample_count": 238,
+      "mean": -28.8781512605042,
+      "median": -26.5,
+      "p95": -24.0,
+      "p99": -24.0,
+      "max": -23.0
+    }
+  }
+}

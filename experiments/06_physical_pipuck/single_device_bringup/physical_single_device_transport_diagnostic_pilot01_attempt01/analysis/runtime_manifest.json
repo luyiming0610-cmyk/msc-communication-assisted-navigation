@@ -1,0 +1,69 @@
+{
+  "experiment_id": "physical_single_device_transport_diagnostic_pilot01",
+  "attempt": "attempt01",
+  "experiment_kind": "DIAGNOSTIC_PHYSICAL",
+  "verdict": "PASS_WITH_LIMITATION",
+  "robot": "school e-puck2 #5809 (only physical unit)",
+  "controller": "NONE -- no controller launched, no /cmd_vel ever published by any recording tool",
+  "protocol_under_test": "base Pi-TCP-WSL transport link only (epuck_bridge_v1); NOT the EpuckState.msg protocol (no converter exists)",
+  "bridge_variant": "base (real_robot_bridge/wsl_epuck_tcp_bridge.py + pi_epuck_tcp_server.py) -- sensor-extended bridge NOT used this pilot",
+  "recorder_script_state": "wsl_transport_recorder.py PRE-FIX version was used for this run: it hit a benign trailing 'rcl_shutdown already called on the given context' exception after SIGINT, matching a bug class already fixed in sequence_counter.py earlier this session. All data-critical work (CSV rows, wsl_transport_totals.json) completed successfully BEFORE that exception -- verified directly via row counts (296 valid rows) and totals.json contents. The script was patched immediately after (wraps the final rclpy.shutdown() in try/except) for future runs; this attempt's data was not discarded or re-collected because its integrity was independently confirmed.",
+  "native_wsl_bag_path": "/home/eamon/epuck_comm_bags/physical_single_device_transport_diagnostic_pilot01_attempt01",
+  "native_wsl_diag_path": "/home/eamon/epuck_comm_bags/physical_single_device_transport_diagnostic_pilot01_attempt01_diag",
+  "windows_final_path": "experiments/06_physical_pipuck/single_device_bringup/physical_single_device_transport_diagnostic_pilot01_attempt01/",
+  "timestamp_integrity": [
+    {
+      "label": "wsl_transport_status",
+      "path": "/home/eamon/epuck_comm_bags/physical_single_device_transport_diagnostic_pilot01_attempt01_diag/wsl_transport_status.csv",
+      "valid_rows": 296,
+      "monotonic_non_decreasing": true,
+      "duplicate_timestamp_count": 0,
+      "first_time_unix_s": 1784377146.122,
+      "last_time_unix_s": 1784377441.122,
+      "span_s": 295.0,
+      "max_gap_s": 1.002000093460083,
+      "min_gap_s": 0.997999906539917,
+      "mean_gap_s": 1.0
+    },
+    {
+      "label": "wsl_system_metrics",
+      "path": "/home/eamon/epuck_comm_bags/physical_single_device_transport_diagnostic_pilot01_attempt01_diag/wsl_system_metrics.csv",
+      "valid_rows": 306,
+      "monotonic_non_decreasing": true,
+      "duplicate_timestamp_count": 0,
+      "first_time_unix_s": 1784377146.314,
+      "last_time_unix_s": 1784377445.545,
+      "span_s": 299.2310001850128,
+      "max_gap_s": 1.003999948501587,
+      "min_gap_s": 0.3529999256134033,
+      "mean_gap_s": 0.9810852465082387
+    },
+    {
+      "label": "pi_system_metrics",
+      "path": "/home/eamon/epuck_comm_bags/physical_single_device_transport_diagnostic_pilot01_attempt01_diag/pi_system_metrics.csv",
+      "valid_rows": 501,
+      "monotonic_non_decreasing": true,
+      "duplicate_timestamp_count": 0,
+      "first_time_unix_s": 1784377120.471,
+      "last_time_unix_s": 1784377624.016,
+      "span_s": 503.54500007629395,
+      "max_gap_s": 1.0139999389648438,
+      "min_gap_s": 1.0059998035430908,
+      "mean_gap_s": 1.007090000152588
+    }
+  ],
+  "run_window": {
+    "run_start_unix_s": 1784377146.122,
+    "run_end_unix_s": 1784377441.122,
+    "main_window_start_unix_s": 1784377173.902174,
+    "main_window_end_unix_s": 1784377413.902174,
+    "main_window_span_s": 240.0,
+    "note": "main_window bounds were computed from the REAL measured overlap of Pi/WSL/bag timestamps, not a fixed offset assumption -- see the overlap-window calculation in the session record."
+  },
+  "not_measurable": [
+    "sequence_gap_count/duplicate_count/out_of_order_count/aligned_window_pdr: the currently-running BASE wsl_epuck_tcp_bridge.py does not expose the Pi's internal per-state 'seq' field on any WSL ROS topic or in /epuck_bridge/status (it is used only for internal de-duplication in _publish_latest_state, then discarded) -- there is no paired source sequence number available to compute true PDR without modifying the bridge, which was explicitly out of scope for this pilot."
+  ],
+  "not_valid": [
+    "one_way_latency_ms: no cross-device clock synchronization procedure (NTP/chrony) has been run or verified between the Pi and the laptop/WSL -- wall_clock_delta_ms exists only as a clock-offset diagnostic and is never used here to compute a one-way latency. RTT (last_rtt_ms) and last_state_age_s ARE valid, because both are computed entirely within WSL's own clock (time.monotonic()/time.time() in wsl_epuck_tcp_bridge.py) and never subtract a Pi-side timestamp from a WSL-side one."
+  ]
+}

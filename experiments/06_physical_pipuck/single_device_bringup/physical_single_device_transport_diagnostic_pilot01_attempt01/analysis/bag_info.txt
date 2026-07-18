@@ -1,0 +1,12 @@
+
+Files:             physical_single_device_transport_diagnostic_pilot01_attempt01_0.db3
+Bag size:          2.8 MiB
+Storage id:        sqlite3
+Duration:          298.939982787s
+Start:             Jul 18 2026 13:19:06.682348369 (1784377146.682348369)
+End:               Jul 18 2026 13:24:05.622331156 (1784377445.622331156)
+Messages:          5849
+Topic information: Topic: /epuck_bridge/status | Type: std_msgs/msg/String | Count: 299 | Serialization Format: cdr
+                   Topic: /scan | Type: sensor_msgs/msg/LaserScan | Count: 2775 | Serialization Format: cdr
+                   Topic: /odom | Type: nav_msgs/msg/Odometry | Count: 2775 | Serialization Format: cdr
+
