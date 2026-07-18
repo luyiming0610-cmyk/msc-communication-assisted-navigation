@@ -36,7 +36,7 @@ Pi-puck, reality gap).
 - **Objective 3** (Library Implementation): `epuck2_comm` library implemented — `state_publisher`, `cooperative_avoider`, `network_impairment_relay`, analyzers. 126/126 tests passing.
 - **Objective 4** (Task-Specific Validation): controller v1→v4 defect chain resolved; **Phase 4 formal batch SEALED, 5/5 PASS** (commit `e32560e`). Avoidance-scenario scope is now intentionally frozen.
 - **Objective 5** (Performance Analysis): analyzer + impairment relay implemented and unit-tested; **zero-impairment baseline is still diagnostic only** — root cause of an earlier ~40-55% message-loss anomaly has been traced to writing rosbag directly to a `/mnt/c` (Windows-mounted) path from WSL2, confirmed via two independent native-WSL-path diagnostic trials (PDR=1.0 both times), but a full formal baseline (with the actual task controller running) has not yet been completed under that fixed workflow. **No formal PDR/latency figures exist yet.**
-- **Objective 6/7** (physical validation, reality gap): bridge/driver bringup verified (see Objective 1 above); no physical validation experiment has actually been run yet under the current protocol. `physical_single_device_comm_pilot01` (stationary, comm-only) is designed but not run — see `experiments/06_physical_pipuck/single_device_bringup/physical_single_device_comm_pilot01_DESIGN.md`.
+- **Objective 6/7** (physical validation, reality gap): bridge/driver bringup verified (see Objective 1 above). **First formal physical result now exists**: `physical_single_device_zero_impairment_baseline_v1` (stationary, no ground motion, no controller, single e-puck2 #5809, expanded Pi-TCP-WSL bridge + `EpuckState.msg`) is **FINAL_BATCH_PASS (5/5 FINAL_PASS)** — see `experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/batch_summary.md` and the per-trial `physical_single_device_zero_impairment_baseline_v1_trial0N_attemptNN_analysis/` directories. All 5 trials are one continuous driver/Pi-expanded-server/WSL-bridge session (not 5 independent cold starts). Tier A delivery ratio 1.0/5 trials (application-level, not IP/TCP loss; `duplicate_count` NOT_MEASURABLE, never 0); Tier B bag-capture ratio 1.0 at ~8.88-8.94 Hz actual; Tier C raw sensors ~9.2 Hz, no PDR claimed; RTT tail ~20-25% >50/100ms, 0% >200ms recurring across all 5 windows with **no root-cause attribution**; one-way Pi-to-WSL latency **NOT reported/measured** (no clock-sync verified); `trial01/02_attempt01_short_window` are excluded diagnostic evidence (window-timing defect, since fixed), not part of this n=5. This is a stationary, comm-layer-only result — no ground-motion or controller-driven physical trial has run yet, and reality-gap comparison (Objective 7) has not started.
 
 ## Key paths
 
@@ -115,6 +115,13 @@ zero gaps/duplicates/out-of-order):
   complete companion (protocol_v1.1_stamp_semantics), metric_coverage all
   five metrics VALID. **Does not replace trial01** — both remain
   separately registered.
+
+The registry's first `evidence_level=FORMAL_PHYSICAL` row (distinct from
+`FORMAL_SIM`) is `physical_single_device_zero_impairment_baseline_v1`
+(5/5 FINAL_PASS, `06_physical_pipuck`) — see the Objective 6/7 status line
+above and `experiments/EXPERIMENT_INDEX.md`'s `06_physical_pipuck` section
+for the full scope note (Tier A/B/C semantics, RTT no-root-cause,
+one-way-latency not measured, 2 excluded short-window attempts).
 
 Full machine-readable record: `experiments/experiment_registry.csv` (one
 row per experiment/batch — `status`, `evidence_level`,

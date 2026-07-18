@@ -87,6 +87,15 @@
         "task_behavior": "VALID", "latency": "VALID"
       },
       "note": "does NOT replace trial01 -- both remain separately registered with different metric_coverage. Same acceptance criteria as trial01, PASS: aligned-window PDR=1.0 both robots, 0 gaps/dup/oo, complete=true both robots, realtime factor 0.996/1.003, genuine task completion. Latency (NEW, via live sequence_counter, same clock domain as message.stamp): mean/median/p95/max message_age_s = 0.0 both robots (zero configured delay, near-instant relay), valid_age_sample_count=836/823, 0 negative/anomalous age samples."
+    },
+    {
+      "name": "Physical single-device zero-impairment communication baseline, formal (physical_single_device_zero_impairment_baseline_v1)",
+      "status": "FINAL_BATCH_PASS",
+      "trial_count": 5,
+      "pass_count": 5,
+      "evidence_level": "FORMAL_PHYSICAL",
+      "sealed": false,
+      "note": "First FORMAL physical-hardware result of the whole project (everything physical before this is DIAGNOSTIC_PHYSICAL). Stationary (no ground motion, no controller), single e-puck2 #5809, expanded Pi-TCP-WSL bridge + EpuckState.msg protocol. 5 trials (trial01_attempt02, trial02_attempt02, trial03_attempt01, trial04_attempt01, trial05_attempt01) all FINAL_PASS -- one continuous driver/Pi-expanded-server/WSL-bridge session, NOT 5 independent cold starts (only state_publisher FRESH-restarted per trial). Each trial: real 4-source (bag/WSL bridge-status CSV/WSL system-metrics CSV/batch Pi system-metrics CSV) overlap 309.9-311.1s, centered 240.000s main window, >=34.9s buffer both sides. Tier A (APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO, trial-start-vs-end snapshot delta of the bridge's own counters, NOT IP/TCP loss) = 1.0 all 5, 0 missing/out_of_order; duplicate_count NOT_MEASURABLE every trial (never reported as 0). Tier B (EpuckState bag capture) ratio 1.0 all 5, actual measured rate ~8.88-8.94 Hz. Tier C (raw sensor topics) ~9.2 Hz, 0 stall, no PDR claimed. RTT (1Hz status snapshot, not a full transaction census): tail ~20-25% >50ms, ~20-25% >100ms, 0% >200ms, recurring across all 5 windows -- observed repeatable pattern only, NO root-cause attribution. One-way Pi-to-WSL latency NOT reported/NOT measured (no NTP/chrony clock-sync verified). trial01_attempt01_short_window and trial02_attempt01_short_window are EXCLUDED diagnostic evidence (window-timing defect in the now-deprecated run_baseline_v1_trial.sh, fixed by run_baseline_v1_trial_v2.sh, orchestrator_git_commit a7f2a7e) -- not part of this n=5. Evidence: experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/batch_summary.md and per-trial physical_single_device_zero_impairment_baseline_v1_trial0N_attemptNN_analysis/ directories. Raw rosbag/CSVs/logs live outside the git repo at native WSL path /home/eamon/epuck_comm_bags/."
     }
   ],
   "active_experiment": {
@@ -113,7 +122,7 @@
     },
     {
       "item": "Physical Pi-puck validation (Objective 1/5/6/7)",
-      "blocked_by": "CORRECTED (was wrong: this project has and will only ever have ONE physical e-puck2/Pi-puck unit, #5809 -- the paper must never claim a completed dual-physical-robot experiment; the second node is a virtual/laptop peer). Bridge/driver bringup verified 2026-07-18 (Pi ROS2 Foxy driver + Pi TCP server + WSL TCP client all running, /scan /odom /tof /ps0 all confirmed publishing, robot stationary, no /cmd_vel sent) -- see experiments/06_physical_pipuck/physical_device_registry.md. No pilot or formal physical experiment has run yet under the current protocol. Remaining blockers: (1) physical_single_device_comm_pilot01 (stationary, comm-only, designed not run -- see experiments/06_physical_pipuck/single_device_bringup/), (2) no EpuckState.msg converter exists yet for real-hardware data (see physical_protocol_gap_report.md), (3) cross-device clock-sync still unimplemented (verify_clock_sync() stub) -- though the bridge's own sequence-acknowledgement RTT does not depend on clock sync and is already available."
+      "blocked_by": "PARTIALLY RESOLVED as of 2026-07-18: physical_single_device_zero_impairment_baseline_v1 (stationary, single e-puck2 #5809, expanded Pi-TCP-WSL bridge + EpuckState.msg) is now FINAL_BATCH_PASS (5/5) -- the first FORMAL physical-hardware result of the project (see completed_batches). This project has and will only ever have ONE physical e-puck2/Pi-puck unit, #5809 -- the paper must never claim a completed dual-physical-robot experiment; the second node is a virtual/laptop peer. Remaining blockers: (1) no ground-motion/controller physical trial has run yet (this batch is stationary, comm-layer-only); (2) one-way Pi-to-WSL latency remains NOT reported -- cross-device clock-sync (verify_clock_sync() stub) is still unimplemented, though the bridge's own sequence-acknowledgement RTT does not depend on clock sync and is already available and measured; (3) no EpuckState.msg converter exists yet for real-hardware data beyond the expanded bridge already used in this batch (see physical_protocol_gap_report.md for the original gap finding)."
     }
   ],
   "formal_data_roots": [
@@ -121,7 +130,8 @@
     "experiments/cooperative_avoidance_20260716/bags/*_formal_trial_0{1..5} (Phase 2/3, controller_v1)",
     "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_combined_formal_trial0{1..5} (Phase 4, controller_v4, SEALED)",
     "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_comm_baseline_zero_impairment_formal_trial01 (Objective 5, zero-impairment formal baseline, PASS, latency=NOT_MEASURED)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_comm_baseline_zero_impairment_formal_trial02_stamp (Objective 5, zero-impairment formal baseline, PASS, latency=VALID; does not replace trial01)"
+    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_comm_baseline_zero_impairment_formal_trial02_stamp (Objective 5, zero-impairment formal baseline, PASS, latency=VALID; does not replace trial01)",
+    "experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/ + physical_single_device_zero_impairment_baseline_v1_trial0{1..5}_attemptNN_analysis/ (Objective 1/5/6, first FORMAL_PHYSICAL result, FINAL_BATCH_PASS 5/5; raw rosbag/CSVs outside git at native WSL path /home/eamon/epuck_comm_bags/)"
   ],
   "diagnostic_data_roots": [
     "experiments/controller_v2_local_latch_20260717/bags/ (controller_v2 development)",
