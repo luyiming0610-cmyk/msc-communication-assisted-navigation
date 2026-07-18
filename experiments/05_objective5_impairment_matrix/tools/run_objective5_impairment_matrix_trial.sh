@@ -410,7 +410,15 @@ echo "[$(date -Iseconds)] draining relay queues for ${DRAIN_DURATION_S}s (max_co
 sleep "$DRAIN_DURATION_S"
 
 for ns in epuck1 epuck2; do
-  STATUS_JSON="$(timeout 3 ros2 topic echo "/$ns/relay_status" --once --field data 2>/dev/null || true)"
+  # `ros2 topic echo --field data --once` ALWAYS appends a trailing YAML
+  # document-end marker line ("---") after the value, regardless of
+  # --field -- the same behavior that broke bridge-status JSON parsing
+  # during the physical-hardware phase of this session (fixed there by
+  # compute_tier_a_delta.load_snapshot_json()). Only the FIRST line is
+  # the actual JSON; take it explicitly with `head -n1`, never pass the
+  # raw multi-line capture to json.loads().
+  STATUS_RAW="$(timeout 3 ros2 topic echo "/$ns/relay_status" --once --field data 2>/dev/null || true)"
+  STATUS_JSON="$(head -n1 <<<"$STATUS_RAW")"
   echo "[$(date -Iseconds)] $ns relay_status after drain wait: $STATUS_JSON" | tee -a "$EXECUTION_LOG"
   PENDING="$(python3 -c "
 import json,sys
