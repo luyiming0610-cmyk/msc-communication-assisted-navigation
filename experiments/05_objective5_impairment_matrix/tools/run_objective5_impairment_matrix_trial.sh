@@ -438,7 +438,17 @@ for ns in epuck1 epuck2; do
   # compute_tier_a_delta.load_snapshot_json()). Only the FIRST line is
   # the actual JSON; take it explicitly with `head -n1`, never pass the
   # raw multi-line capture to json.loads().
-  STATUS_RAW="$(timeout 3 ros2 topic echo "/$ns/relay_status" --once --field data 2>/dev/null || true)"
+  # relay_status publishes at 1Hz; a fresh `ros2 topic echo --once`
+  # process must first complete DDS discovery of the publisher (can
+  # itself take close to 1s) and then wait for the next publish tick
+  # (up to 1s away) -- a 3s timeout left too little margin and produced
+  # a genuine empty-capture false negative for epuck2 on one real Pilot
+  # 2 run. Widened to 6s with one retry before giving up.
+  STATUS_RAW=""
+  for _attempt in 1 2; do
+    STATUS_RAW="$(timeout 6 ros2 topic echo "/$ns/relay_status" --once --field data 2>/dev/null || true)"
+    [[ -n "$STATUS_RAW" ]] && break
+  done
   STATUS_JSON="$(head -n1 <<<"$STATUS_RAW")"
   echo "[$(date -Iseconds)] $ns relay_status after drain wait: $STATUS_JSON" | tee -a "$EXECUTION_LOG"
   PENDING="$(python3 -c "
@@ -472,7 +482,17 @@ echo "[$(date -Iseconds)] rosbag metadata.yaml check done" | tee -a "$EXECUTION_
 stop_pid_group "$SIM_PID"; SIM_PID=""
 sleep 2
 
-BAG_WARN_LINES="$(grep -icE 'drop|warn|error' "$BAG_RECORD_LOG" 2>/dev/null || echo 0)"
+# `grep -c` on zero matches still prints "0" to stdout but exits 1 --
+# the old `$(grep -c ... || echo 0)` idiom therefore ran BOTH branches
+# on the zero-match case (grep's own "0" line, then echo's "0" line),
+# leaving BAG_WARN_LINES as the two-line string "0\n0", which the
+# `!= "0"` check below never matched -- a real false-positive INVALID
+# found running Pilot 2 (Condition F) despite bag_record.log genuinely
+# having zero drop/warn/error lines. Fixed: don't let grep's own exit
+# code trigger a second echo; only default to "0" if grep produced no
+# stdout at all (e.g. the file was unreadable).
+BAG_WARN_LINES="$(grep -icE 'drop|warn|error' "$BAG_RECORD_LOG" 2>/dev/null)" || true
+BAG_WARN_LINES="${BAG_WARN_LINES:-0}"
 grep -iE 'drop|warn|error' "$BAG_RECORD_LOG" | tee -a "$EXECUTION_LOG" || echo "no drop/warn/error lines in bag_record.log" | tee -a "$EXECUTION_LOG"
 if [[ "$BAG_WARN_LINES" != "0" ]]; then
   DATA_VALIDITY="INVALID"
