@@ -306,8 +306,8 @@ QUEUE_DRAINED="true"
 BAG_LOG_CLEAN="true"
 
 cleanup() {
-  stop_pid "$STATE1_PID" || true
-  stop_pid "$STATE2_PID" || true
+  stop_pid_group "$STATE1_PID" || true
+  stop_pid_group "$STATE2_PID" || true
   stop_pid_group "$CONTROLLER_PID" || true
   stop_pid_group "$RELAY_COUNTER_PID" || true
   stop_pid "$BAG_PID" || true
@@ -352,13 +352,21 @@ RELAY_COUNTER_PID=$!
 sleep 2
 echo "[$(date -Iseconds)] both relays + sequence_counter subscribed (no state_raw exists yet)" | tee -a "$EXECUTION_LOG"
 
-ros2 run epuck2_comm state_publisher --ros-args \
+# Launched under setsid and stopped via stop_pid_group: `ros2 run`
+# state_publisher was found orphaning its actual python process (left
+# with PPID=/init, i.e. reparented after the wrapper it was signaled
+# under exited) during a real Pilot 2 run even though the plain stop_pid
+# call reported success -- the same launch/wrapper-child pattern as the
+# controller, relay+counter, and sim launches above, just via a
+# different wrapper (ros2 run's console-script entry point rather than
+# a launch.LaunchService).
+setsid ros2 run epuck2_comm state_publisher --ros-args \
   -r __ns:=/epuck1 -r state:=state_raw -p robot_id:=1 -p use_sim_time:=true \
   -p mode:=periodic -p origin_x_m:=-0.35 -p origin_y_m:=0.0 \
   -p origin_yaw_rad:=0.0 >"$STATE1_LOG" 2>&1 &
 STATE1_PID=$!
 
-ros2 run epuck2_comm state_publisher --ros-args \
+setsid ros2 run epuck2_comm state_publisher --ros-args \
   -r __ns:=/epuck2 -r state:=state_raw -p robot_id:=2 -p use_sim_time:=true \
   -p mode:=periodic -p origin_x_m:=0.35 -p origin_y_m:=0.0 \
   -p origin_yaw_rad:=3.141592653589793 >"$STATE2_LOG" 2>&1 &
@@ -418,8 +426,8 @@ echo "[$(date -Iseconds)] controller stage finished (complete_count=$complete_co
 # not be miscounted as "dropped" by stopping the relay too early.
 echo "[$(date -Iseconds)] stopping controller (relay/bag/counter/sim remain running for drain)" | tee -a "$EXECUTION_LOG"
 stop_pid_group "$CONTROLLER_PID"; CONTROLLER_PID=""
-stop_pid "$STATE1_PID"; STATE1_PID=""
-stop_pid "$STATE2_PID"; STATE2_PID=""
+stop_pid_group "$STATE1_PID"; STATE1_PID=""
+stop_pid_group "$STATE2_PID"; STATE2_PID=""
 
 DRAIN_DURATION_S="$(python3 -c "
 import sys
