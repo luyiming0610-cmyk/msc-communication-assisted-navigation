@@ -115,6 +115,30 @@ if [[ -e "$NATIVE_BAG_DIR" || -e "$FINAL_DIR" ]]; then
 fi
 mkdir -p "$DIAG_LOG_DIR"
 
+# --- WSL binfmt_misc interop check, fail fast with a clear diagnostic
+# instead of a 90s topic-wait timeout. This is a known-recurring WSL
+# state (confirmed twice this session: the first real run of this
+# script silently launched Webots as if WEBOTS_HOME were the only
+# problem, actually failing on this instead -- "OSError: [Errno 8] Exec
+# format error" trying to posix_spawn a Windows .exe directly). Fixed
+# externally via `wsl -u root -- bash -lc "echo ':WSLInterop:M::MZ::/init:PF'
+# > /proc/sys/fs/binfmt_misc/register"` when this check fails -- this
+# script does NOT attempt that fix itself (requires root, a privilege
+# escalation this script must never silently perform).
+if ! /mnt/c/Windows/System32/cmd.exe /c echo WSL_INTEROP_OK 2>/dev/null | grep -q WSL_INTEROP_OK; then
+  echo "WSL_INTEROP_BROKEN: cannot exec a Windows binary from this WSL session (binfmt_misc WSLInterop likely unregistered) -- Webots would fail the same way. Aborting before starting anything." >&2
+  exit 1
+fi
+echo "[$(date -Iseconds)] WSL interop confirmed OK" | tee -a "$EXECUTION_LOG"
+
+RESIDUAL="$(pgrep -af 'webots-bin|cooperative_avoider|state_publisher|ros2 bag record|network_impairment_relay|sequence_counter' 2>/dev/null | grep -v 'bash -lc' || true)"
+if [[ -n "$RESIDUAL" ]]; then
+  echo "RESIDUAL_PROCESSES_FOUND: refusing to start with leftover processes from a prior run:" >&2
+  echo "$RESIDUAL" >&2
+  exit 1
+fi
+echo "[$(date -Iseconds)] no residual processes found" | tee -a "$EXECUTION_LOG"
+
 # --- freeze/record every resolved parameter + commit/SHA before anything starts ---
 ORCH_SCRIPT="$TOOLS_DIR/run_objective5_impairment_matrix_trial.sh"
 ORCH_SHA256="$(sha256sum "$ORCH_SCRIPT" | awk '{print $1}')"
