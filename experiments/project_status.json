@@ -1,7 +1,9 @@
 {
-  "schema_version": "1.0.0",
-  "last_updated": "2026-07-17",
-  "current_git_commit": "2558216",
+  "schema_version": "1.1.0",
+  "last_updated": "2026-07-18",
+  "index_generated_from_commit": "2558216",
+  "index_files_commit": "026223b",
+  "runtime_head_commit": "READ_WITH_GIT_REV_PARSE_HEAD -- do not hardcode; run `git rev-parse HEAD` for the true current value, since this file cannot self-referentially contain the hash of the commit that includes it",
   "frozen_controller": {
     "version": "controller_v4_timebase_fix_20260717",
     "key_commits": ["980e7d0", "06e0f0f", "f1830c5"],
@@ -19,7 +21,7 @@
     {
       "name": "Phase 1 static wooden obstacle, locked batch",
       "status": "PASS",
-      "trial_count": 5,
+      "trial_count": "OPEN (5 per batch-summary filename vs 6 directories on disk -- unresolved, see known_limitations)",
       "evidence_level": "FORMAL_SIM",
       "sealed": false,
       "note": "controller_v1 era; still valid because Phase 1 runtime windows never reached the extended-tail window where the v1 defect manifests"
@@ -101,8 +103,9 @@
     "Old EpuckState-format bags (5 pre-protocol-freeze bags in cooperative_avoidance_20260716/, specifically head_on_cpa_only_trial_02..06_postfix) cannot be reprocessed by any analyzer assuming the current PROTOCOL_VERSION=1 message shape (Fast CDR deserialization exception); their original, contemporaneous analysis outputs remain valid historical evidence but must not be re-analyzed with current tooling",
     "The /mnt/c rosbag-write-loss finding is confirmed via two independent native-path diagnostic trials (aligned-window PDR=1.0 both times) but a full formal zero-impairment baseline (with cooperative_avoider actually running) has not yet been completed under that workflow",
     "sequence_counter (the third-party comm-diagnostic observer) has an unresolved bug: its SIGINT-triggered summary write does not reliably fire when launched via ros2 launch's process supervision -- root cause not yet identified",
-    "This experiment_registry.csv's rows for the 53 cooperative_avoidance_20260716 bags and 2 fusion_static_neighbor_20260716 trial-count fields are aggregated/summarized from directory names and prior-session records, NOT freshly re-verified per-bag against their individual summary.json files during this indexing pass",
-    "communication_baseline_20260716/ directory's purpose and contents were not investigated during this indexing pass beyond confirming it has no bags/ subdirectory",
+    "experiment_registry.csv now carries verification_status/verification_basis columns per row (DIRECTLY_VERIFIED / SUMMARY_VERIFIED / NAMING_INFERRED / UNVERIFIED) so evidence rigor is explicit rather than implied; rows marked NAMING_INFERRED or UNVERIFIED always have included_in_paper=NO by construction -- see that CSV for the per-row basis rather than treating any aggregate trial_count as independently re-verified this pass",
+    "fusion_static_neighbor_20260716's Phase 1 trial count is intentionally left OPEN in experiment_registry.csv (batch-summary filename implies 03-07 = 5 trials; 6 directories local_static_long_trial_02..07 exist on disk) -- do not pick either number without reconciling the discrepancy first",
+    "communication_baseline_20260716/ was investigated this pass (previous pass had only confirmed no bags/ subdirectory): it contains exactly one file, an empty (0-byte) state_monitor_20260716_105522.jsonl stub, predating and unrelated to the current Objective 5 comm-baseline work. Registered EXCLUDED, included_in_paper=false, artifact_missing=true.",
     "CPU/memory overhead for communication performance is not measured anywhere yet (analyze_comm_performance.py explicitly reports this as NOT MEASURED, pending a live psutil-style sampling companion)",
     "Cross-device (physical Pi-puck) clock synchronization has no implementation yet -- verify_clock_sync() in analyze_comm_performance.py intentionally raises NotImplementedError until Objective 6 begins"
   ]

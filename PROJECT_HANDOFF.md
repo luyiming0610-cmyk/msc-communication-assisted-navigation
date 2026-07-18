@@ -1,8 +1,12 @@
 # PROJECT_HANDOFF.md — start here
 
 Single entry point for any AI (Claude, Codex, or otherwise) or human
-picking up this project. Last updated: 2026-07-17. Current git commit:
-`03ce36c`.
+picking up this project. Last updated: 2026-07-18. This document was
+current as of index-files commit `026223b` (source state at scan time:
+`2558216`) — **do not trust a hardcoded commit hash in any document,
+including this one, as "the current commit."** Always run
+`git rev-parse HEAD` / `git log -1` for the true current state; a
+document's own commit field necessarily lags the commit that contains it.
 
 ## What this project is
 
