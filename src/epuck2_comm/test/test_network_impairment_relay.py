@@ -6,6 +6,7 @@ on real timer threads -- deterministic and fast.
 """
 
 import csv
+import json
 
 import rclpy
 
@@ -117,6 +118,115 @@ def test_message_content_is_never_mutated_by_the_relay(monkeypatch):
         assert published[0].sequence == 42
         assert published[0].x_m == 0.123
         assert published[0].y_m == -0.456
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+def test_relay_csv_records_drop_reason_for_outage_and_bernoulli_separately(tmp_path, monkeypatch):
+    fake_clock = {"t": 0.0}
+    monkeypatch.setattr(
+        "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
+        lambda self: fake_clock["t"],
+    )
+    log_path = str(tmp_path / "relay.csv")
+    rclpy.init(args=[
+        "--ros-args",
+        "-p", "drop_probability:=1.0",
+        "-p", "outage_period_s:=15.0",
+        "-p", "outage_duration_s:=0.7",
+        "-p", "outage_phase_s:=0.0",
+        "-p", f"log_path:={log_path}",
+    ])
+    try:
+        node = NetworkImpairmentRelay()
+        fake_clock["t"] = 0.3  # inside the outage window (elapsed since node start = 0.3s)
+        node._on_message(_state(1))
+        fake_clock["t"] = 10.0  # outside the outage window; drop_probability=1.0 still drops
+        node._on_message(_state(2))
+        assert node.dropped_outage_count == 1
+        assert node.dropped_bernoulli_count == 1
+        assert node.dropped_count == 2
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+    with open(log_path, encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    assert len(rows) == 2
+    assert rows[0]["drop_reason"] == "outage"
+    assert rows[1]["drop_reason"] == "bernoulli"
+
+
+def test_pending_queue_depth_reflects_undelivered_messages(monkeypatch):
+    fake_clock = {"t": 100.0}
+    monkeypatch.setattr(
+        "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
+        lambda self: fake_clock["t"],
+    )
+    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.5"])
+    try:
+        node = NetworkImpairmentRelay()
+        assert node.pending_queue_depth() == 0
+        node._on_message(_state(1))
+        node._on_message(_state(2))
+        assert node.pending_queue_depth() == 2
+        fake_clock["t"] = 100.5
+        node._flush_queue()
+        assert node.pending_queue_depth() == 0
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+def test_status_topic_publishes_counts_and_queue_depth(monkeypatch):
+    fake_clock = {"t": 100.0}
+    monkeypatch.setattr(
+        "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
+        lambda self: fake_clock["t"],
+    )
+    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.5"])
+    try:
+        node = NetworkImpairmentRelay()
+        node._on_message(_state(1))
+        node._on_message(_state(2))
+        published = []
+        node.status_publisher.publish = lambda msg: published.append(msg)
+        node._publish_status()
+        assert len(published) == 1
+        payload = json.loads(published[0].data)
+        assert payload["received_count"] == 2
+        assert payload["forwarded_count"] == 0
+        assert payload["pending_queue_depth"] == 2
+        assert payload["dropped_bernoulli_count"] == 0
+        assert payload["dropped_outage_count"] == 0
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+def test_default_outage_relay_forwards_identically_to_pre_extension_relay(monkeypatch):
+    """End-to-end node-level equivalence check (complements the pure
+    decider-level test in test_network_impairment.py): a relay
+    constructed with no outage parameters set at all (the ROS parameter
+    defaults) must forward/drop/delay exactly as the pre-v1.1 relay
+    would for the same delay/jitter/drop config."""
+    fake_clock = {"t": 100.0}
+    monkeypatch.setattr(
+        "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
+        lambda self: fake_clock["t"],
+    )
+    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.2", "-p", "jitter_s:=0.0", "-p", "drop_probability:=0.0"])
+    try:
+        node = NetworkImpairmentRelay()
+        node._on_message(_state(1))
+        assert node.forwarded_count == 0
+        assert len(node._queue) == 1
+        fake_clock["t"] = 100.2
+        node._flush_queue()
+        assert node.forwarded_count == 1
+        assert node.dropped_outage_count == 0
+        assert node.dropped_bernoulli_count == 0
     finally:
         node.destroy_node()
         rclpy.shutdown()
