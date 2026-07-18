@@ -5,9 +5,18 @@ Trial 01 of a formal n=5 batch. Launched manually by the user via the
 permanent Windows->WSL wrapper for individual real-time observation --
 **not** part of an automated batch. *(Correction: this line originally
 carried the Condition-A-batch template's default automated-batch text;
-see `final_verdict.json`'s `revision_note`.)* `manual_observation.status
-=PENDING` in `final_verdict.json`; Trials 02-05 will not auto-start
-until the observation is received and confirmed.
+see `final_verdict.json`'s `revision_note`.)*
+
+**Manual observation (received)**: avoidance completed, no collision,
+no spinning/oscillation, recovered and auto-stopped normally, no
+desynchronization during the avoidance maneuver itself. **Startup
+asynchrony observed**: epuck1 (bottom-left) visibly began moving
+noticeably earlier than epuck2 (top-right) at trial start, even though
+the avoidance maneuvers themselves were synchronized. See
+`objective5_conditionB_trial01_startup_sync_audit.{json,md}` for the
+offline audit of this observation -- Trial 02 is withheld pending its
+conclusion. `final_verdict.json`'s `final_confirmed_verdict
+=PASS_PENDING_STARTUP_SYNC_AUDIT`.
 
 See `objective5_condition_B_trial01_trigger_mechanism_audit.{json,md}`
 for the offline trigger-mechanism audit: `PURE_COMMUNICATION_CPA_

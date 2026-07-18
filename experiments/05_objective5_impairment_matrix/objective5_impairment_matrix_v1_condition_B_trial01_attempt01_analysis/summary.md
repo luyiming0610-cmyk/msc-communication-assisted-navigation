@@ -59,6 +59,22 @@ directions).
 
 `min_interrobot_distance_m=0.14777153762172363`, `safety_radius_m=0.14`, `safety_margin_m=0.007771537621723612`.
 
+## Manual observation (user, real-time)
+
+Avoidance completed: **yes**. Collision: **no**. Spinning/visible
+oscillation: **no**. Recovered-and-auto-stopped: **yes**. Visible
+desynchronization during avoidance: **no**. Later avoidance than
+Condition A: not observed (user could not tell). **Startup asynchrony
+observed: yes** -- the two robots' avoidance maneuvers were themselves
+synchronized, but epuck1 (bottom-left) visibly began moving noticeably
+earlier than epuck2 (top-right) at trial start. This observation is
+preserved and is the subject of a separate offline startup-timing-sync
+audit (`objective5_conditionB_trial01_startup_sync_audit.{json,md}`)
+before Trial 02 may proceed.
+
+`final_confirmed_verdict=PASS_PENDING_STARTUP_SYNC_AUDIT` in
+`final_verdict.json`.
+
 ## Process cleanup / data integrity
 
 - Post-run process check: **CLEAN**.

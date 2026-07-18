@@ -1,0 +1,68 @@
+{
+  "audit_type": "OFFLINE_STARTUP_SYNC_AUDIT",
+  "webots_run_for_this_audit": false,
+  "controller_geometry_or_thresholds_modified": false,
+  "method_note": "controller.log TRANSITION lines carry both a wall-clock epoch (matching the bracketed rclpy logger prefix) and the ROS/sim clock (ros_time=) for the same instant. A per-robot linear fit (ros_time = a*wall_epoch + b, mean-centered least squares) is built from these paired values, then used to map bag-record wall-clock timestamps (cmd_vel has no own stamp field) onto the same sim-time axis. EpuckState messages (/epuckN/state_raw, /epuckN/state) carry their own stamp field, which IS already sim time -- used directly, no mapping needed. 'Sustained nonzero' = 3 consecutive samples with |value| > 0.005 (linear.x for cmd_vel, linear_velocity_mps for real motion), per instruction.",
+  "trials_audited": {
+    "condition_B": ["objective5_impairment_matrix_v1_condition_B_trial01_attempt01"],
+    "condition_A": [
+      "objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
+      "objective5_impairment_matrix_v1_condition_A_trial02_attempt01",
+      "objective5_impairment_matrix_v1_condition_A_trial03_attempt01",
+      "objective5_impairment_matrix_v1_condition_A_trial04_attempt01",
+      "objective5_impairment_matrix_v1_condition_A_trial05_attempt01"
+    ]
+  },
+  "condition_B_trial01": {
+    "epuck1_to_epuck2_deltas_s": {
+      "TIMEBASE_INIT": -2.64,
+      "first_valid_own_state_received": -0.007403374671936035,
+      "first_valid_peer_state_received": -0.004638113975524902,
+      "STARTUP_HOLD_start": -2.5,
+      "STARTUP_HOLD_end": -2.64,
+      "first_CRUISE": -2.64,
+      "first_sustained_nonzero_cmd_vel": -2.6342880725860596,
+      "first_sustained_real_motion": -2.66,
+      "first_AVOID_TURN": 0.0,
+      "first_RECOVER": 0.0
+    },
+    "interpretation": "epuck1 leads epuck2 by ~2.5-2.66s through every startup-phase event (TIMEBASE_INIT, STARTUP_HOLD, CRUISE entry, first commanded motion, first real motion), but the actual encounter response (AVOID_TURN, RECOVER) is perfectly synchronized (delta=0.000s exactly, both robots). The 'first valid own/peer state received' deltas are near-zero (~5-7ms) -- state_raw/state messages from both robots' state_publisher processes arrive at nearly the same sim time (well before either controller's own TIMEBASE_INIT), so the asynchrony is NOT a communication/state-delivery effect; it originates entirely in when each robot's OWN controller process reaches its first valid clock tick."
+  },
+  "condition_A_comparison_table": {
+    "trial01": {"TIMEBASE_INIT_delta_s": -0.92, "motion_start_delta_s": -0.9200000000000017, "cruise_entry_delta_s": -0.8999999999999986, "avoid_turn_delta_s": 0.0, "recover_delta_s": 0.0},
+    "trial02": {"TIMEBASE_INIT_delta_s": -1.02, "motion_start_delta_s": -1.0600000000000023, "cruise_entry_delta_s": -1.0, "avoid_turn_delta_s": 0.0, "recover_delta_s": 0.0},
+    "trial03": {"TIMEBASE_INIT_delta_s": -0.46, "motion_start_delta_s": -0.33999999999999986, "cruise_entry_delta_s": -0.46000000000000085, "avoid_turn_delta_s": 0.0, "recover_delta_s": 0.0},
+    "trial04": {"TIMEBASE_INIT_delta_s": 2.66, "motion_start_delta_s": 2.66, "cruise_entry_delta_s": 2.6400000000000006, "avoid_turn_delta_s": 0.0, "recover_delta_s": 0.0},
+    "trial05": {"TIMEBASE_INIT_delta_s": -0.08, "motion_start_delta_s": -0.120000000000001, "cruise_entry_delta_s": -0.060000000000002274, "avoid_turn_delta_s": 0.0, "recover_delta_s": 0.0}
+  },
+  "cross_trial_analysis": {
+    "startup_offset_present_in_condition_A": true,
+    "always_epuck1_first": false,
+    "note_on_direction": "epuck1 leads in Trials 01/02/03/05 (negative delta) but epuck2 leads in Trial 04 (positive delta, +2.66s -- the identical magnitude to Condition B Trial 01's -2.66s, just opposite sign). The SIGN of which robot starts first is not fixed across trials.",
+    "magnitude_range_condition_A_s": [0.06, 0.12, 0.34, 0.46, 0.92, 1.0, 1.02, 2.64, 2.66, 2.7],
+    "magnitude_close_to_one_publish_period_0_1151s": "only Trial 05 (~0.06-0.12s) is close to one publish period; Trials 01-04 range 0.34s-2.7s, i.e. 3x-23x the publish period -- NOT explained by publish-period-scale jitter alone.",
+    "condition_B_trial01_within_condition_A_distribution": true,
+    "condition_B_trial01_magnitude_vs_A_range": "Condition B Trial 01's ~2.5-2.66s magnitude falls within Condition A's own observed range (0.06s-2.7s) -- Condition A Trial 04 shows an essentially identical magnitude (2.66s). Condition B Trial 01 is NOT an outlier relative to the Condition A distribution.",
+    "avoidance_phase_synchronization": "AVOID_TURN and RECOVER deltas are exactly 0.000s in EVERY audited trial (all 5 Condition A trials plus Condition B Trial 01) -- the encounter response itself is always synchronized regardless of the startup-phase offset magnitude or direction."
+  },
+  "root_cause_readonly_check": {
+    "controller_launch_structure": "Both cooperative_avoider instances (epuck1, epuck2) are declared in the SAME launch.LaunchDescription and started via a single launch.LaunchService call (run_comm_baseline_formal_controllers.py lines 42-48) -- not two separate sequential process launches. Source: experiments/controller_v4_full_sensor_bypass_20260717/config/comm_baseline_v1/run_comm_baseline_formal_controllers.py.",
+    "startup_hold_s_identical": "Both nodes receive parameters from the same per-robot dict structure in make_controller() (audited for Condition A: enable_peer_avoidance/enable_local_avoidance/require_local_sensors identical); startup_hold_s is not overridden in this dict for either robot, so both use cooperative_avoider.py's identical declared default (5.0s) -- confirmed identical, not a source of asymmetry.",
+    "TIMEBASE_INIT_independence": "TIMEBASE_INIT fires independently per node on that node's own first control-timer tick where its own _now_s() > 0.0 (cooperative_avoider.py _ensure_timebase(), audited separately) -- it is NOT a shared or synchronized event between the two robots, and does not depend on peer-state receipt.",
+    "relay_delay_effect_on_startup_hold_exit": "STARTUP_HOLD exit is gated purely by a fixed-duration timer (elapsed >= startup_hold_s since that node's own started_at) -- NOT by peer-state freshness at the exit instant. The 0.20s relay delay in Condition B cannot mechanically cause an earlier or later STARTUP_HOLD exit through this path. Consistent with the finding that Condition B Trial 01's magnitude (~2.6s) is not anomalously large relative to Condition A's own distribution (which has zero configured delay and still shows a matching 2.66s case in Trial 04).",
+    "orchestrator_sequencing_effect": "The relay+counter and state_publisher processes are launched sequentially, well before the controller launch, in every trial (both conditions) -- this affects the ABSOLUTE timing of TIMEBASE_INIT (which lags first state-message arrival by roughly 7-11s in every trial, a known, designed launch-ordering artifact from launching the controller last) but does not explain the RELATIVE epuck1-vs-epuck2 asymmetry, since both controllers are declared in the same LaunchDescription and launched together.",
+    "conclusion": "The observed epuck1-vs-epuck2 startup-phase timing offset is consistent with ordinary OS-level process-spawn/scheduling variance for two ExecuteProcess actions declared in the same LaunchDescription (Python interpreter startup, rclpy init, parameter-file loading) under the WSL2/Webots-shared-CPU environment used for these runs -- not a deterministic code-level ordering bug, and not a relay-delay-driven effect (the STARTUP_HOLD-exit mechanism does not depend on relay delay by design)."
+  },
+  "classification_per_decision_rules": {
+    "rule_1_publish_period_scale_and_consistent_A_B": "DOES NOT APPLY -- most trials' magnitudes (0.34s-2.7s) are not close to one publish period (0.1151s); only Trial 05 qualifies.",
+    "rule_2_large_but_stable_across_A_and_B": "DOES NOT APPLY -- the SIGN (which robot leads) is not stable across Condition A trials (Trial 04 flips relative to 01/02/03/05); 'stably the same' is false.",
+    "rule_3_B_exceeds_A_distribution_or_B_only": "DOES NOT APPLY -- Condition B Trial 01's magnitude (~2.6s) falls within Condition A's own observed range and matches Trial 04 closely; this is not evidence of a communication-impairment-driven confound.",
+    "rule_4_orchestrator_instability_or_launch_race": "APPLIES -- the offset's variable sign and magnitude across trials of the SAME condition (Condition A alone), combined with both controllers being launched via the same LaunchDescription (i.e. subject to real process-spawn scheduling variance, not a deterministic code path), is most consistent with ordinary launch-time race/scheduling jitter intrinsic to the orchestrator, present identically in both conditions -- not a communication-impairment effect. Per instruction: stop the batch (already the case -- Trial 02 was not going to auto-start regardless), do not modify code, report a fix-impact assessment before any further trials.",
+    "final_classification": "ORCHESTRATOR_LAUNCH_TIMING_VARIANCE -- pre-existing in Condition A, reproduced (not amplified) in Condition B Trial 01. Not a communication-impairment confound. Not evidence against this trial's PASS. Avoidance-phase synchronization (AVOID_TURN/RECOVER deltas = 0.000s in all 6 audited trials) is unaffected."
+  },
+  "fix_impact_assessment": {
+    "current_impact_on_measured_communication_metrics": "NONE IDENTIFIED. The impairment-matrix metrics that matter for cross-condition comparison (message_age_s distribution, capture_ratio, drop counts, min_interrobot_distance_m, complete_count/TASK_OUTCOME) are all measured relative to each trial's own encounter phase (AVOID_TURN onward), which is synchronized to 0.000s in every trial regardless of the startup offset. The startup offset shifts WHEN the encounter begins in absolute ros_time, not the relative dynamics of the encounter itself or the relay's delay/jitter/drop behavior (which operates on message content, not on which robot's controller happens to be further along its own STARTUP_HOLD timer).",
+    "potential_future_risk_if_left_unaddressed": "For conditions with time-dependent impairment mechanics (Condition F's periodic outage, outage_phase_s anchored to absolute elapsed_s since the shared /clock, NOT to either robot's own started_at) a large startup offset could in principle shift which robot's messages fall inside vs outside a given outage window differently between directions, if the offset were large enough relative to outage_period_s=15.0s. The observed 0.06-2.7s range is small relative to 15.0s, so this is not expected to be a practical problem for Condition F specifically, but is flagged here for completeness rather than assumed away.",
+    "recommended_action": "Not a code change recommendation (instruction: do not modify code as part of this audit). Recommend the user decide whether to (a) accept this as known, pre-existing, non-impairment-related launch variance and proceed with Trial 02-05, or (b) request a dedicated read-only investigation into reducing launch-time variance (e.g. explicit startup barriers/synchronization) as separate, deliberate future work -- not undertaken here without explicit authorization."
+  }
+}
