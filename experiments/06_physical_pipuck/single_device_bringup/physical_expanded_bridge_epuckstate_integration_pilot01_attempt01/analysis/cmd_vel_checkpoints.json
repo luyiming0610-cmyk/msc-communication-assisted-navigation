@@ -1,0 +1,20 @@
+[
+  {
+    "label": "start",
+    "unix_time_s": 1784380376.3037622,
+    "publisher_count": 0,
+    "publisher_node_names": []
+  },
+  {
+    "label": "mid",
+    "unix_time_s": 1784380522.9171727,
+    "publisher_count": 0,
+    "publisher_node_names": []
+  },
+  {
+    "label": "end",
+    "unix_time_s": 1784380667.7106774,
+    "publisher_count": 0,
+    "publisher_node_names": []
+  }
+]

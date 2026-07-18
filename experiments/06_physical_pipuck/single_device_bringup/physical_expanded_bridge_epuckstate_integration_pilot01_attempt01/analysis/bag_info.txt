@@ -1,0 +1,22 @@
+
+Files:             physical_expanded_bridge_epuckstate_integration_pilot01_attempt01_0.db3
+Bag size:          5.0 MiB
+Storage id:        sqlite3
+Duration:          299.599099674s
+Start:             Jul 18 2026 14:12:57.243334059 (1784380377.243334059)
+End:               Jul 18 2026 14:17:56.842433733 (1784380676.842433733)
+Messages:          33115
+Topic information: Topic: /tof | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /ps7 | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /ps4 | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /ps3 | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /ps5 | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /ps2 | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /ps0 | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /odom | Type: nav_msgs/msg/Odometry | Count: 2739 | Serialization Format: cdr
+                   Topic: /scan | Type: sensor_msgs/msg/LaserScan | Count: 2739 | Serialization Format: cdr
+                   Topic: /ps1 | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /epuck_bridge/status | Type: std_msgs/msg/String | Count: 300 | Serialization Format: cdr
+                   Topic: /ps6 | Type: sensor_msgs/msg/Range | Count: 2739 | Serialization Format: cdr
+                   Topic: /epuck1/state | Type: epuck2_comm_interfaces/msg/EpuckState | Count: 2686 | Serialization Format: cdr
+

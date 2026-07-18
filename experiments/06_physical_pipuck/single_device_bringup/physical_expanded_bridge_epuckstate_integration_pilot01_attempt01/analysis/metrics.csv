@@ -1,0 +1,162 @@
+section,key,value
+tier_a,state_seq_first,0
+tier_a,state_seq_last,9596
+tier_a,state_unique_received,9597
+tier_a,state_missing,0
+tier_a,state_out_of_order_INCLUDES_ANY_DUPLICATE,0
+tier_a,duplicate_count_SEPARATELY_TRACKED,
+tier_a,duplicate_note,the bridge's own update_sequence_stats() does not distinguish a true duplicate from a generic out-of-order/backward arrival -- both increment the same counter. Not fabricated here.
+tier_a,APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO,1.0
+tier_a,naming_note,"this is Pi application-level state-sequence receipt completeness at the WSL bridge. It is NOT IP packet loss, NOT TCP packet loss, and is NOT automatically equal to the EpuckState bag capture ratio (tier B) or any rosbag PDR."
+tier_b,message_count,2150
+tier_b,first_sequence,6048
+tier_b,last_sequence,8197
+tier_b,unique_sequence_count,2150
+tier_b,expected_sequence_count,2150
+tier_b,gap_count,0
+tier_b,duplicate_count,0
+tier_b,out_of_order_count,0
+tier_b,bag_capture_ratio,1.0
+tier_b,note,measures whether the bag captured every state_publisher-generated EpuckState message; does NOT measure Pi-to-WSL bridge transport loss (see tier A)
+tier_c,/odom_message_count,2194
+tier_c,/odom_duration_s,239.88020610809326
+tier_c,/odom_avg_rate_hz,9.146231927995569
+tier_c,/odom_max_gap_s,0.3014411926269531
+tier_c,/odom_total_stall_s,0
+tier_c,/odom_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/scan_message_count,2194
+tier_c,/scan_duration_s,239.88035225868225
+tier_c,/scan_avg_rate_hz,9.146226355520913
+tier_c,/scan_max_gap_s,0.3012726306915283
+tier_c,/scan_total_stall_s,0
+tier_c,/scan_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/tof_message_count,2194
+tier_c,/tof_duration_s,239.880113363266
+tier_c,/tof_avg_rate_hz,9.14623546420242
+tier_c,/tof_max_gap_s,0.30058765411376953
+tier_c,/tof_total_stall_s,0
+tier_c,/tof_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/ps0_message_count,2194
+tier_c,/ps0_duration_s,239.880206823349
+tier_c,/ps0_avg_rate_hz,9.146231900724061
+tier_c,/ps0_max_gap_s,0.3020823001861572
+tier_c,/ps0_total_stall_s,0
+tier_c,/ps0_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/ps1_message_count,2194
+tier_c,/ps1_duration_s,239.88018989562988
+tier_c,/ps1_avg_rate_hz,9.14623254614978
+tier_c,/ps1_max_gap_s,0.300431489944458
+tier_c,/ps1_total_stall_s,0
+tier_c,/ps1_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/ps2_message_count,2194
+tier_c,/ps2_duration_s,239.88020730018616
+tier_c,/ps2_avg_rate_hz,9.146231882543056
+tier_c,/ps2_max_gap_s,0.3005392551422119
+tier_c,/ps2_total_stall_s,0
+tier_c,/ps2_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/ps3_message_count,2194
+tier_c,/ps3_duration_s,239.88022446632385
+tier_c,/ps3_avg_rate_hz,9.146231228026927
+tier_c,/ps3_max_gap_s,0.3004939556121826
+tier_c,/ps3_total_stall_s,0
+tier_c,/ps3_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/ps4_message_count,2194
+tier_c,/ps4_duration_s,239.8803551197052
+tier_c,/ps4_avg_rate_hz,9.146226246435017
+tier_c,/ps4_max_gap_s,0.30040431022644043
+tier_c,/ps4_total_stall_s,0
+tier_c,/ps4_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/ps5_message_count,2194
+tier_c,/ps5_duration_s,239.88007521629333
+tier_c,/ps5_avg_rate_hz,9.14623691868418
+tier_c,/ps5_max_gap_s,0.30046987533569336
+tier_c,/ps5_total_stall_s,0
+tier_c,/ps5_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/ps6_message_count,2194
+tier_c,/ps6_duration_s,239.8801634311676
+tier_c,/ps6_avg_rate_hz,9.14623355519581
+tier_c,/ps6_max_gap_s,0.3005070686340332
+tier_c,/ps6_total_stall_s,0
+tier_c,/ps6_note,no source-side sequence exists for this topic; PDR is not claimed
+tier_c,/ps7_message_count,2194
+tier_c,/ps7_duration_s,239.8801543712616
+tier_c,/ps7_avg_rate_hz,9.146233900635043
+tier_c,/ps7_max_gap_s,0.30051422119140625
+tier_c,/ps7_total_stall_s,0
+tier_c,/ps7_note,no source-side sequence exists for this topic; PDR is not claimed
+connection,connected_fraction,1.0
+connection,reconnect_count,0
+connection,crc_errors_delta,0
+rtt,sample_count,240
+rtt,mean,38.393531074950715
+rtt,median,8.361592500023107
+rtt,p95,119.10301659981997
+rtt,p99,144.3929051897338
+rtt,max,169.69313799927477
+rtt,min,5.881353999939165
+rtt_tail,count_gt_50ms,65
+rtt_tail,percent_gt_50ms,27.083333333333332
+rtt_tail,count_gt_100ms,65
+rtt_tail,percent_gt_100ms,27.083333333333332
+rtt_tail,count_gt_200ms,0
+rtt_tail,percent_gt_200ms,0.0
+rtt_tail,longest_consecutive_status_ticks_gt_50ms,5
+rtt,provenance,"1Hz /epuck_bridge/status snapshot of most recently completed individual RTT, not a full transaction census"
+state_age,sample_count,240
+state_age,mean,0.05923211971918742
+state_age,median,0.05780518054962158
+state_age,p95,0.1074020743370056
+state_age,p99,0.1712675046920769
+state_age,max,0.2623443603515625
+state_age,min,0.0034809112548828125
+state_age,formula,"time.time() - self._last_state_time, both WSL time.time() calls, single clock domain, VALID"
+validity_flags_duration_s,7,239.88038059799996
+nan_inf,protocol_allowed_inf_count,6377
+nan_inf,nan_count,0
+nan_inf,unexpected_inf_count_in_pose_velocity_fields,0
+cmd_vel,nonzero_in_bag,0
+cmd_vel_checkpoint,start,0
+cmd_vel_checkpoint,mid,0
+cmd_vel_checkpoint,end,0
+wsl_system_main,cpu_percent_sample_count,244
+wsl_system_main,cpu_percent_mean,3.9873770491803278
+wsl_system_main,cpu_percent_median,3.77
+wsl_system_main,cpu_percent_p95,6.59
+wsl_system_main,cpu_percent_p99,7.721099999999998
+wsl_system_main,cpu_percent_max,9.3
+wsl_system_main,cpu_percent_min,1.02
+wsl_system_main,mem_used_mb_sample_count,244
+wsl_system_main,mem_used_mb_mean,661.1709016393443
+wsl_system_main,mem_used_mb_median,661.02
+wsl_system_main,mem_used_mb_p95,662.8570000000001
+wsl_system_main,mem_used_mb_p99,662.93
+wsl_system_main,mem_used_mb_max,670.01
+wsl_system_main,mem_used_mb_min,659.09
+pi_system_main,cpu_percent_sample_count,238
+pi_system_main,cpu_percent_mean,14.396764705882353
+pi_system_main,cpu_percent_median,14.39
+pi_system_main,cpu_percent_p95,15.901999999999997
+pi_system_main,cpu_percent_p99,16.5
+pi_system_main,cpu_percent_max,16.87
+pi_system_main,cpu_percent_min,11.84
+pi_system_main,mem_used_mb_sample_count,238
+pi_system_main,mem_used_mb_mean,169.67046218487394
+pi_system_main,mem_used_mb_median,169.70999999999998
+pi_system_main,mem_used_mb_p95,170.84
+pi_system_main,mem_used_mb_p99,170.98
+pi_system_main,mem_used_mb_max,170.99
+pi_system_main,mem_used_mb_min,168.62
+pi_system_main,wifi_link_quality_sample_count,238
+pi_system_main,wifi_link_quality_mean,70.0
+pi_system_main,wifi_link_quality_median,70.0
+pi_system_main,wifi_link_quality_p95,70.0
+pi_system_main,wifi_link_quality_p99,70.0
+pi_system_main,wifi_link_quality_max,70.0
+pi_system_main,wifi_link_quality_min,70.0
+pi_system_main,wifi_signal_dbm_sample_count,238
+pi_system_main,wifi_signal_dbm_mean,-25.050420168067227
+pi_system_main,wifi_signal_dbm_median,-21.0
+pi_system_main,wifi_signal_dbm_p95,-20.0
+pi_system_main,wifi_signal_dbm_p99,-20.0
+pi_system_main,wifi_signal_dbm_max,-20.0
+pi_system_main,wifi_signal_dbm_min,-33.0
