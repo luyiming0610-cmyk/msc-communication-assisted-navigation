@@ -18,19 +18,37 @@ set -eo pipefail
 # trial ran, per trial.
 #
 # Usage: run_objective5_impairment_matrix_trial.sh CONDITION_ID TRIAL_INDEX [ATTEMPT]
+#        run_objective5_impairment_matrix_trial.sh CONDITION_ID TRIAL_INDEX --pilot LABEL
 #   CONDITION_ID: A-G (matches objective5_impairment_matrix_conditions.csv)
-#   TRIAL_INDEX:  1-5
+#   TRIAL_INDEX:  1-5 (still resolves this trial index's frozen
+#                 parameters/seeds from the CSV even in --pilot mode, so
+#                 an exclusionary pilot run uses genuinely frozen
+#                 parameters, not ad-hoc ones)
 #   ATTEMPT:      defaults to 1; bump only after a failed/interrupted
 #                 attempt (never reused, never overwritten)
+#   --pilot LABEL: EXCLUSIONARY_DIAGNOSTIC mode -- directory name becomes
+#                 objective5_matrix_v1_condition<ID>_exclusionary_<LABEL>
+#                 instead of the normal trialNN_attemptNN scheme, so it
+#                 can never collide with or be mistaken for a formal n=5
+#                 trial directory. Still fully exercises the real
+#                 pipeline (same relay/controller/bag/drain/verdict
+#                 code path) -- only the directory naming differs.
 
-if (( $# < 2 || $# > 3 )); then
+PILOT_LABEL=""
+if (( $# == 4 )) && [[ "$3" == "--pilot" ]]; then
+  PILOT_LABEL="$4"
+  CONDITION_ID="$1"
+  TRIAL_INDEX="$2"
+  ATTEMPT=1
+elif (( $# >= 2 && $# <= 3 )); then
+  CONDITION_ID="$1"
+  TRIAL_INDEX="$2"
+  ATTEMPT="${3:-1}"
+else
   echo "Usage: $0 CONDITION_ID TRIAL_INDEX [ATTEMPT]" >&2
+  echo "       $0 CONDITION_ID TRIAL_INDEX --pilot LABEL" >&2
   exit 2
 fi
-
-CONDITION_ID="$1"
-TRIAL_INDEX="$2"
-ATTEMPT="${3:-1}"
 
 MATRIX_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/05_objective5_impairment_matrix"
 TOOLS_DIR="$MATRIX_DIR/tools"
@@ -50,15 +68,24 @@ eval "$CONFIG_OUTPUT"
 # populates: CONDITION_ID TRIAL_INDEX DELAY_S JITTER_S DROP_PROBABILITY
 #            SEED_EPUCK1 SEED_EPUCK2 OUTAGE_PERIOD_S OUTAGE_DURATION_S OUTAGE_PHASE_S
 
-STEM="$(python3 -c "
+if [[ -n "$PILOT_LABEL" ]]; then
+  STEM="objective5_matrix_v1_condition${CONDITION_ID}_exclusionary_${PILOT_LABEL}"
+else
+  # trial_dir_name() already returns the FULL directory name (including
+  # the "objective5_impairment_matrix_v1_" prefix) -- STEM is used
+  # as-is below, never re-prefixed (an earlier draft of this script
+  # double-prefixed it; caught before any real run via this exact
+  # exclusionary-pilot path).
+  STEM="$(python3 -c "
 import sys
 sys.path.insert(0, '$TOOLS_DIR')
 from unique_trial_dir import trial_dir_name
 print(trial_dir_name('$CONDITION_ID', $TRIAL_INDEX, $ATTEMPT))
 ")"
+fi
 
 NATIVE_BAG_ROOT="/home/eamon/epuck_comm_bags"
-NATIVE_BAG_DIR="$NATIVE_BAG_ROOT/objective5_impairment_matrix_v1_$STEM"
+NATIVE_BAG_DIR="$NATIVE_BAG_ROOT/$STEM"
 FINAL_DIR="$MATRIX_DIR/${STEM}_analysis"
 DIAG_LOG_DIR="$NATIVE_BAG_ROOT/${STEM}_diag_logs"
 CONTROLLER_LOG="$DIAG_LOG_DIR/controller.log"
