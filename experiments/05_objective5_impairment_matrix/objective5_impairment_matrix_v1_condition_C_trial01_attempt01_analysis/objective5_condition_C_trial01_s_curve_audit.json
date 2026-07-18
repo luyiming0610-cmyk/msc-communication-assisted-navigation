@@ -1,0 +1,124 @@
+{
+  "experiment_id": "objective5_impairment_matrix_v1_condition_C_trial01_attempt01",
+  "audit_type": "OFFLINE_S_CURVE_AND_CONTROL_SMOOTHNESS_AUDIT",
+  "data_validity": "VALID",
+  "task_outcome": "SUCCESS",
+  "behavioral_assessment": "PATH_SMOOTHNESS_DEGRADATION",
+  "configured_impairment": {
+    "delay_s": 1.0,
+    "jitter_s": 0.0,
+    "drop_probability": 0.0
+  },
+  "communication_metrics": {
+    "epuck1_to_epuck2": {
+      "sample_count": 446,
+      "mean_message_age_s": 1.0001793721973093,
+      "median_message_age_s": 1.0,
+      "p95_message_age_s": 1.0,
+      "p99_message_age_s": 1.0000000005500016,
+      "max_message_age_s": 1.0199999999999996,
+      "capture_ratio": 1.0,
+      "drop_count": 0
+    },
+    "epuck2_to_epuck1": {
+      "sample_count": 452,
+      "mean_message_age_s": 1.000221238938053,
+      "median_message_age_s": 1.0,
+      "p95_message_age_s": 1.0,
+      "p99_message_age_s": 1.0098000000199991,
+      "max_message_age_s": 1.0199999999999996,
+      "capture_ratio": 1.0,
+      "drop_count": 0
+    }
+  },
+  "trigger_and_mode_audit": {
+    "first_trigger_reason": "PREDICTED_CPA",
+    "epuck1": {
+      "avoid_turn_entries": 1,
+      "avoid_pass_entries": 1,
+      "recover_entries": 1,
+      "local_mode_entries": 0
+    },
+    "epuck2": {
+      "avoid_turn_entries": 1,
+      "avoid_pass_entries": 1,
+      "recover_entries": 1,
+      "local_mode_entries": 0
+    },
+    "interpretation": "The observed 4-5 S-bends were not 4-5 independent CPA encounters. They were repeated steering reversals inside one continuous AVOID_PASS phase."
+  },
+  "synchronization": {
+    "avoid_turn_ros_time_epuck1_s": 34.86,
+    "avoid_turn_ros_time_epuck2_s": 34.86,
+    "avoid_pass_ros_time_epuck1_s": 36.6,
+    "avoid_pass_ros_time_epuck2_s": 36.56,
+    "recover_ros_time_epuck1_s": 56.4,
+    "recover_ros_time_epuck2_s": 56.4,
+    "complete_ros_time_epuck1_s": 59.46,
+    "complete_ros_time_epuck2_s": 59.36,
+    "assessment": "SYNCHRONIZED_WITHIN_0.10_S"
+  },
+  "avoid_pass_metrics": {
+    "epuck1": {
+      "duration_s": 20.7260000705719,
+      "angular_direction_reversals": 9,
+      "angular_sign_runs": [-1, 1, -1, 1, -1, 1, -1, 1, -1, 1],
+      "reversal_start_offsets_s": [0.0, 0.1344, 3.5662, 5.8839, 8.1416, 10.5347, 12.8655, 15.1805, 17.3893, 19.7603],
+      "absolute_angular_command_integral_rad": 5.548101570628442,
+      "yaw_total_variation_rad": 5.256494551897049,
+      "yaw_range_rad": 0.9617421627044678,
+      "path_efficiency": 0.9729151506904168
+    },
+    "epuck2": {
+      "duration_s": 20.766000032424927,
+      "angular_direction_reversals": 9,
+      "angular_sign_runs": [-1, 1, -1, 1, -1, 1, -1, 1, -1, 1],
+      "reversal_start_offsets_s": [0.0, 0.2187, 3.4965, 5.8706, 8.1303, 10.5251, 12.8317, 15.0552, 17.3558, 19.7539],
+      "absolute_angular_command_integral_rad": 5.550334409130908,
+      "yaw_total_variation_rad": 5.26311182975769,
+      "yaw_range_rad": 0.9330663681030273,
+      "path_efficiency": 0.9739273720474451
+    }
+  },
+  "comparison_trial01": {
+    "condition_A_zero_impairment": {
+      "angular_direction_reversals_epuck1_epuck2": [0, 1],
+      "yaw_total_variation_rad_epuck1_epuck2": [0.07940986752510071, 0.11029171943664551],
+      "path_efficiency_epuck1_epuck2": [0.9999985456812932, 0.9999787072304919]
+    },
+    "condition_B_fixed_0_2_s": {
+      "angular_direction_reversals_epuck1_epuck2": [1, 1],
+      "yaw_total_variation_rad_epuck1_epuck2": [0.3286688029766083, 0.37499213218688965],
+      "path_efficiency_epuck1_epuck2": [0.9996627245172136, 0.9997405575214183]
+    },
+    "condition_C_fixed_1_0_s": {
+      "angular_direction_reversals_epuck1_epuck2": [9, 9],
+      "yaw_total_variation_rad_epuck1_epuck2": [5.256494551897049, 5.26311182975769],
+      "path_efficiency_epuck1_epuck2": [0.9729151506904168, 0.9739273720474451]
+    }
+  },
+  "safety": {
+    "minimum_center_separation_m": 0.14132004503269063,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.00132004503269062,
+    "collision": false
+  },
+  "manual_observation": {
+    "avoidance_completed": true,
+    "collision": false,
+    "obvious_spin_or_shake": false,
+    "recovered_and_stopped_automatically": true,
+    "avoidance_synchronized": true,
+    "s_curve_with_four_to_five_incremental_corrections": true
+  },
+  "conclusion": {
+    "classification": "SUCCESS_WITH_REPEATABLE_CANDIDATE_DELAY_INDUCED_STEERING_OSCILLATION",
+    "causal_strength": "STRONG_ASSOCIATION_IN_ONE_TRIAL_NOT_YET_BATCH_CONFIRMED",
+    "notes": [
+      "No LOCAL_* mode was entered; this was not IR/ToF fallback.",
+      "Only one CPA state-machine cycle occurred; the S-shape came from 9 command-direction reversals within AVOID_PASS.",
+      "Compared with A01 and B01, C01 shows a large increase in yaw variation and a measurable path-efficiency reduction.",
+      "C02-C05 must compute the same metrics before claiming repeatability or a condition-level effect."
+    ]
+  }
+}
