@@ -129,29 +129,34 @@ it runs.**
   Conditions B-G. Raw bag/diag_logs for every trial preserved outside
   git (native WSL + Windows copy, SHA-256-verified identical), see each
   trial's own `..._analysis/` directory.
-- **Formal Condition B, Trial 01 ONLY (NOT complete)**:
-  `objective5_impairment_matrix_v1_condition_B_trial01_attempt01`
+- **Formal Condition B batch, COMPLETE, 5/5 PASS**:
+  `objective5_impairment_matrix_v1_condition_B_trial01..05_attempt01`
   (fixed `delay_s=0.20`, `jitter_s=0.0`, `drop_probability=0.0`, outage
   disabled -- world/controller/thresholds/initial poses identical to
-  Condition A; local ToF/IR safety layer remains enabled). Launched
-  manually by the user via the new permanent Windows->WSL wrapper
-  (`tools/run_objective5_matrix_from_windows.sh`) for individual
-  real-time observation. Automated strict-criteria verdict:
-  `DATA_VALIDITY=VALID`/`TASK_OUTCOME=SUCCESS`/`analyzer_ok=true`
-  (`legacy_replay=false`, `schema_problems=[]` both directions),
-  `capture_ratio=1.0` and 0 drops both directions,
-  `min_interrobot_distance_m=0.14777153762172363` (safety margin
-  ~7.77mm), process cleanup CLEAN, measured message age tracks the
-  configured 0.20s delay closely (mean~0.209s, median=0.200s exactly,
-  p95/p99/max=0.22s both directions, `VALID_AT_SIM_CLOCK_RESOLUTION`).
-  Offline trigger-mechanism audit (no Webots run):
-  `first_trigger_reason=PREDICTED_CPA`, every `LOCAL_*` counter 0,
-  `PURE_COMMUNICATION_CPA_AVOIDANCE` -- see
-  `objective5_impairment_matrix_v1_condition_B_trial01_attempt01_analysis/objective5_condition_B_trial01_trigger_mechanism_audit.md`.
-  **`final_verdict.json`'s `final_confirmed_verdict=PENDING_MANUAL_
-  OBSERVATION`** -- Trials 02-05 will not auto-start until the user's
-  observation is received and confirmed consistent with this automated
-  evidence. **Condition B's formal n=5 batch is NOT complete.**
+  Condition A; local ToF/IR safety layer enabled throughout, never
+  engaged). Trial 01 launched manually via the permanent wrapper and
+  individually observed (final PASS confirmed after an offline
+  startup-sync audit classified the user-observed ~2.6s startup
+  asynchrony as `ORCHESTRATOR_LAUNCH_TIMING_VARIANCE` -- present in
+  Condition A too, direction not fixed, avoidance always synchronized);
+  Trials 02-05 ran automatically under explicit authorization with
+  behavioral-code SHA-256 verified identical to B01 before each run.
+  All 5: `DATA_VALIDITY=VALID`/`TASK_OUTCOME=SUCCESS`/`analyzer_ok=true`
+  (strict schema, p99 finite), `capture_ratio=1.0`, 0 drops both
+  directions, `first_trigger_reason=PREDICTED_CPA` with every `LOCAL_*`
+  counter 0 (`PURE_COMMUNICATION_CPA_AVOIDANCE` 5/5). Median message
+  age = 0.200s exactly (the configured delay) in every trial;
+  mean ~0.209s; p95/p99/max 0.22s. `min_interrobot_distance_m` in
+  `[0.1418936528990241, 0.14777153762172363]` -- margin mean ~4.66mm,
+  **tightest ~1.89mm (Trial 05)**, all positive. Per-trial
+  TIMEBASE_INIT startup deltas recorded as covariates
+  ([-2.64, -2.38, -0.02, -0.34, 0.00]s; AVOID_TURN/RECOVER deltas
+  0.000s in all 5). Full cross-trial statistics + descriptive
+  startup-delta relationship check (no significance claims, n=5) in
+  `objective5_impairment_matrix_v1_condition_B_formal_batch_summary.{json,md}`.
+  **Condition F precondition recorded in `project_status.json`**: the
+  startup offset (up to ~2.66s, ~3.8x F's 0.7s outage duration) must be
+  checked against actual outage-window timing before formal F begins.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,
@@ -162,7 +167,11 @@ it runs.**
   `objective5_impairment_matrix_v1_condition_A_trial03_attempt01`,
   `objective5_impairment_matrix_v1_condition_A_trial04_attempt01`,
   `objective5_impairment_matrix_v1_condition_A_trial05_attempt01`,
-  `objective5_impairment_matrix_v1_condition_B_trial01_attempt01`.
+  `objective5_impairment_matrix_v1_condition_B_trial01_attempt01`,
+  `objective5_impairment_matrix_v1_condition_B_trial02_attempt01`,
+  `objective5_impairment_matrix_v1_condition_B_trial03_attempt01`,
+  `objective5_impairment_matrix_v1_condition_B_trial04_attempt01`,
+  `objective5_impairment_matrix_v1_condition_B_trial05_attempt01`.
 
 ### 06_physical_pipuck
 Two physical e-puck2/Pi-puck units, Wi-Fi validation, disconnect/recovery,

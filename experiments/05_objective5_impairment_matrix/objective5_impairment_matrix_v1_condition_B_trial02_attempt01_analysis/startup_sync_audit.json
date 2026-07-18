@@ -1,0 +1,57 @@
+{
+  "trial_id": "objective5_impairment_matrix_v1_condition_B_trial02_attempt01",
+  "robots": {
+    "epuck1": {
+      "wall_to_sim_fit": {
+        "slope": 0.9619010777258711,
+        "intercept": -1716431575.2560775
+      },
+      "wall_to_sim_fit_n_points": 9,
+      "TIMEBASE_INIT_ros_time_s": 22.74,
+      "first_valid_own_state_received_ros_time_s": 15.426997661590576,
+      "first_valid_own_state_received_note": null,
+      "first_valid_peer_state_received_ros_time_s": 16.379525423049927,
+      "first_valid_peer_state_received_note": null,
+      "STARTUP_HOLD_start_ros_time_s": 22.8,
+      "STARTUP_HOLD_end_ros_time_s": 27.76,
+      "first_CRUISE_ros_time_s": 27.76,
+      "first_sustained_nonzero_cmd_vel_ros_time_s": 27.74751091003418,
+      "first_sustained_nonzero_cmd_vel_note": null,
+      "first_sustained_real_motion_ros_time_s": 28.04,
+      "first_sustained_real_motion_note": null,
+      "first_AVOID_TURN_ros_time_s": 36.46,
+      "first_RECOVER_ros_time_s": 57.76
+    },
+    "epuck2": {
+      "wall_to_sim_fit": {
+        "slope": 0.9603752517984228,
+        "intercept": -1713708867.1351862
+      },
+      "wall_to_sim_fit_n_points": 8,
+      "TIMEBASE_INIT_ros_time_s": 25.12,
+      "first_valid_own_state_received_ros_time_s": 16.4321391582489,
+      "first_valid_own_state_received_note": null,
+      "first_valid_peer_state_received_ros_time_s": 15.481122493743896,
+      "first_valid_peer_state_received_note": null,
+      "STARTUP_HOLD_start_ros_time_s": 25.12,
+      "STARTUP_HOLD_end_ros_time_s": 30.16,
+      "first_CRUISE_ros_time_s": 30.16,
+      "first_sustained_nonzero_cmd_vel_ros_time_s": 30.257984161376953,
+      "first_sustained_nonzero_cmd_vel_note": null,
+      "first_sustained_real_motion_ros_time_s": 30.38,
+      "first_sustained_real_motion_note": null,
+      "first_AVOID_TURN_ros_time_s": 36.46,
+      "first_RECOVER_ros_time_s": 57.76
+    }
+  },
+  "deltas_epuck1_minus_epuck2_s": {
+    "motion_start_delta_s": -2.34,
+    "cmd_vel_start_delta_s": -2.5104732513427734,
+    "cruise_entry_delta_s": -2.3999999999999986,
+    "avoid_turn_delta_s": 0.0,
+    "recover_delta_s": 0.0,
+    "timebase_init_delta_s": -2.3800000000000026,
+    "startup_hold_start_delta_s": -2.3200000000000003,
+    "startup_hold_end_delta_s": -2.3999999999999986
+  }
+}

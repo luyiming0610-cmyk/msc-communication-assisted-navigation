@@ -1,0 +1,97 @@
+{
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "B",
+  "trial_index": 2,
+  "attempt": 1,
+  "trial_id": "objective5_impairment_matrix_v1_condition_B_trial02_attempt01",
+  "batch_status": "TRIAL_PASS_PENDING_BATCH_COMPLETION",
+  "batch_note": "This is trial 2 of a formal n=5 batch for Condition B. Do not treat this file as batch-level completion evidence on its own.",
+  "data_validity": "VALID",
+  "data_validity_reasons": [],
+  "task_outcome": "SUCCESS",
+  "task_outcome_reason": "complete_count=2 >= expected 2",
+  "analyzer_ok": true,
+  "measurement_validity": "VALID",
+  "legacy_replay": false,
+  "safety": {
+    "min_interrobot_distance_m": 0.14483920109118267,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.00483920109118266
+  },
+  "manual_observation": {
+    "note": "Not individually observed -- run as part of an automated batch under explicit user authorization (frozen Condition A config, no controller/relay/analyzer/geometry/pose/threshold changes, SHA-256-verified identical behavioral code to Trial 01, per-trial automated strict-criteria gate; batch stops immediately on any failure rather than proceeding)."
+  },
+  "process_cleanup_check": {
+    "result": "CLEAN",
+    "checked_after_run_completion": true
+  },
+  "bag_integrity_check": {
+    "ros2_bag_info_succeeded": true,
+    "message_count": 3241,
+    "topic_count": 7,
+    "duration_s": 55.699798624
+  },
+  "raw_data_preservation": {
+    "native_wsl_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_B_trial02_attempt01",
+    "native_wsl_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_B_trial02_attempt01_diag_logs",
+    "windows_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_B_trial02_attempt01/",
+    "windows_copy_committed_to_git": false,
+    "sha256_verified_native_vs_windows_copy": true
+  },
+  "run_identity": {
+    "git_commit": "14a0650655066075dc4911367b2cdebf58127f45",
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "communication_metrics": {
+    "epuck1_to_epuck2": {
+      "sample_count": 438,
+      "missing_count": 0,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "capture_ratio": 1.0,
+      "mean_message_age_s": 0.20890410958904104,
+      "median_message_age_s": 0.20000000000000284,
+      "p95_message_age_s": 0.21999999999999886,
+      "p99_message_age_s": 0.21999999999999886,
+      "max_message_age_s": 0.21999999999999886,
+      "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
+      "mean_bandwidth_bytes_per_s": 711.1063982144561,
+      "schema_problems": [],
+      "relay_forwarded_matches_consumer_received": true,
+      "independent_drop_count": 0,
+      "outage_drop_count": 0
+    },
+    "epuck2_to_epuck1": {
+      "sample_count": 435,
+      "missing_count": 0,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "capture_ratio": 1.0,
+      "mean_message_age_s": 0.20914942528735628,
+      "median_message_age_s": 0.20000000000000284,
+      "p95_message_age_s": 0.21999999999999886,
+      "p99_message_age_s": 0.21999999999999886,
+      "max_message_age_s": 0.21999999999999886,
+      "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
+      "mean_bandwidth_bytes_per_s": 710.7790047973922,
+      "schema_problems": [],
+      "relay_forwarded_matches_consumer_received": true,
+      "independent_drop_count": 0,
+      "outage_drop_count": 0
+    }
+  },
+  "queue_drain": {
+    "drain_duration_s": 0.4302,
+    "queue_drained": true
+  },
+  "realtime_factor": {
+    "preload_realtime_factor": 0.962,
+    "full_load_realtime_factor": 0.948,
+    "realtime_factor_ok": true
+  },
+  "trial_verdict": "PASS",
+  "trial_verdict_reason": "All strict automated criteria satisfied."
+}

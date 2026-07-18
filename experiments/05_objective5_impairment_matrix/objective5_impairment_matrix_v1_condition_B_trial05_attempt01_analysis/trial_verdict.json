@@ -1,0 +1,21 @@
+{
+  "condition_id": "B",
+  "trial_index": 5,
+  "attempt": 1,
+  "native_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_B_trial05_attempt01",
+  "native_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_B_trial05_attempt01_diag_logs",
+  "preload_realtime_factor": 1.023,
+  "full_load_realtime_factor": 0.951,
+  "controller_complete_count": 2,
+  "drain_duration_s": 0.4302,
+  "min_interrobot_distance_m": 0.1418936528990241,
+  "git_commit": "14a0650655066075dc4911367b2cdebf58127f45",
+  "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+  "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+  "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+  "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3",
+  "data_validity": "VALID",
+  "data_validity_reasons": [],
+  "task_outcome": "SUCCESS",
+  "task_outcome_reason": "complete_count=2 >= expected 2"
+}

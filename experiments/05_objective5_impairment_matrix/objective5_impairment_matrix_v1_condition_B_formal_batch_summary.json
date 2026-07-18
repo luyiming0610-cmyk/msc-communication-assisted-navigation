@@ -1,0 +1,412 @@
+{
+  "condition_id": "B",
+  "batch_label": "FORMAL_SIM",
+  "frozen_config": {
+    "delay_s": 0.2,
+    "jitter_s": 0.0,
+    "drop_probability": 0.0,
+    "outage": "disabled"
+  },
+  "n_trials": 5,
+  "pass_count": 5,
+  "data_validity_distribution": {
+    "VALID": 5,
+    "INVALID": 0
+  },
+  "task_outcome_distribution": {
+    "SUCCESS": 5,
+    "other": 0
+  },
+  "trial_ids": [
+    "objective5_impairment_matrix_v1_condition_B_trial01_attempt01",
+    "objective5_impairment_matrix_v1_condition_B_trial02_attempt01",
+    "objective5_impairment_matrix_v1_condition_B_trial03_attempt01",
+    "objective5_impairment_matrix_v1_condition_B_trial04_attempt01",
+    "objective5_impairment_matrix_v1_condition_B_trial05_attempt01"
+  ],
+  "code_identity": {
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3",
+    "identical_across_all_5_trials": true,
+    "git_commits_per_trial": [
+      "3f30f708cac4f102f920925236e07c518356337f",
+      "14a0650655066075dc4911367b2cdebf58127f45",
+      "14a0650655066075dc4911367b2cdebf58127f45",
+      "14a0650655066075dc4911367b2cdebf58127f45",
+      "14a0650655066075dc4911367b2cdebf58127f45"
+    ]
+  },
+  "per_direction": {
+    "epuck1_to_epuck2": {
+      "message_count_per_trial": [
+        444,
+        438,
+        438,
+        438,
+        428
+      ],
+      "capture_ratio_per_trial": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "capture_ratio_stats": {
+        "mean": 1.0,
+        "stdev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "drop_count_per_trial": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "latency_mean_s_stats": {
+        "mean": 0.2090072016719161,
+        "stdev": 0.00041569441134546266,
+        "min": 0.2086301369885844,
+        "max": 0.2097663551401868
+      },
+      "latency_median_s_stats": {
+        "mean": 0.20000000000000284,
+        "stdev": 0.0,
+        "min": 0.20000000000000284,
+        "max": 0.20000000000000284
+      },
+      "latency_p95_s_stats": {
+        "mean": 0.21999999999999886,
+        "stdev": 0.0,
+        "min": 0.21999999999999886,
+        "max": 0.21999999999999886
+      },
+      "latency_p99_s_stats": {
+        "mean": 0.21999999999999886,
+        "stdev": 0.0,
+        "min": 0.21999999999999886,
+        "max": 0.21999999999999886
+      },
+      "latency_max_s_stats": {
+        "mean": 0.22000000000000028,
+        "stdev": 2.842170943040401e-15,
+        "min": 0.21999999999999886,
+        "max": 0.22000000000000597
+      },
+      "throughput_bytes_per_s_stats": {
+        "mean": 708.7966988374367,
+        "stdev": 1.52380276238892,
+        "min": 706.6338119029846,
+        "max": 711.1063982144561
+      }
+    },
+    "epuck2_to_epuck1": {
+      "message_count_per_trial": [
+        443,
+        435,
+        446,
+        444,
+        434
+      ],
+      "capture_ratio_per_trial": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "capture_ratio_stats": {
+        "mean": 1.0,
+        "stdev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "drop_count_per_trial": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "latency_mean_s_stats": {
+        "mean": 0.20930337058977805,
+        "stdev": 0.0003536346002047594,
+        "min": 0.2090134529170403,
+        "max": 0.2099999999999999
+      },
+      "latency_median_s_stats": {
+        "mean": 0.20200000000000246,
+        "stdev": 0.003999999999999204,
+        "min": 0.20000000000000284,
+        "max": 0.21000000000000085
+      },
+      "latency_p95_s_stats": {
+        "mean": 0.21999999999999886,
+        "stdev": 0.0,
+        "min": 0.21999999999999886,
+        "max": 0.21999999999999886
+      },
+      "latency_p99_s_stats": {
+        "mean": 0.21999999999999886,
+        "stdev": 0.0,
+        "min": 0.21999999999999886,
+        "max": 0.21999999999999886
+      },
+      "latency_max_s_stats": {
+        "mean": 0.21999999999999886,
+        "stdev": 0.0,
+        "min": 0.21999999999999886,
+        "max": 0.21999999999999886
+      },
+      "throughput_bytes_per_s_stats": {
+        "mean": 709.1272740419827,
+        "stdev": 1.4161452322099481,
+        "min": 706.833989024102,
+        "max": 710.7790047973922
+      }
+    }
+  },
+  "latency_vs_configured": {
+    "configured_delay_s": 0.2,
+    "note": "Median message age = 0.200s exactly in every trial, both directions; mean 0.204-0.209s; p95/p99/max 0.22s (one publish-period quantization above the configured delay). Latency status VALID_AT_SIM_CLOCK_RESOLUTION in all 10 direction-measurements."
+  },
+  "safety": {
+    "safety_radius_m": 0.14,
+    "min_interrobot_distance_m_per_trial": [
+      0.14777153762172363,
+      0.14483920109118267,
+      0.1464050217802145,
+      0.1423689662964818,
+      0.1418936528990241
+    ],
+    "min_interrobot_distance_m_stats": {
+      "mean": 0.14465567593772533,
+      "stdev": 0.0022654049811045686,
+      "min": 0.1418936528990241,
+      "max": 0.14777153762172363
+    },
+    "safety_margin_m_per_trial": [
+      0.007771537621723612,
+      0.00483920109118266,
+      0.006405021780214487,
+      0.0023689662964817837,
+      0.001893652899024073
+    ],
+    "safety_margin_m_stats": {
+      "mean": 0.004655675937725323,
+      "stdev": 0.0022654049811045686,
+      "min": 0.001893652899024073,
+      "max": 0.007771537621723612
+    },
+    "tightest_trial": "objective5_impairment_matrix_v1_condition_B_trial05_attempt01",
+    "tightest_margin_m": 0.001893652899024073
+  },
+  "trigger_classification": {
+    "first_trigger_reason_per_trial": [
+      "PREDICTED_CPA",
+      "PREDICTED_CPA",
+      "PREDICTED_CPA",
+      "PREDICTED_CPA",
+      "PREDICTED_CPA"
+    ],
+    "all_predicted_cpa": true,
+    "local_layer_engaged_any_trial": false,
+    "note": "All 5 trials: PREDICTED_CPA, every LOCAL_* counter 0 -- PURE_COMMUNICATION_CPA_AVOIDANCE under 0.20s fixed delay."
+  },
+  "startup_delta_covariate": {
+    "note": "Recorded as a covariate per instruction -- NOT used to exclude any trial, and no data was altered for symmetry. Negative = epuck1 earlier.",
+    "timebase_init_delta_s_per_trial": [
+      -2.64,
+      -2.3800000000000026,
+      -0.019999999999999574,
+      -0.33999999999999986,
+      0.0
+    ],
+    "timebase_init_delta_stats": {
+      "mean": -1.0760000000000005,
+      "stdev": 1.1799254213720465,
+      "min": -2.64,
+      "max": 0.0
+    },
+    "abs_timebase_init_delta_stats": {
+      "mean": 1.0760000000000005,
+      "stdev": 1.1799254213720465,
+      "min": 0.0,
+      "max": 2.64
+    },
+    "motion_start_delta_s_per_trial": [
+      -2.66,
+      -2.34,
+      -0.120000000000001,
+      -0.33999999999999986,
+      0.060000000000002274
+    ],
+    "cruise_delta_s_per_trial": [
+      -2.64,
+      -2.3999999999999986,
+      0.0,
+      -0.33999999999999986,
+      0.0
+    ],
+    "cmd_vel_delta_s_per_trial": [
+      -2.6342880725860596,
+      -2.5104732513427734,
+      -0.0012392997741699219,
+      -0.4014425277709961,
+      0.002835512161254883
+    ],
+    "avoid_turn_delta_s_per_trial": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "recover_delta_s_per_trial": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "startup_leader_per_trial": [
+      "epuck1",
+      "epuck1",
+      "epuck1",
+      "epuck1",
+      "tie"
+    ],
+    "avoidance_synchronized_every_trial": true
+  },
+  "startup_delta_relationship_check": {
+    "method": "Descriptive only -- n=5 is far too small for any statistical-significance claim, and none is made. Pearson r reported as a raw descriptive number.",
+    "pearson_r_abs_timebase_delta_vs_min_distance": 0.5926033594636853,
+    "pearson_r_abs_timebase_delta_vs_bag_duration": 0.8375815053407355,
+    "pairs_abs_delta_vs_min_distance": [
+      [
+        0.0,
+        0.1418936528990241
+      ],
+      [
+        0.019999999999999574,
+        0.1464050217802145
+      ],
+      [
+        0.33999999999999986,
+        0.1423689662964818
+      ],
+      [
+        2.3800000000000026,
+        0.14483920109118267
+      ],
+      [
+        2.64,
+        0.14777153762172363
+      ]
+    ],
+    "pairs_abs_delta_vs_duration": [
+      [
+        0.0,
+        52.383178041
+      ],
+      [
+        0.019999999999999574,
+        54.432986689
+      ],
+      [
+        0.33999999999999986,
+        52.775109976
+      ],
+      [
+        2.3800000000000026,
+        55.699798624
+      ],
+      [
+        2.64,
+        55.497479486
+      ]
+    ]
+  },
+  "bag_duration_s_per_trial": [
+    55.497479486,
+    55.699798624,
+    54.432986689,
+    52.775109976,
+    52.383178041
+  ],
+  "bag_duration_s_stats": {
+    "mean": 54.157710563200006,
+    "stdev": 1.364503085761943,
+    "min": 52.383178041,
+    "max": 55.699798624
+  },
+  "complete_count_per_trial": [
+    2,
+    2,
+    2,
+    2,
+    2
+  ],
+  "realtime_factor": {
+    "preload_per_trial": [
+      0.955,
+      0.962,
+      0.963,
+      0.994,
+      1.023
+    ],
+    "full_load_per_trial": [
+      0.958,
+      0.948,
+      0.96,
+      0.966,
+      0.951
+    ]
+  },
+  "individual_trials": [
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial01_attempt01",
+      "verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.14777153762172363,
+      "timebase_init_delta_s": -2.64
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial02_attempt01",
+      "verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.14483920109118267,
+      "timebase_init_delta_s": -2.3800000000000026
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial03_attempt01",
+      "verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.1464050217802145,
+      "timebase_init_delta_s": -0.019999999999999574
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial04_attempt01",
+      "verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.1423689662964818,
+      "timebase_init_delta_s": -0.33999999999999986
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial05_attempt01",
+      "verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.1418936528990241,
+      "timebase_init_delta_s": 0.0
+    }
+  ]
+}
