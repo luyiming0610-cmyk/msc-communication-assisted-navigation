@@ -1,0 +1,55 @@
+{
+  "note": "Addendum to verdict.json, added 2026-07-18. verdict.json itself is left unmodified as the original analyzer's output. This file adds precision/naming corrections computed from the SAME already-recorded main-window data (wsl_transport_status.csv, main window 1784377173.902174-1784377413.902174 Unix seconds) -- no data was re-collected, no pilot was re-run.",
+  "verdict": "PASS_WITH_LIMITATION",
+  "verdict_label": "BASIC PHYSICAL TRANSPORT STABILITY",
+  "rtt_status_snapshot_ms": {
+    "provenance": "1Hz snapshot from /epuck_bridge/status of the most recently completed individual WSL-to-Pi-to-WSL command-acknowledgement RTT (wsl_epuck_tcp_bridge.py: rtt_ms = (time.monotonic() - command_sent) * 1000.0, both operands WSL time.monotonic()). NOT a per-transaction census -- commands are sent roughly every 0.1s (~2400 over 240s), only 240 were sampled via the 1Hz status tick.",
+    "valid_sample_count": 240,
+    "mean_ms": 52.54225128333587,
+    "median_ms": 8.503562999976566,
+    "p95_ms": 116.58297035025949,
+    "p99_ms": 129.63318268965392,
+    "max_ms": 355.3862150001805,
+    "min_ms": 5.052475999946182,
+    "tail_distribution": {
+      "count_gt_50ms": 104,
+      "percent_gt_50ms": 43.3,
+      "count_gt_100ms": 100,
+      "percent_gt_100ms": 41.7,
+      "count_gt_200ms": 1,
+      "percent_gt_200ms": 0.4,
+      "longest_consecutive_status_ticks_gt_50ms": 6,
+      "longest_run_approx_seconds": 6,
+      "longest_run_start_unix_s": 1784377262.123
+    },
+    "root_cause_claimed": false
+  },
+  "state_age_s": {
+    "formula": "time.time() - self._last_state_time, computed inside wsl_epuck_tcp_bridge.py's _publish_status(); self._last_state_time is set to time.time() inside _record_state() at the moment a state message from the Pi was successfully decoded",
+    "both_operands_source": "WSL-local time.time() calls in the same Python process -- no Pi-side timestamp is read or subtracted",
+    "clock_domain": "single (WSL only)",
+    "validity": "VALID",
+    "valid_sample_count": 240,
+    "mean_s": 0.0563848614692688,
+    "median_s": 0.05238223075866699,
+    "p95_s": 0.10407196283340454,
+    "p99_s": 0.17762587547302097,
+    "max_s": 0.4846198558807373
+  },
+  "cmd_vel_zero_motion_confirmation": {
+    "method": "four joint, independent checks -- none is treated as sufficient alone",
+    "checks": [
+      "bag: 0 /cmd_vel messages recorded (topic absent from ros2 bag info's topic list) -- proves nothing was recorded on the WSL ROS graph during the bag's own recording window, does not by itself prove no command existed anywhere else in the system",
+      "WSL-side live recorder: 0 nonzero /cmd_vel messages observed via its own independent subscription for the same window",
+      "Pi driver foreground log: user-confirmed (not independently re-verified by the analyzer) continuous 'New velocity, left 0 and right 0'",
+      "manual visual observation: robot wheels remained physically stationary throughout"
+    ]
+  },
+  "application_state_sequence_delivery_ratio_naming_note": {
+    "applies_to": "the sensor-extended bridge (NOT used in this attempt) -- reserved naming for the next pilot",
+    "required_name": "APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO",
+    "meaning": "Pi application-level state-sequence receipt completeness as measured at the WSL bridge (state_unique_received / (state_unique_received + state_missing))",
+    "must_not_be_called": ["IP packet loss", "TCP packet loss"],
+    "must_not_be_auto_equated_with": "rosbag PDR (a separate, bag-vs-live-source comparison, computed independently)"
+  }
+}

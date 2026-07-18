@@ -4,10 +4,21 @@
 current `EpuckState` protocol, does not validate avoidance behaviour.
 Validates ONLY the base Pi-TCP-WSL transport link.
 
-**Verdict: `PASS_WITH_LIMITATION`** — see `analysis/verdict.json` /
+**Verdict: `PASS_WITH_LIMITATION` — BASIC PHYSICAL TRANSPORT STABILITY**
+(final for this attempt; not re-run). See `analysis/verdict.json` /
 `analysis/summary.md` for the full account, including why this is not an
 unqualified PASS (PDR/sequence integrity structurally NOT_MEASURABLE with
 the current base bridge; one-way latency NOT_VALID with no clock sync).
+**Not a formal EpuckState protocol baseline. Not a PDR experiment.**
+
+`analysis/summary.md` was corrected 2026-07-18 (wording/interpretation
+only, no data re-collected) to: name the RTT figures precisely as 1Hz
+status-tick snapshots of the most recently completed individual RTT (not
+a full per-transaction census); add the RTT tail distribution
+(>50/100/200ms counts, longest consecutive high-RTT run) with no
+root-cause claim; spell out `state_age_s`'s exact formula/fields/clock
+source; reframe the zero-`/cmd_vel` claim as four joint checks, none
+alone sufficient.
 
 ## Contents
 
@@ -33,11 +44,17 @@ the current base bridge; one-way latency NOT_VALID with no clock sync).
 ## Headline (main window, 240.0s, real overlap-derived)
 
 - `connected_fraction=1.0`, 0 reconnects, `crc_errors` delta = 0.
-- RTT: mean 52.5ms / median 8.5ms / p95 116.6ms / p99 129.6ms / max 355.4ms.
-- `state_age_s`: mean 0.056 / median 0.052 / p95 0.104 / max 0.485.
+- RTT status-tick snapshots (240 valid, 1Hz sampling of the most recently
+  completed individual command-ack RTT — NOT a full transaction census):
+  mean 52.5ms / median 8.5ms / p95 116.6ms / p99 129.6ms / max 355.4ms.
+  Tail: 104 (43.3%) > 50ms, 100 (41.7%) > 100ms, 1 (0.4%) > 200ms; longest
+  consecutive high-RTT run 6 ticks (~6s). No root cause claimed.
+- `state_age_s` (both operands `time.time()` in the same WSL process — same
+  clock domain, VALID): mean 0.056 / median 0.052 / p95 0.104 / max 0.485.
 - `/scan`, `/odom`: 2227 messages each, ≈9.28Hz.
-- 0 nonzero `/cmd_vel` anywhere (bag: 0 messages at all on that topic;
-  live WSL observation: 0).
+- 0 nonzero `/cmd_vel` anywhere — confirmed via 4 joint checks (bag
+  absence, live WSL observation, Pi driver log, manual wheel observation),
+  none alone treated as sufficient.
 
 ## Explicitly NOT claimed
 

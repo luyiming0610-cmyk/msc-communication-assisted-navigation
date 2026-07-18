@@ -1,20 +1,52 @@
 # physical_single_device_transport_diagnostic_pilot01 (attempt01) — summary
 
-**Verdict: `PASS_WITH_LIMITATION`** (see `verdict.json` for the machine-readable
-form). **This is NOT a formal communication-performance PASS** and does NOT
-validate the current EpuckState protocol or avoidance behaviour — it
-validates ONLY the base Pi-TCP-WSL transport link (`epuck_bridge_v1`, base
-variant, sensor-extended bridge not used this pilot).
+**Verdict: `PASS_WITH_LIMITATION` — BASIC PHYSICAL TRANSPORT STABILITY**
+(see `verdict.json` for the machine-readable form). **This is NOT a formal
+communication-performance PASS, NOT a formal EpuckState protocol baseline,
+and NOT a PDR experiment** — it validates ONLY the base Pi-TCP-WSL
+transport link (`epuck_bridge_v1`, base variant, sensor-extended bridge not
+used this pilot). This verdict is final for this attempt; the attempt was
+not, and will not be, re-run to chase a different label.
+
+**Corrections applied 2026-07-18 (after the original run, before any
+further pilot) — this section documents what changed and why, per
+instruction; no data was re-collected, only wording/interpretation was
+corrected:**
+1. RTT sample provenance clarified (was ambiguous about per-transaction vs.
+   snapshot).
+2. RTT tail distribution quantified (>50/100/200ms counts, longest
+   consecutive high-RTT run) with no root-cause claim.
+3. `state_age_s`'s exact formula, fields, and clock source spelled out to
+   justify VALID.
+4. The `/cmd_vel` zero-motion claim reframed as four joint, independent
+   confirmations rather than "bag absence is the strongest evidence" (bag
+   absence alone cannot prove no command was ever produced elsewhere in
+   the system).
+5. The bridge's delivery-ratio concept (relevant to the *next* pilot, not
+   this one, since the base bridge doesn't expose it) is name-reserved as
+   `APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO` to avoid future confusion
+   with IP/TCP packet loss or rosbag PDR.
 
 ## Run
 
 - 2026-07-18, robot stationary throughout (wheels suspended/on stand), zero
-  `/cmd_vel` ever published — confirmed three independent ways: (1) the bag
+  `/cmd_vel` ever published — confirmed by **four joint, independent
+  checks, none of which alone is sufficient proof on its own**: (1) the bag
   contains **0** `/cmd_vel` messages at all (topic does not even appear in
-  `ros2 bag info`'s topic list), (2) the WSL-side recorder's own live
-  subscription observed 0 nonzero `/cmd_vel` messages, (3) the Pi driver's
-  own foreground log (user-confirmed, not independently re-verified by this
-  analyzer) showed continuous `New velocity, left 0 and right 0`.
+  `ros2 bag info`'s topic list) — this shows nothing was recorded on that
+  topic on the WSL ROS graph during the recording window, but a bag's
+  silence cannot by itself prove no command was ever produced anywhere else
+  in the system (e.g. before recording started, or on a process this bag
+  wasn't subscribed early enough to catch); (2) the WSL-side recorder's own
+  live subscription, active for the same window, independently observed 0
+  nonzero `/cmd_vel` messages; (3) the Pi driver's own foreground log
+  (user-confirmed via manual inspection, not independently re-verified by
+  this analyzer) showed continuous `New velocity, left 0 and right 0`,
+  confirming the TCP-server-to-driver path also only ever carried
+  zero-velocity commands; (4) manual visual confirmation that the robot's
+  wheels remained physically stationary throughout. Together these four
+  cover the ROS graph, the recording, the Pi-side command log, and direct
+  physical observation — no single one is treated as sufficient alone.
 - Recorded via: Pi ROS 2 Foxy driver + Pi TCP server (already running,
   untouched), WSL TCP client (already running, untouched), a new
   WSL-side transport/status recorder, WSL-side and Pi-side local system
@@ -39,13 +71,44 @@ No stalls, no duplicate timestamps, no non-monotonic timestamps anywhere.
 ## Key results — main window (240.0s, sample_count=240 status ticks)
 
 - `connected_fraction` = 1.0, **0 reconnects**, `crc_errors` delta = **0**.
-- RTT (ms, WSL-local clock only, single clock domain — VALID): mean 52.54,
-  **median 8.50**, p95 116.58, p99 129.63, max 355.39. The large mean/median
-  gap means most samples are low (close to the ~5–18ms historical range)
-  with an occasional high-RTT tail up to 355ms — reported as-is, not
-  smoothed into one number.
-- `state_age_s` (WSL-local, single clock domain — VALID): mean 0.056,
-  median 0.052, p95 0.104, p99 0.178, max 0.485.
+- **RTT provenance (must be named precisely, per instruction)**: this is
+  **not** a per-TCP-transaction census. `wsl_epuck_tcp_bridge.py` sends a
+  command roughly every 0.1s and updates its internal `_last_rtt_ms` each
+  time an incoming state message's `command_ack_seq` completes a
+  round-trip (`rtt_ms = (time.monotonic() - command_sent) * 1000.0`, both
+  operands from WSL's own `time.monotonic()`). `/epuck_bridge/status` is
+  published once per second and reports **whichever individual
+  command-ack RTT was most recently completed at that instant** — i.e.
+  this recorder captured **240 one-Hz snapshots of the most recently
+  completed individual RTT**, each snapshot itself a real measured value
+  (not an average), but **not a complete census of every ~0.1s command
+  transaction** (~2400 would have occurred over 240s; only 240 were
+  sampled, ~1-in-10). Renamed here accordingly:
+  **`rtt_status_snapshot_ms`** (240 valid samples, WSL-local clock only,
+  single clock domain — VALID as a measurement, but as a *snapshot*
+  sampling of the RTT process, not a full transaction log): mean 52.54,
+  median 8.50, p95 116.58, p99 129.63, max 355.39.
+  - Tail breakdown (240 valid samples): **104 samples (43.3%) > 50ms**;
+    **100 samples (41.7%) > 100ms**; **1 sample (0.4%) > 200ms**. The
+    tail is not smoothly spread — it clusters just above 100ms (matching
+    p95/p99), with a single 355ms outlier as the max.
+  - **Longest consecutive run of 1Hz snapshots with RTT>50ms: 6
+    consecutive ticks (~6 seconds)**, starting near Unix time
+    1784377262.12 (≈88s into the main window).
+  - **No root-cause is claimed for the tail** (not attributed to Wi-Fi,
+    Pi CPU load, WSL scheduling, or anything else) — only the measured
+    shape is reported.
+- **`state_age_s` — exact formula, fields, clock source (per
+  instruction, to justify VALID)**: computed entirely inside
+  `wsl_epuck_tcp_bridge.py._publish_status()` as
+  `time.time() - self._last_state_time`, where `self._last_state_time`
+  is set to `time.time()` inside `_record_state()` at the moment a state
+  message from the Pi was successfully decoded. **Both the minuend and
+  the subtrahend are `time.time()` calls made by the same WSL Python
+  process** — no Pi-side timestamp is read or subtracted anywhere in this
+  computation. Confirmed **VALID** (single clock domain, same machine, same
+  process). Main window (240 valid samples): mean 0.056, median 0.052,
+  p95 0.104, p99 0.178, max 0.485.
 - `/scan`, `/odom` (from the bag, main window): 2227 messages each,
   ≈9.28 Hz average rate.
 - `/epuck_bridge/status`: 240 messages, ≈1.00 Hz (matches the bridge's own
@@ -84,6 +147,13 @@ figures re-examined as distributions, which they were not) to say more.
   interpreted as PDR=1** — it only shows the two topics arrived in matched
   pairs via the bridge's own re-publish-on-new-state logic, not that every
   source-side state was received.
+  **Naming note for the next pilot**: the sensor-extended bridge (not used
+  this pilot) implements a comparable field, which must be called
+  **`APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO`** — it reflects Pi
+  application-level state-sequence receipt completeness at the WSL bridge,
+  and must never be called IP packet loss, TCP packet loss, or
+  automatically equated with rosbag PDR (a separate, bag-vs-live-source
+  comparison).
 
 ## NOT_VALID
 
