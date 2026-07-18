@@ -58,6 +58,19 @@ WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/simulation_comm_expe
 
 source /opt/ros/humble/setup.bash
 source "$HOME/epuck_ws/install/setup.bash"
+# Webots environment -- normally set by ~/.bashrc, but `.bashrc` is only
+# sourced for interactive non-login shells; this script is routinely
+# invoked as `bash -lc "bash '<this script>' ..."` (a login shell, which
+# does NOT source .bashrc unless .bash_profile explicitly does), so
+# WEBOTS_HOME/LD_LIBRARY_PATH/PYTHONPATH are exported explicitly here
+# rather than assumed inherited from whatever shell launched this script.
+# Confirmed missing and root-caused directly: the first real run of this
+# script (objective5_matrix_v1_conditionA_exclusionary_pilot01) failed
+# with "OSError: [Errno 8] Exec format error" because webots_ros2_driver
+# fell back to launching a Windows .exe path with no WEBOTS_HOME set.
+export WEBOTS_HOME="/mnt/c/Program Files/Webots"
+export LD_LIBRARY_PATH="$WEBOTS_HOME/lib/controller:${LD_LIBRARY_PATH:-}"
+export PYTHONPATH="$WEBOTS_HOME/local/lib/python3.10/dist-packages:${PYTHONPATH:-}"
 set -u
 
 # --- resolve this trial's frozen parameters (the ONLY way parameters
