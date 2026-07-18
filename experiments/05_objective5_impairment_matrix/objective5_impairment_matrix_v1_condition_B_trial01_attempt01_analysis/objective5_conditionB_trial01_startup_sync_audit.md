@@ -134,15 +134,27 @@ unaffected in every audited trial.
   not the encounter's relative dynamics or the relay's delay/jitter/
   drop behavior (which acts on message content, not on either robot's
   `STARTUP_HOLD` timer progress).
-- **Potential future risk if left unaddressed**: Condition F's
-  periodic outage is anchored to absolute elapsed `ros_time` (shared
-  `/clock`), not to either robot's own `started_at` -- a large enough
-  startup offset could in principle shift which outage window a given
-  direction's messages fall inside differently between directions.
-  The observed 0.06-2.7s range is small relative to
-  `outage_period_s=15.0s`, so this is not expected to be a practical
-  problem for Condition F specifically, but is flagged for
-  completeness, not assumed away.
+- **Potential future risk -- KNOWN CONFOUND, must be checked before
+  formal Condition F begins**: Condition F's periodic outage is
+  anchored to absolute elapsed `ros_time` (shared `/clock`), not to
+  either robot's own `started_at`. *(Corrected: an earlier revision of
+  this bullet reasoned "the 0.06-2.7s range is small relative to
+  `outage_period_s=15.0s`, so not expected to be a practical problem"
+  -- that inference was rejected by the user as over-reach and is
+  retracted.)* The relevant comparison is against the **0.7s outage
+  duration**, not the 15.0s period: the observed startup offset (up to
+  ~2.66s) is roughly 3.8x the outage duration, so it can materially
+  shift where each trial's `TIMEBASE_INIT`/`CRUISE`/`AVOID_TURN` phase
+  falls relative to the fixed global outage windows (elapsed
+  10/25/40/55s) -- including whether an outage window overlaps the
+  critical CPA decision period at all. **Before formal Condition F
+  Trial 01, each trial's actually-experienced outage windows must be
+  reconstructed against that trial's own
+  `TIMEBASE_INIT`/`CRUISE`/`AVOID_TURN` times** -- proving which
+  windows each trial actually hit and whether any covered the CPA
+  decision phase -- not assumed from the configured schedule alone.
+  Recorded as a Condition-F precondition in `project_status.json`; no
+  change is made in the current Condition B phase.
 - **Recommended action**: not a code-change recommendation (out of
   scope for this audit by instruction). The user should decide whether
   to (a) accept this as known, pre-existing, non-impairment-related
