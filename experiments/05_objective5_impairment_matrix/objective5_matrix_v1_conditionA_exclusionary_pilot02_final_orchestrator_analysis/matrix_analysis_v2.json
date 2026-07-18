@@ -2,6 +2,7 @@
   "condition_id": "A",
   "trial_index": 1,
   "measurement_validity": "VALID",
+  "legacy_replay": true,
   "directions": [
     {
       "direction": "epuck1_to_epuck2",
@@ -33,7 +34,12 @@
         "configured_delay_s": 0.0,
         "configured_jitter_s": 0.0,
         "latency_measurement_status": "RESOLUTION_LIMITED",
-        "clock_domain_evidence": "state_publisher, network_impairment_relay, and sequence_counter are all launched with use_sim_time=true and read the same /clock topic; message_age_s = consumer_callback_ros_time (sequence_counter's own get_clock().now() at message receipt) - EpuckState.stamp (state_publisher's get_clock().now() at publish time). Never the rosbag recorder's wall-clock time."
+        "clock_domain_evidence": "state_publisher, network_impairment_relay, and sequence_counter are all launched with use_sim_time=true and read the same /clock topic; message_age_s = consumer_callback_ros_time (sequence_counter's own get_clock().now() at message receipt) - EpuckState.stamp (state_publisher's get_clock().now() at publish time). Never the rosbag recorder's wall-clock time.",
+        "legacy_missing_p99": true,
+        "measurement_limitation": [
+          "sequence_counter.py counter version predates p99 field (counter version predates p99 field) -- archived data has no raw samples to retroactively compute p99 from"
+        ],
+        "schema_problems": []
       },
       "relay_forwarded_matches_consumer_received": true,
       "throughput": {
@@ -73,7 +79,12 @@
         "configured_delay_s": 0.0,
         "configured_jitter_s": 0.0,
         "latency_measurement_status": "RESOLUTION_LIMITED",
-        "clock_domain_evidence": "state_publisher, network_impairment_relay, and sequence_counter are all launched with use_sim_time=true and read the same /clock topic; message_age_s = consumer_callback_ros_time (sequence_counter's own get_clock().now() at message receipt) - EpuckState.stamp (state_publisher's get_clock().now() at publish time). Never the rosbag recorder's wall-clock time."
+        "clock_domain_evidence": "state_publisher, network_impairment_relay, and sequence_counter are all launched with use_sim_time=true and read the same /clock topic; message_age_s = consumer_callback_ros_time (sequence_counter's own get_clock().now() at message receipt) - EpuckState.stamp (state_publisher's get_clock().now() at publish time). Never the rosbag recorder's wall-clock time.",
+        "legacy_missing_p99": true,
+        "measurement_limitation": [
+          "sequence_counter.py counter version predates p99 field (counter version predates p99 field) -- archived data has no raw samples to retroactively compute p99 from"
+        ],
+        "schema_problems": []
       },
       "relay_forwarded_matches_consumer_received": true,
       "throughput": {

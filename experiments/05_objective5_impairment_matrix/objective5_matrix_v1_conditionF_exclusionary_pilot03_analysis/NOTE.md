@@ -19,9 +19,18 @@ clock-domain-mismatch label); `mean_message_age_s≈0.0175s`/`≈0.0169s`
 -- both match the outage drop counts exactly (30 missing = 30
 `outage_drop_count`, confirming the sequence/relay cross-check is
 self-consistent); `relay_forwarded_matches_consumer_received=true`
-both directions. **Honest limitation**: `p99_message_age_s` is `null`
-in this replay for the same reason as the Condition A pilot -- the
-original `sequence_counter.py` binary predates the p99 field.
+both directions, `legacy_replay=true` at top level. **Honest
+limitation**: `p99_message_age_s` is `null` in this replay for the same
+reason as the Condition A pilot -- the original `sequence_counter.py`
+binary predates the p99 field. Machine-readable, not just prose: both
+directions' `latency.legacy_missing_p99` is `true` and
+`latency.measurement_limitation` contains "sequence_counter.py counter
+version predates p99 field (counter version predates p99 field)",
+produced via `--legacy-replay` (a flag that exists ONLY for
+already-collected `EXCLUSIONARY_DIAGNOSTIC` data, never used by the
+orchestrator or any future trial, which are instead held to the strict
+completeness gate: `measurement_validity=INVALID` if p99/any other
+required latency field is null, NaN, Inf, or `sample_count==0`).
 
 # Condition F bidirectional synchronization: reconstructed per-window evidence
 

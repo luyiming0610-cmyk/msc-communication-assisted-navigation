@@ -61,12 +61,24 @@ zero-jitter configured condition observing near-zero message age),
 `mean_message_age_s=0.0` exactly (`epuck1_to_epuck2`: 418/418 samples;
 `epuck2_to_epuck1`: 437/437 samples), `capture_ratio=1.0` both
 directions, `relay_forwarded_matches_consumer_received=true` both
-directions. **Honest limitation**: `p99_message_age_s` is `null` in
-this replay -- the original run's `sequence_counter.py` binary predates
-the p99 field being added (commit `f4e8d6c`); only the raw aggregates
-it actually computed at the time (mean/median/p95/max) are available
-from the archived JSON. A future trial run under the current code would
-report p99 too.
+directions, `legacy_replay=true` at top level. **Honest limitation**:
+`p99_message_age_s` is `null` in this replay -- the original run's
+`sequence_counter.py` binary predates the p99 field being added (commit
+`f4e8d6c`); only the raw aggregates it actually computed at the time
+(mean/median/p95/max) are available from the archived JSON. This is now
+explicitly machine-readable, not just prose: both directions'
+`latency.legacy_missing_p99` is `true` and
+`latency.measurement_limitation` contains "sequence_counter.py counter
+version predates p99 field (counter version predates p99 field)". This
+replay was regenerated with `--legacy-replay` specifically to carry
+these markers (commit follows this one); the flag exists ONLY for
+already-collected `EXCLUSIONARY_DIAGNOSTIC` data like this pilot and is
+never used by the orchestrator or any future trial. A future trial run
+under the current code would report p99 and would NOT be eligible for
+`--legacy-replay` -- it would instead be held to the strict
+completeness gate (`validate_latency_schema_strict`), which forces
+`measurement_validity=INVALID` if p99 (or any other required latency
+field) is null, NaN, Inf, or if `sample_count==0`.
 - Realtime factor: preload 0.972, full load 0.955 (within the 0.8-1.2
   tolerance band).
 - `min_interrobot_distance_m=0.14811` (> `safety_radius_m=0.14`).

@@ -4,12 +4,14 @@ import sys
 from pathlib import Path
 
 from matrix_analyzer import (
+    LATENCY_STAT_FIELDS,
     build_direction_report,
     build_latency_block,
     build_sequence_block,
     classify_latency_measurement_status,
     overall_measurement_validity,
     summarize_relay_csv,
+    validate_latency_schema_strict,
     validate_output_schema,
 )
 
@@ -169,6 +171,103 @@ def test_overall_validity_is_invalid_if_relay_consumer_mismatch():
         build_direction_report("a", _relay_rows(forwarded=10), _counter_topic(received=8, sample_count=8, mean_age=0.0), 0.0, 0.0),
     ]
     assert overall_measurement_validity(directions) == "INVALID"
+
+
+# --- strict (formal-trial) latency-completeness gate vs legacy replay ---
+
+def _full_latency_block(**overrides):
+    block = {
+        "sample_count": 100,
+        "mean_message_age_s": 0.15,
+        "median_message_age_s": 0.15,
+        "p95_message_age_s": 0.16,
+        "p99_message_age_s": 0.17,
+        "max_message_age_s": 0.18,
+    }
+    block.update(overrides)
+    return block
+
+
+def test_validate_latency_schema_strict_accepts_complete_block():
+    assert validate_latency_schema_strict(_full_latency_block()) == []
+
+
+def test_validate_latency_schema_strict_rejects_null_p99():
+    problems = validate_latency_schema_strict(_full_latency_block(p99_message_age_s=None))
+    assert any("p99_message_age_s" in p for p in problems)
+
+
+def test_validate_latency_schema_strict_rejects_nan():
+    problems = validate_latency_schema_strict(_full_latency_block(p99_message_age_s=float("nan")))
+    assert any("p99_message_age_s" in p for p in problems)
+
+
+def test_validate_latency_schema_strict_rejects_inf():
+    problems = validate_latency_schema_strict(_full_latency_block(mean_message_age_s=float("inf")))
+    assert any("mean_message_age_s" in p for p in problems)
+
+
+def test_validate_latency_schema_strict_rejects_zero_sample_count():
+    problems = validate_latency_schema_strict(_full_latency_block(sample_count=0))
+    assert any("sample_count" in p for p in problems)
+
+
+def test_validate_latency_schema_strict_rejects_every_missing_field_independently():
+    for field in LATENCY_STAT_FIELDS:
+        problems = validate_latency_schema_strict(_full_latency_block(**{field: None}))
+        assert any(field in p for p in problems), f"expected a problem naming {field}"
+
+
+def test_formal_trial_default_mode_forces_metric_invalid_when_p99_null():
+    """A formal trial (legacy_replay defaults to False) must never accept
+    a null p99 -- this is the core requirement: no formal trial may be
+    silently let through under the old permissive rule."""
+    counter_topic = _counter_topic(received=100, sample_count=100, mean_age=0.15)
+    counter_topic["p99_message_age_s"] = None  # simulate a stale/broken counter binary
+    report = build_direction_report("epuck1_to_epuck2", _relay_rows(forwarded=100), counter_topic, 0.15, 0.0)
+    assert report["latency"]["latency_measurement_status"] == "METRIC_INVALID"
+    assert any("p99_message_age_s" in p for p in report["latency"]["schema_problems"])
+    assert overall_measurement_validity([report]) == "INVALID"
+
+
+def test_formal_trial_default_mode_forces_metric_invalid_when_sample_count_zero():
+    counter_topic = _counter_topic(received=0, sample_count=0, mean_age=None)
+    report = build_direction_report("epuck1_to_epuck2", _relay_rows(forwarded=0), counter_topic, 0.0, 0.0)
+    assert report["latency"]["latency_measurement_status"] == "METRIC_INVALID"
+    assert overall_measurement_validity([report]) == "INVALID"
+
+
+def test_formal_trial_default_mode_forces_metric_invalid_on_nan_or_inf():
+    counter_topic = _counter_topic(received=10, sample_count=10, mean_age=0.15)
+    counter_topic["max_message_age_s"] = float("inf")
+    report = build_direction_report("epuck1_to_epuck2", _relay_rows(forwarded=10), counter_topic, 0.15, 0.0)
+    assert report["latency"]["latency_measurement_status"] == "METRIC_INVALID"
+    assert overall_measurement_validity([report]) == "INVALID"
+
+
+def test_legacy_replay_mode_accepts_null_p99_and_marks_it_explicitly():
+    """The ONLY case permitted to accept a null p99: an explicit
+    legacy_replay=True re-analysis of already-collected exclusionary-
+    pilot data. It must be marked, not silently passed through as if
+    nothing were missing."""
+    counter_topic = _counter_topic(received=100, sample_count=100, mean_age=0.0)
+    counter_topic["p99_message_age_s"] = None
+    report = build_direction_report(
+        "epuck1_to_epuck2", _relay_rows(forwarded=100), counter_topic, 0.0, 0.0, legacy_replay=True
+    )
+    assert report["latency"]["legacy_missing_p99"] is True
+    assert any("counter version predates p99 field" in m for m in report["latency"]["measurement_limitation"])
+    # legacy mode does not force METRIC_INVALID purely for a missing p99
+    assert report["latency"]["latency_measurement_status"] != "METRIC_INVALID"
+
+
+def test_legacy_replay_mode_with_p99_present_does_not_set_legacy_missing_flag():
+    counter_topic = _counter_topic(received=100, sample_count=100, mean_age=0.15)
+    report = build_direction_report(
+        "epuck1_to_epuck2", _relay_rows(forwarded=100), counter_topic, 0.15, 0.0, legacy_replay=True
+    )
+    assert report["latency"]["legacy_missing_p99"] is False
+    assert report["latency"]["measurement_limitation"] == []
 
 
 # --- validate_output_schema ---

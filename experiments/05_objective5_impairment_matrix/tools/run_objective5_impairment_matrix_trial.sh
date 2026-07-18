@@ -144,6 +144,7 @@ ORCH_SCRIPT="$TOOLS_DIR/run_objective5_impairment_matrix_trial.sh"
 ORCH_SHA256="$(sha256sum "$ORCH_SCRIPT" | awk '{print $1}')"
 RELAY_SHA256="$(sha256sum "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/src/epuck2_comm/epuck2_comm/network_impairment_relay.py" | awk '{print $1}')"
 IMPAIRMENT_SHA256="$(sha256sum "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/src/epuck2_comm/epuck2_comm/network_impairment.py" | awk '{print $1}')"
+SEQCOUNTER_SHA256="$(sha256sum "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/src/epuck2_comm/epuck2_comm/sequence_counter.py" | awk '{print $1}')"
 GIT_COMMIT="$(cd "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm" && git rev-parse HEAD)"
 
 echo "[$(date -Iseconds)] $STEM START" | tee "$EXECUTION_LOG"
@@ -153,6 +154,7 @@ echo "outage_period_s=$OUTAGE_PERIOD_S outage_duration_s=$OUTAGE_DURATION_S outa
 echo "seed_epuck1_to_epuck2=$SEED_EPUCK1 seed_epuck2_to_epuck1=$SEED_EPUCK2" | tee -a "$EXECUTION_LOG"
 echo "git_commit=$GIT_COMMIT orchestrator_sha256=$ORCH_SHA256" | tee -a "$EXECUTION_LOG"
 echo "network_impairment_relay.py_sha256=$RELAY_SHA256 network_impairment.py_sha256=$IMPAIRMENT_SHA256" | tee -a "$EXECUTION_LOG"
+echo "sequence_counter.py_sha256=$SEQCOUNTER_SHA256" | tee -a "$EXECUTION_LOG"
 
 cat > "$DIAG_LOG_DIR/frozen_params.json" <<EOF
 {
@@ -170,7 +172,8 @@ cat > "$DIAG_LOG_DIR/frozen_params.json" <<EOF
   "git_commit": "$GIT_COMMIT",
   "orchestrator_sha256": "$ORCH_SHA256",
   "network_impairment_relay_py_sha256": "$RELAY_SHA256",
-  "network_impairment_py_sha256": "$IMPAIRMENT_SHA256"
+  "network_impairment_py_sha256": "$IMPAIRMENT_SHA256",
+  "sequence_counter_py_sha256": "$SEQCOUNTER_SHA256"
 }
 EOF
 
@@ -660,6 +663,7 @@ manifest = {
     'orchestrator_sha256': '$ORCH_SHA256',
     'network_impairment_relay_py_sha256': '$RELAY_SHA256',
     'network_impairment_py_sha256': '$IMPAIRMENT_SHA256',
+    'sequence_counter_py_sha256': '$SEQCOUNTER_SHA256',
 }
 manifest.update(json.loads('''$VERDICT_JSON'''))
 with open('$FINAL_DIR/trial_verdict.json', 'w', encoding='utf-8') as fh:

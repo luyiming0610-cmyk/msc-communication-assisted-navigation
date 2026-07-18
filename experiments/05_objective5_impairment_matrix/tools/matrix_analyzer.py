@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -54,6 +55,42 @@ REQUIRED_TOP_LEVEL_FIELDS = (
     "queue_drain",
 )
 REQUIRED_DIRECTION_FIELDS = ("direction", "relay", "sequence", "latency")
+
+# Every formal (and any future, non-legacy) trial must report all five of
+# these as finite numbers -- p99_message_age_s was added to
+# sequence_counter.py after some already-collected exclusionary pilots
+# ran, so LEGACY replay of THAT already-collected data is the only case
+# permitted to have a null p99 (see legacy_replay in build_latency_block
+# / analyze_trial). No formal trial run under current code may ever be
+# missing any of these.
+LATENCY_STAT_FIELDS = (
+    "mean_message_age_s",
+    "median_message_age_s",
+    "p95_message_age_s",
+    "p99_message_age_s",
+    "max_message_age_s",
+)
+
+
+def _is_finite_number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def validate_latency_schema_strict(latency_block: dict) -> list:
+    """Pure. The formal-trial completeness gate: sample_count must be > 0
+    and every LATENCY_STAT_FIELDS entry must be a finite number (not
+    None, NaN, or Inf). Returns a list of problem strings (empty means
+    the block passes). Applied to every direction unless the analysis
+    is explicitly run in --legacy-replay mode against already-collected
+    exclusionary-pilot data that predates the p99 field."""
+    problems = []
+    if latency_block.get("sample_count", 0) <= 0:
+        problems.append("sample_count must be > 0 for a formal trial (0 samples means every message this direction was lost or the counter never ran)")
+    for field in LATENCY_STAT_FIELDS:
+        value = latency_block.get(field)
+        if not _is_finite_number(value):
+            problems.append(f"{field} missing or not a finite number: {value!r}")
+    return problems
 
 
 def summarize_relay_csv(rows: list) -> dict:
@@ -138,16 +175,31 @@ def classify_latency_measurement_status(
     return "METRIC_INVALID"
 
 
-def build_latency_block(counter_topic_summary: dict, configured_delay_s, configured_jitter_s) -> dict:
+def build_latency_block(
+    counter_topic_summary: dict, configured_delay_s, configured_jitter_s, legacy_replay: bool = False
+) -> dict:
     """Pure. Assembles the frozen latency block using ONLY
     sequence_counter.py's already-sim-time-domain aggregates -- never
-    the bag-based age computation."""
+    the bag-based age computation.
+
+    `legacy_replay=True` is the ONLY case permitted to accept a null
+    p99_message_age_s (already-collected exclusionary-pilot data whose
+    sequence_counter.py binary predates the p99 field) -- it is marked
+    explicitly (`legacy_missing_p99`, `measurement_limitation`) rather
+    than silently accepted, and this data remains
+    EXCLUSIONARY_DIAGNOSTIC only, never eligible for formal statistics.
+    `legacy_replay=False` (the default, used for every trial run under
+    current code) instead runs the strict completeness gate
+    (validate_latency_schema_strict) and forces the status to
+    METRIC_INVALID -- which propagates to an overall INVALID
+    measurement_validity -- if sample_count is 0, or any of
+    LATENCY_STAT_FIELDS is missing, None, NaN, or Inf."""
     sample_count = counter_topic_summary.get("valid_age_sample_count", 0)
     mean_age = counter_topic_summary.get("mean_message_age_s")
     status = classify_latency_measurement_status(
         sample_count, mean_age, configured_delay_s, configured_jitter_s
     )
-    return {
+    block = {
         "sample_count": sample_count,
         "mean_message_age_s": mean_age,
         "median_message_age_s": counter_topic_summary.get("median_message_age_s"),
@@ -168,6 +220,24 @@ def build_latency_block(counter_topic_summary: dict, configured_delay_s, configu
             "publish time). Never the rosbag recorder's wall-clock time."
         ),
     }
+    if legacy_replay:
+        block["legacy_missing_p99"] = block["p99_message_age_s"] is None
+        block["measurement_limitation"] = (
+            [
+                "sequence_counter.py counter version predates p99 field "
+                "(counter version predates p99 field) -- archived data "
+                "has no raw samples to retroactively compute p99 from"
+            ]
+            if block["legacy_missing_p99"]
+            else []
+        )
+        block["schema_problems"] = []
+    else:
+        problems = validate_latency_schema_strict(block)
+        block["schema_problems"] = problems
+        if problems:
+            block["latency_measurement_status"] = "METRIC_INVALID"
+    return block
 
 
 def build_direction_report(
@@ -176,11 +246,14 @@ def build_direction_report(
     counter_topic_summary: dict,
     configured_delay_s,
     configured_jitter_s,
+    legacy_replay: bool = False,
 ) -> dict:
     """Pure. One direction's (e.g. epuck1->epuck2) full report."""
     relay_block = summarize_relay_csv(relay_csv_rows)
     sequence_block = build_sequence_block(counter_topic_summary)
-    latency_block = build_latency_block(counter_topic_summary, configured_delay_s, configured_jitter_s)
+    latency_block = build_latency_block(
+        counter_topic_summary, configured_delay_s, configured_jitter_s, legacy_replay=legacy_replay
+    )
     consistency_ok = relay_block["forwarded_count"] == sequence_block["received_count"]
     return {
         "direction": direction_label,
@@ -244,10 +317,22 @@ def analyze_trial(
     queue_drain: dict,
     realtime_factor: dict,
     task_outcome_inputs: dict,
+    legacy_replay: bool = False,
 ) -> dict:
     """The single analysis entry point. Both the orchestrator's inline
     call and the standalone --analysis-only replay CLI call this exact
-    function -- there is only one analysis code path."""
+    function -- there is only one analysis code path.
+
+    `legacy_replay=True` must ONLY be used for re-analyzing
+    already-collected EXCLUSIONARY_DIAGNOSTIC data whose
+    sequence_counter.py binary predates the p99 field -- it relaxes the
+    strict latency-completeness gate and instead marks
+    legacy_missing_p99/measurement_limitation on the affected
+    direction(s). Every trial run under current code (formal or any
+    future exclusionary pilot) must use the default `legacy_replay=False`
+    and will be marked measurement_validity=INVALID if p99 (or any other
+    required latency field) is missing, non-finite, or if sample_count
+    is 0."""
     diag_dir = Path(native_diag_log_dir)
     relay1_rows = load_relay_csv(diag_dir / "epuck1_relay.csv")
     relay2_rows = load_relay_csv(diag_dir / "epuck2_relay.csv")
@@ -260,10 +345,12 @@ def analyze_trial(
     # epuck1's relay forwards epuck1's OWN state to epuck2 -- consumed on
     # the "state" topic in the epuck2 namespace's own counter instance.
     direction_1_to_2 = build_direction_report(
-        "epuck1_to_epuck2", relay1_rows, counter1.get("state", {}), delay_s, jitter_s
+        "epuck1_to_epuck2", relay1_rows, counter1.get("state", {}), delay_s, jitter_s,
+        legacy_replay=legacy_replay,
     )
     direction_2_to_1 = build_direction_report(
-        "epuck2_to_epuck1", relay2_rows, counter2.get("state", {}), delay_s, jitter_s
+        "epuck2_to_epuck1", relay2_rows, counter2.get("state", {}), delay_s, jitter_s,
+        legacy_replay=legacy_replay,
     )
     directions = [direction_1_to_2, direction_2_to_1]
 
@@ -302,6 +389,7 @@ def analyze_trial(
         "condition_id": frozen_params.get("condition_id"),
         "trial_index": frozen_params.get("trial_index"),
         "measurement_validity": measurement_validity,
+        "legacy_replay": legacy_replay,
         "directions": directions,
         "queue_drain": queue_drain,
         "realtime_factor": realtime_factor,
@@ -318,6 +406,16 @@ def main() -> int:
     parser.add_argument("--frozen-params-json", required=True, help="path to frozen_params.json")
     parser.add_argument("--queue-drain-json", required=True, help="JSON string: queue drain facts")
     parser.add_argument("--realtime-factor-json", required=True, help="JSON string: realtime factor facts")
+    parser.add_argument(
+        "--legacy-replay", action="store_true",
+        help=(
+            "Relax the strict latency-completeness gate for re-analyzing "
+            "already-collected EXCLUSIONARY_DIAGNOSTIC data whose "
+            "sequence_counter.py binary predates the p99 field. Must "
+            "NEVER be passed for a formal trial or any trial run under "
+            "current code -- the orchestrator never passes this flag."
+        ),
+    )
     parser.add_argument("--task-outcome-inputs-json", required=True, help="JSON string: task outcome inputs")
     parser.add_argument("--output-path", required=True)
     args = parser.parse_args()
@@ -336,6 +434,7 @@ def main() -> int:
             queue_drain,
             realtime_factor,
             task_outcome_inputs,
+            legacy_replay=args.legacy_replay,
         )
         problems = validate_output_schema(payload)
         if problems:
