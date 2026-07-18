@@ -57,9 +57,47 @@ remains diagnostic-only.
 - Registry rows: `comm_baseline_v1_trial{1,2,3}`, `comm_baseline_native_diag_trial0{1,2}`, `objective5_comm_baseline_zero_impairment_formal_trial01`, `objective5_timestamp_latency_validation_pilot01`, `objective5_comm_baseline_zero_impairment_formal_trial02_stamp`
 
 ### 05_objective5_impairment_matrix
-Delay, loss, combined-impairment experiments. **Not started.** Blocked on
-04 completing a full formal baseline first (see `project_status.json`'s
-`blocked_items`).
+Delay, loss, combined-impairment experiments (Conditions A-G). **Design
+frozen, orchestrator built and exclusionary-pilot-verified; formal n=5
+batch (35 trials) not yet started, pending explicit user confirmation
+after reviewing Condition A Trial 01's first run.**
+- Design: `objective5_impairment_matrix_design_v1.md` (revision 2+),
+  `objective5_impairment_matrix_conditions.csv`,
+  `objective5_impairment_matrix_analysis_plan.md` (revision 2+).
+  Two-dimensional verdict (`DATA_VALIDITY` = VALID/INVALID,
+  `TASK_OUTCOME` = SUCCESS/SAFE_DEGRADATION/UNSAFE_FAILURE/NOT_EVALUABLE
+  — a simplified 4-category scheme, superseding an earlier 6-category
+  draft never implemented in code) is real, tested code
+  (`tools/matrix_verdict.py`), not design-doc prose. Final,
+  non-overlapping per-trial/per-direction seed table for randomized
+  Conditions D/E/F/G: trial 01-05 -> epuck1→epuck2
+  `4001..4005`, epuck2→epuck1 `14001..14005` (10 distinct values, no
+  reuse across trials/directions/conditions).
+- Orchestrator: `tools/run_objective5_impairment_matrix_trial.sh`, one
+  unified parameterized script for every condition (frozen CSV is the
+  only parameter source, no hand-typed override), supports both formal
+  trials and `--pilot LABEL` exclusionary runs in separate, non-colliding
+  directories.
+- Two exclusionary pilots (`EXCLUSIONARY_DIAGNOSTIC`, not part of the
+  formal n=5): `objective5_matrix_v1_conditionA_exclusionary_pilot01`
+  (zero-impairment orchestrator equivalence check; original run's
+  DATA_VALIDITY was falsely INVALID due to a since-fixed JSON-parsing
+  bug, corrected post-hoc in `trial_verdict_corrected.json` without a
+  re-run: DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS) and
+  `objective5_matrix_v1_conditionF_exclusionary_pilot01/02/03`
+  (bidirectional periodic-outage path; `pilot01`/`pilot02` failed on
+  real, now-fixed orchestrator bugs — process-group leaks in the
+  controller/sim/state_publisher launches, a `DATA_VALIDITY` field
+  mislabeling bug, a `grep -c` false-positive, and a relay-status echo
+  timeout race, each preserved with a `NOTE.md`; `pilot03` is the valid
+  result: DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, both directions'
+  `current_outage_index=5` and consistent `outage_drop_count` (30/30),
+  `independent_drop_count=0/0`).
+- Registry rows:
+  `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
+  `objective5_matrix_v1_conditionF_exclusionary_pilot01`,
+  `objective5_matrix_v1_conditionF_exclusionary_pilot02`,
+  `objective5_matrix_v1_conditionF_exclusionary_pilot03`.
 
 ### 06_physical_pipuck
 Two physical e-puck2/Pi-puck units, Wi-Fi validation, disconnect/recovery,

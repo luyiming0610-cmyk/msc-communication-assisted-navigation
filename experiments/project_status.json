@@ -106,11 +106,11 @@
       "the delay/loss impairment matrix (A-G conditions, evidence-based tiers) must be designed and submitted for explicit user confirmation before any such run begins -- per instruction, do not auto-run it after the baseline PASS"
     ]
   },
-  "next_action": "Prepare and submit the delay/loss impairment matrix (A-G conditions, evidence-based tiers) design for user confirmation; do not run it until confirmed",
+  "next_action": "Both exclusionary pilots for the Objective 5 impairment matrix orchestrator now pass (Condition A zero-impairment equivalence, Condition F bidirectional outage); awaiting explicit user confirmation before starting formal Condition A Trial 01 (first trial to be run under manual observation, not auto-batched)",
   "blocked_items": [
     {
       "item": "Objective 5 delay/loss impairment matrix (A-G conditions)",
-      "blocked_by": "both prerequisites are now satisfied (zero-impairment baseline PASS with full metric_coverage via trial02_stamp, timestamp/latency chain independently validated via the pilot); remaining blocker is explicit user sign-off on the matrix design itself, per instruction"
+      "blocked_by": "design frozen (revision 2+), unified parameterized orchestrator built, real DATA_VALIDITY/TASK_OUTCOME verdict code implemented and tested (matrix_verdict.py), seed collision fixed (final non-overlapping per-direction table, trial01-05 -> 4001-4005/14001-14005), Condition F burst/outage extension implemented and tested, both exclusionary pilots (Condition A zero-impairment equivalence, Condition F bidirectional outage) now pass DATA_VALIDITY=VALID/TASK_OUTCOME=SUCCESS after five real orchestrator bugs were found and fixed running them (process-group leaks, a DATA_VALIDITY field mislabeling bug, a JSON-parsing bug, a grep -c false positive, a relay-status echo timeout race -- see experiments/05_objective5_impairment_matrix/ for details). Remaining blocker is explicit user sign-off on running formal Condition A Trial 01 itself, per instruction -- no formal trial has run yet."
     },
     {
       "item": "Phase 4 formal Trials 06+ or any new avoidance scenario",
@@ -141,7 +141,10 @@
     "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_trial{1,2,3} (Objective 5, /mnt/c bag-loss diagnostics)",
     "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_native_trial0{1,2} (Objective 5, native-WSL-path measurement-chain isolation)",
     "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_timestamp_latency_validation_pilot01_condition_{a_delay0,b_delay025} (Objective 5, stamp/latency measurement-chain validation, PASS, diagnostic-only)",
-    "experiments/cooperative_avoidance_20260716/bags/combined_* (controller_v1 combined-scenario defect evidence)"
+    "experiments/cooperative_avoidance_20260716/bags/combined_* (controller_v1 combined-scenario defect evidence)",
+    "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionA_exclusionary_pilot01_analysis (orchestrator equivalence check, EXCLUSIONARY_DIAGNOSTIC, corrected verdict DATA_VALIDITY=VALID/TASK_OUTCOME=SUCCESS, not part of formal n=5)",
+    "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionF_exclusionary_pilot0{1,2}_analysis (failed attempts, real orchestrator bugs, preserved with NOTE.md, EXCLUSIONARY_DIAGNOSTIC, not part of formal n=5)",
+    "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionF_exclusionary_pilot03_analysis (valid bidirectional-outage exclusionary pilot, DATA_VALIDITY=VALID/TASK_OUTCOME=SUCCESS, EXCLUSIONARY_DIAGNOSTIC, not part of formal n=5)"
   ],
   "paper_ready_outputs": [],
   "known_limitations": [

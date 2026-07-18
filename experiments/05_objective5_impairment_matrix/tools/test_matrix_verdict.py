@@ -139,6 +139,31 @@ def test_cli_reads_json_stdin_and_writes_combined_verdict_to_stdout():
     assert output["task_outcome"] == "SUCCESS"
 
 
+def test_task_outcome_values_never_overlap_data_validity_values():
+    """TASK_OUTCOME and DATA_VALIDITY are two independent dimensions with
+    disjoint value sets -- TASK_OUTCOME must never be the string "VALID"
+    or "INVALID" (those belong exclusively to DATA_VALIDITY), for any
+    combination of inputs. An earlier design-doc revision, and one
+    conversational status report, described TASK_OUTCOME as if it could
+    take a "VALID" value -- this test pins the real code's behavior so
+    that confusion cannot silently reappear."""
+    data_validity_values = {"VALID", "INVALID"}
+    task_outcome_values = {"SUCCESS", "SAFE_DEGRADATION", "UNSAFE_FAILURE", "NOT_EVALUABLE"}
+    assert data_validity_values.isdisjoint(task_outcome_values)
+
+    scenarios = [
+        ("INVALID", TaskOutcomeSignals(0, 2, None, 0.14, False)),
+        ("VALID", TaskOutcomeSignals(2, 2, 0.20, 0.14, False)),
+        ("VALID", TaskOutcomeSignals(0, 2, 0.30, 0.14, False)),
+        ("VALID", TaskOutcomeSignals(2, 2, 0.05, 0.14, False)),
+        ("VALID", TaskOutcomeSignals(0, 2, 1.0, 0.14, True)),
+    ]
+    for data_validity, signals in scenarios:
+        outcome, _ = classify_task_outcome(data_validity, signals)
+        assert outcome in task_outcome_values
+        assert outcome not in data_validity_values
+
+
 def test_task_outcome_missing_distance_data_does_not_crash_success_path():
     """If min_interrobot_distance_m could not be computed (e.g. a
     position field was unreadable) but everything else indicates

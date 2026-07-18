@@ -203,9 +203,19 @@ See `objective5_impairment_matrix_conditions.csv` for the machine-readable versi
 
 - Condition A: deterministic, no seed applies. n=5, all new (section 1.3).
 - Conditions B, C: deterministic (`jitter_s=0`, `drop_probability=0`, `outage_period_s=0` — `ImpairmentDecider.decide()` never calls `self._rng` at all). n=5 trials each still required (task-completion timing, controller-internal state-machine timing, and Webots physics have their own trial-to-trial variance even with a deterministic relay) but no seed needed.
-- **Conditions D, E, F, G: randomized. Exactly 5 decimal base seeds, frozen: `4001, 4002, 4003, 4004, 4005`** (trial index 1-5 maps to base seed `4000 + trial_index`), reusing the project's existing precedent value (`objective5_timestamp_latency_validation_pilot01` used `seed=4001`).
-- **Two-direction seed mapping, explicit** (each condition has TWO relay instances, one per robot's outgoing state stream -- see section 2.5's "one relay instance per robot" note): the **epuck1-to-epuck2 direction** (the relay in the `epuck1` namespace, relaying epuck1's own state to epuck2's controller) uses the base seed directly; the **epuck2-to-epuck1 direction** (the relay in the `epuck2` namespace) uses `base_seed + 1`. Concretely: trial 1 -> epuck1_to_epuck2 seed `4001`, epuck2_to_epuck1 seed `4002`; trial 5 -> `4005`/`4006`. This is the SAME convention already established in `run_relay_counter_configurable.py` (lines 60-63), reused here rather than invented. **The two directions never share an identical seed value** -- `test_two_direction_seeds_base_and_base_plus_one_produce_different_sequences` confirms `base` and `base+1` produce genuinely different decision sequences, so this is not an unintended full correlation; it is the deliberate, minimal, precedented choice, not independently-drawn seeds, and that is stated here explicitly rather than left implicit.
-- **Matched-seed pairing (E vs G)**: same 5 base seeds, same trial-index-to-seed mapping, for both conditions. Caveat, stated honestly: `decide()`'s RNG consumption differs between E (drop-only, always exactly one `random()` call per message) and G (`drop_probability>0` AND `jitter_s>0`, draws `random()` then conditionally `uniform()`), so E and G do **not** receive byte-identical drop/no-drop event sequences despite the shared seed -- "matched" means matched starting seed value (a considered, documented choice, verified reproducible via `test_same_seed_reproduces_the_identical_decision_sequence`), not a guaranteed identical event trace. Condition D's own seeds reuse the same `{4001..4005}` values for consistency across the whole randomized set, with the same caveat.
+- **Conditions D, E, F, G: randomized. Final, non-overlapping, per-direction seed mapping** (supersedes an earlier `base`/`base+1` scheme that allowed cross-trial seed reuse, e.g. trial 1's reverse direction and trial 2's forward direction would have collided on `4002` — caught and fixed before any formal trial ran):
+
+  | Trial | epuck1→epuck2 | epuck2→epuck1 |
+  |---|---|---|
+  | 01 | 4001 | 14001 |
+  | 02 | 4002 | 14002 |
+  | 03 | 4003 | 14003 |
+  | 04 | 4004 | 14004 |
+  | 05 | 4005 | 14005 |
+
+  Ten distinct values total; no seed value is ever reused across trials, directions, or conditions (`test_no_seed_value_is_ever_reused_across_the_whole_randomized_batch`). D/E/F/G all share this identical table, indexed by trial number.
+- **Two-direction seed mapping, explicit** (each condition has TWO relay instances, one per robot's outgoing state stream -- see section 2.5's "one relay instance per robot" note): the **epuck1-to-epuck2 direction** (the relay in the `epuck1` namespace, relaying epuck1's own state to epuck2's controller) and the **epuck2-to-epuck1 direction** (the relay in the `epuck2` namespace) each get their own seed from the table above -- never the same value, and never derived from one another by a fixed offset within the same trial (the `+10000` gap between the two columns is purely a human-readable range separator, not a claim about the RNG relationship between the two streams). `test_two_direction_seeds_base_and_base_plus_one_produce_different_sequences` confirms the two directions' seeds produce genuinely different decision sequences.
+- **Matched-seed pairing (E vs G)**: same 5-trial seed table above, for both conditions. Caveat, stated honestly: `decide()`'s RNG consumption differs between E (drop-only, always exactly one `random()` call per message) and G (`drop_probability>0` AND `jitter_s>0`, draws `random()` then conditionally `uniform()`), so E and G do **not** receive byte-identical drop/no-drop event sequences despite the shared seed -- "matched" means matched starting seed value (a considered, documented choice, verified reproducible via `test_same_seed_reproduces_the_identical_decision_sequence`), not a guaranteed identical event trace. Condition D's own seeds reuse the same table for consistency across the whole randomized set, with the same caveat.
 - Condition F: same seed scheme (`seed` parameter still set per relay instance, for consistency and CSV-log provenance), but the outage schedule itself is deterministic and does NOT depend on the seed at all (section 3's `_in_outage` check draws no random number) -- only the (currently zero, per F's frozen params) Bernoulli component would ever consume it.
 - Every trial gets a unique directory name (`objective5_impairment_matrix_v1_condition_<ID>_trial<NN>_attempt<NN>`, `unique_trial_dir.py`); `require_unique_trial_dir()` refuses to overwrite an existing directory; a failed/interrupted attempt is preserved under an incremented `_attemptNN`, matching the convention established for the physical baseline batch.
 
@@ -226,20 +236,44 @@ trustworthy record of what happened?"):
   **Only `INVALID` stops the batch for diagnosis, per instruction.**
 
 **TASK_OUTCOME** (scientific-result question — "what did the robots
-actually do under this condition?"): `SUCCESS`, `SAFE_DEGRADATION`
-(task did not complete cleanly but no unsafe event occurred — e.g. hit
-`max_runtime_s` while still safely separated), `COLLISION`,
-`TASK_TIMEOUT`, `STALE_STATE_STOP` (`SAFE_STOP_STALE` from `_fresh()`
-returning false), `PEER_TIMEOUT_STOP` (same underlying mechanism as
-`STALE_STATE_STOP`, labeled separately when directly attributable to
-peer freshness specifically vs. own-state staleness), or an explicit
-other named category if a trial exhibits something not covered above
-(never silently forced into the nearest existing bucket).
+actually do under this condition?") is computed ONLY when
+`DATA_VALIDITY=VALID` (otherwise `NOT_EVALUABLE` — a task outcome
+cannot be trusted from data that already failed its own validity
+checks). **As actually implemented in code**
+(`matrix_verdict.classify_task_outcome`, superseding an earlier
+six-category design sketch that was never wired into code — see below),
+the four values are:
+- `SUCCESS`: `complete_count >= expected_complete_count` (both robots
+  reached their goal) and no collision.
+- `SAFE_DEGRADATION`: task did not complete cleanly (e.g. hit
+  `max_runtime_s`, or a safe stop that never recovered) but no unsafe
+  event occurred.
+- `UNSAFE_FAILURE`: the controller process crashed/exited abnormally,
+  OR `min_interrobot_distance_m` fell below `safety_radius_m` at any
+  point in the trial (a deliberately conservative collision heuristic —
+  documented in `classify_task_outcome`'s own docstring — that does not
+  attempt to distinguish a genuine collision from a very close clean
+  pass via closing-speed sign).
+- `NOT_EVALUABLE`: `DATA_VALIDITY=INVALID`.
 
-**A `COLLISION`/`TASK_TIMEOUT`/`STALE_STATE_STOP` outcome produced by a
-frozen, correctly-applied impairment condition is a valid experimental
-result with `DATA_VALIDITY=VALID`.** It is never used to exclude the
-trial, retry it, or stop the condition's remaining trials. Only
+**Note on an earlier drafting error**: an earlier revision of this
+document, and one conversational status report during this session,
+described a six-category scheme (`COLLISION`, `TASK_TIMEOUT`,
+`STALE_STATE_STOP`, `PEER_TIMEOUT_STOP` as separate values) that was
+never implemented — the simplified four-category scheme above is what
+`matrix_verdict.py` actually outputs, confirmed by
+`test_task_outcome_success`/`_safe_degradation_on_incomplete_but_no_collision`/
+`_unsafe_failure_on_close_distance_even_if_complete`/`_unsafe_failure_on_controller_crash_regardless_of_distance`/
+`_not_evaluable_when_data_invalid`, none of which return the value
+`"VALID"` or `"INVALID"` for TASK_OUTCOME — those two strings are
+exclusively DATA_VALIDITY values, and `TASK_OUTCOME` never takes them.
+`test_task_outcome_signals_never_return_a_data_validity_string` makes
+this non-overlap explicit.
+
+**A `SAFE_DEGRADATION` or `UNSAFE_FAILURE` outcome produced by a frozen,
+correctly-applied impairment condition is a valid experimental result
+with `DATA_VALIDITY=VALID`.** It is never used to exclude the trial,
+retry it, or stop the condition's remaining trials. Only
 `DATA_VALIDITY=INVALID` triggers a stop-and-diagnose. No controller
 parameter, CPA threshold, `peer_timeout_s`, speed, or relay parameter is
 ever adjusted in response to a TASK_OUTCOME, for any condition, at any

@@ -33,11 +33,16 @@ question, checked via:
   must be treated as `INVALID`, not silently included
 - **Only `INVALID` halts the batch for diagnosis.**
 
-**TASK_OUTCOME** = `SUCCESS` | `SAFE_DEGRADATION` | `COLLISION` |
-`TASK_TIMEOUT` | `STALE_STATE_STOP` | `PEER_TIMEOUT_STOP` | other named
-category — scientific-result question, never grounds for excluding a
-trial, retrying it, or stopping the condition's remaining trials when
-`DATA_VALIDITY=VALID`.
+**TASK_OUTCOME** = `SUCCESS` | `SAFE_DEGRADATION` | `UNSAFE_FAILURE` |
+`NOT_EVALUABLE` — as actually implemented in
+`matrix_verdict.classify_task_outcome` (see design doc section 6 for
+the exact per-value criteria; this supersedes an earlier six-category
+draft that was never implemented). `NOT_EVALUABLE` only occurs when
+`DATA_VALIDITY=INVALID`; the other three are never grounds for
+excluding a trial, retrying it, or stopping the condition's remaining
+trials when `DATA_VALIDITY=VALID`. `TASK_OUTCOME` and `DATA_VALIDITY`
+are disjoint value sets — `TASK_OUTCOME` never takes the value `VALID`
+or `INVALID`, and `DATA_VALIDITY` never takes any `TASK_OUTCOME` value.
 
 ## 2. Per-trial communication metrics
 
@@ -152,13 +157,16 @@ with impairment-specific fields:
 - G vs (A, B, D, E): combined-vs-single-factor comparison; whether G's
   effect exceeds the naive sum of B+D+E's individual deviations from A
   (superadditive/interaction) or is closer to additive.
-- F vs A (once implemented): burst-specific stale/peer-timeout behavior,
-  compared against whichever of B/C/D/E/G also produced any
-  `STALE_STATE_STOP`/`PEER_TIMEOUT_STOP` events, to check whether F's
-  mechanism (deterministic full outage) produces qualitatively different
-  safe-stop patterns than incidental staleness under the other
-  conditions (e.g. outage-triggered stops clustering at fixed intervals
-  vs. incidental stops scattered randomly).
+- F vs A: burst-specific stale/peer-timeout behavior, compared against
+  whichever of B/C/D/E/G also produced a `SAFE_DEGRADATION` outcome
+  (TASK_OUTCOME does not distinguish a stale-state safe-stop from a
+  timeout by category, so this comparison must go via the controller
+  log's own `SAFE_STOP_STALE` transitions, not the trial-level
+  TASK_OUTCOME label) to check whether F's mechanism (deterministic full
+  outage) produces qualitatively different safe-stop patterns than
+  incidental staleness under the other conditions (e.g. outage-triggered
+  stops clustering at fixed intervals vs. incidental stops scattered
+  randomly).
 
 ## 7. Physical-baseline comparison boundary (repeated from design doc, binding here too)
 
