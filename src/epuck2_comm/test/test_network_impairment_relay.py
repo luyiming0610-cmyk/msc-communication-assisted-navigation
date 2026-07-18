@@ -123,7 +123,7 @@ def test_message_content_is_never_mutated_by_the_relay(monkeypatch):
         rclpy.shutdown()
 
 
-def test_relay_csv_records_drop_reason_for_outage_and_bernoulli_separately(tmp_path, monkeypatch):
+def test_relay_csv_records_drop_reason_for_outage_and_independent_separately(tmp_path, monkeypatch):
     fake_clock = {"t": 0.0}
     monkeypatch.setattr(
         "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
@@ -140,12 +140,13 @@ def test_relay_csv_records_drop_reason_for_outage_and_bernoulli_separately(tmp_p
     ])
     try:
         node = NetworkImpairmentRelay()
-        fake_clock["t"] = 0.3  # inside the outage window (elapsed since node start = 0.3s)
+        fake_clock["t"] = 0.3  # inside the outage window (absolute sim time = 0.3s)
         node._on_message(_state(1))
         fake_clock["t"] = 10.0  # outside the outage window; drop_probability=1.0 still drops
         node._on_message(_state(2))
-        assert node.dropped_outage_count == 1
-        assert node.dropped_bernoulli_count == 1
+        assert node.outage_drop_count == 1
+        assert node.independent_drop_count == 1
+        assert node.total_drop_count == 2
         assert node.dropped_count == 2
     finally:
         node.destroy_node()
@@ -155,7 +156,43 @@ def test_relay_csv_records_drop_reason_for_outage_and_bernoulli_separately(tmp_p
         rows = list(csv.DictReader(fh))
     assert len(rows) == 2
     assert rows[0]["drop_reason"] == "outage"
-    assert rows[1]["drop_reason"] == "bernoulli"
+    assert rows[1]["drop_reason"] == "independent"
+
+
+def test_both_relay_instances_reading_same_sim_clock_see_synchronized_outage_windows(monkeypatch):
+    """Regression test for the absolute-clock design decision: two
+    separately-constructed relay instances (standing in for the epuck1
+    and epuck2 namespaces) sharing the SAME simulation clock must agree
+    on outage_active at any given sim-time instant, even though they are
+    constructed at different wall-clock moments -- confirming the fix
+    actually addresses the "must be genuinely simultaneous, not merely
+    close" requirement, not just documents an intention."""
+    fake_clock = {"t": 0.0}
+    monkeypatch.setattr(
+        "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
+        lambda self: fake_clock["t"],
+    )
+    rclpy.init(args=[
+        "--ros-args",
+        "-p", "outage_period_s:=15.0", "-p", "outage_duration_s:=0.7", "-p", "outage_phase_s:=10.0",
+    ])
+    try:
+        # node_a "constructed" at sim time 0.0
+        node_a = NetworkImpairmentRelay()
+        # node_b constructed "later" in wall-clock terms but the shared
+        # sim clock has already advanced to 3.0 by the time it comes up
+        fake_clock["t"] = 3.0
+        node_b = NetworkImpairmentRelay()
+
+        fake_clock["t"] = 10.3  # inside the first outage window
+        decision_a = node_a.decider.decide(node_a._now_s())
+        decision_b = node_b.decider.decide(node_b._now_s())
+        assert decision_a.drop_reason == "outage"
+        assert decision_b.drop_reason == "outage"
+    finally:
+        node_a.destroy_node()
+        node_b.destroy_node()
+        rclpy.shutdown()
 
 
 def test_pending_queue_depth_reflects_undelivered_messages(monkeypatch):
@@ -198,8 +235,42 @@ def test_status_topic_publishes_counts_and_queue_depth(monkeypatch):
         assert payload["received_count"] == 2
         assert payload["forwarded_count"] == 0
         assert payload["pending_queue_depth"] == 2
-        assert payload["dropped_bernoulli_count"] == 0
-        assert payload["dropped_outage_count"] == 0
+        assert payload["independent_drop_count"] == 0
+        assert payload["outage_drop_count"] == 0
+        assert payload["total_drop_count"] == 0
+        assert payload["outage_active"] is False
+        assert payload["current_outage_index"] is None
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+def test_status_topic_reports_outage_active_and_index_during_a_window(monkeypatch):
+    fake_clock = {"t": 0.0}
+    monkeypatch.setattr(
+        "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
+        lambda self: fake_clock["t"],
+    )
+    rclpy.init(args=[
+        "--ros-args",
+        "-p", "outage_period_s:=15.0", "-p", "outage_duration_s:=0.7", "-p", "outage_phase_s:=10.0",
+    ])
+    try:
+        node = NetworkImpairmentRelay()
+        published = []
+        node.status_publisher.publish = lambda msg: published.append(msg)
+
+        fake_clock["t"] = 10.3
+        node._publish_status()
+        payload = json.loads(published[-1].data)
+        assert payload["outage_active"] is True
+        assert payload["current_outage_index"] == 0
+
+        fake_clock["t"] = 12.0
+        node._publish_status()
+        payload = json.loads(published[-1].data)
+        assert payload["outage_active"] is False
+        assert payload["current_outage_index"] == 0
     finally:
         node.destroy_node()
         rclpy.shutdown()
@@ -225,8 +296,8 @@ def test_default_outage_relay_forwards_identically_to_pre_extension_relay(monkey
         fake_clock["t"] = 100.2
         node._flush_queue()
         assert node.forwarded_count == 1
-        assert node.dropped_outage_count == 0
-        assert node.dropped_bernoulli_count == 0
+        assert node.outage_drop_count == 0
+        assert node.independent_drop_count == 0
     finally:
         node.destroy_node()
         rclpy.shutdown()

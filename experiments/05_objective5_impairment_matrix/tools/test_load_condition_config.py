@@ -27,15 +27,40 @@ def test_condition_b_resolves_deterministic_delay_no_seed_needed():
     assert params.seed_epuck2 == 0
 
 
-def test_condition_d_resolves_matched_base_seed_scheme_per_trial():
+def test_condition_d_resolves_non_overlapping_seed_scheme_per_trial():
+    """epuck1->epuck2 uses 4001-4005, epuck2->epuck1 uses 14001-14005 --
+    no seed value is ever reused across trials or directions within the
+    whole batch (unlike the earlier base/base+1 scheme, where trial N's
+    epuck2 seed equaled trial N+1's epuck1 seed)."""
     p1 = resolve_trial_params(REAL_CSV, "D", trial_index=1)
     p5 = resolve_trial_params(REAL_CSV, "D", trial_index=5)
     assert p1.seed_epuck1 == 4001
-    assert p1.seed_epuck2 == 4002
+    assert p1.seed_epuck2 == 14001
     assert p5.seed_epuck1 == 4005
-    assert p5.seed_epuck2 == 4006
+    assert p5.seed_epuck2 == 14005
     assert p1.jitter_s == 0.30
     assert p1.delay_s == 0.15
+
+
+def test_no_seed_value_is_ever_reused_across_the_whole_randomized_batch():
+    all_seeds = []
+    for condition in ("D", "E", "F", "G"):
+        for trial_index in range(1, 6):
+            p = resolve_trial_params(REAL_CSV, condition, trial_index)
+            all_seeds.append((condition, trial_index, "epuck1", p.seed_epuck1))
+            all_seeds.append((condition, trial_index, "epuck2", p.seed_epuck2))
+    # Within one trial index, D/E/F/G all reuse the SAME matched pair by
+    # design -- so dedupe on (trial_index, direction, seed) rather than
+    # requiring every (condition, trial_index, direction) tuple unique.
+    matched_pairs = {(trial_index, direction, seed) for (_, trial_index, direction, seed) in all_seeds}
+    seed_values_only = [seed for (_, _, _, seed) in all_seeds]
+    distinct_matched_seed_values = {seed for (_, _, seed) in matched_pairs}
+    # 5 trials x 2 directions = 10 distinct seed values across the whole
+    # batch (shared by all 4 randomized conditions at a given trial index).
+    assert len(distinct_matched_seed_values) == 10
+    assert distinct_matched_seed_values == {
+        4001, 4002, 4003, 4004, 4005, 14001, 14002, 14003, 14004, 14005,
+    }
 
 
 def test_condition_e_and_g_share_matched_base_seeds():
@@ -54,7 +79,7 @@ def test_condition_f_resolves_with_real_outage_params_now_that_the_extension_is_
     assert params.outage_duration_s == 0.7
     assert params.outage_phase_s == 10.0
     assert params.seed_epuck1 == 4001
-    assert params.seed_epuck2 == 4002
+    assert params.seed_epuck2 == 14001
 
 
 def test_condition_not_executable_error_still_exists_for_a_hypothetical_unfrozen_condition(tmp_path):
@@ -115,7 +140,7 @@ def test_cli_prints_shell_sourceable_key_value_lines():
     lines = dict(line.split("=", 1) for line in result.stdout.strip().splitlines())
     assert lines["DELAY_S"] == "0.15"
     assert lines["SEED_EPUCK1"] == "4002"
-    assert lines["SEED_EPUCK2"] == "4003"
+    assert lines["SEED_EPUCK2"] == "14002"
 
 
 def test_cli_exits_nonzero_with_stderr_marker_on_bad_condition():

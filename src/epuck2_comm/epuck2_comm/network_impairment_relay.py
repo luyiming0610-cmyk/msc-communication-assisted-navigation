@@ -27,13 +27,29 @@ v1.1: also supports a deterministic burst/outage window (see
 `network_impairment.ImpairmentConfig`'s `outage_period_s`/
 `outage_duration_s`/`outage_phase_s`) on top of the original fixed
 delay + symmetric jitter + independent-Bernoulli drop, and publishes a
-1Hz `relay_status` topic (received/forwarded/dropped_bernoulli/
-dropped_outage counts + current pending queue depth) so an external
-orchestrator can poll for "queue fully drained" before stopping this
-node -- `destroy_node()` still does NOT flush the pending delayed-message
-queue (unchanged from v1.0; this is why the drain-before-stop poll
-exists as an orchestrator-level responsibility, not something this node
-does for itself on shutdown).
+1Hz `relay_status` topic (independent_drop_count/outage_drop_count/
+total_drop_count/pending_queue_depth/outage_active/current_outage_index)
+so an external orchestrator can poll for "queue fully drained" before
+stopping this node -- `destroy_node()` still does NOT flush the pending
+delayed-message queue (unchanged from v1.0; this is why the
+drain-before-stop poll exists as an orchestrator-level responsibility,
+not something this node does for itself on shutdown).
+
+v1.1 outage timing uses the RAW simulation clock (`self._now_s()`)
+directly as `elapsed_s`, not time since this node's own construction --
+this is a deliberate choice, not an oversight: every relay launch site
+sets `use_sim_time=true`, so both robots' relay instances (started
+within the same launch.LaunchDescription, a fraction of a second apart
+in wall time but reading the identical shared `/clock` topic) see
+EXACTLY the same simulation-time value at any given instant. Since each
+trial's Webots session starts fresh (a new process per trial, per the
+orchestrator), sim time itself starts near 0 for that session, so
+`outage_phase_s` remains a small, meaningful number (seconds since this
+trial's simulation began) while ALSO guaranteeing the two directions'
+outage windows are genuinely simultaneous -- not merely close because
+they happened to be constructed near the same wall-clock moment, which
+using each node's own construction-relative elapsed time would only
+have approximated.
 """
 
 import heapq
@@ -79,21 +95,22 @@ class NetworkImpairmentRelay(Node):
         self._counter = 0
         self.received_count = 0
         self.forwarded_count = 0
-        self.dropped_bernoulli_count = 0
-        self.dropped_outage_count = 0
+        self.independent_drop_count = 0
+        self.outage_drop_count = 0
 
         # v1.1: elapsed_s fed to the (pure, stateless) outage-window check
-        # is measured from this node's own construction instant, under
-        # its own clock (sim time when use_sim_time=true, matching every
-        # launch site -- see the module docstring). Because _in_outage()
-        # is a pure function of elapsed_s with no accumulated state, a
-        # backward jump in self._now_s() (e.g. a Webots sim-time reset)
-        # is handled correctly automatically -- it just re-evaluates the
-        # same periodic schedule at whatever elapsed_s results, never
-        # raises, never needs the reset-detection machinery
-        # cooperative_avoider.py's _ensure_timebase() needs for its own
-        # ACCUMULATING elapsed-time state.
-        self._start_s = self._now_s()
+        # is the RAW simulation clock value itself -- see the module
+        # docstring for why this (not time since this node's own
+        # construction) is what guarantees both directions' outage
+        # windows are genuinely simultaneous. Because _in_outage()/
+        # outage_status() are pure functions of elapsed_s with no
+        # accumulated state, a backward jump in self._now_s() (e.g. a
+        # Webots sim-time reset) is handled correctly automatically -- it
+        # just re-evaluates the same periodic schedule at whatever
+        # elapsed_s results, never raises, never needs the reset-
+        # detection machinery cooperative_avoider.py's
+        # _ensure_timebase() needs for its own ACCUMULATING elapsed-time
+        # state.
 
         log_path = str(self.get_parameter("log_path").value)
         self._log_file = open(log_path, "w", encoding="utf-8") if log_path else None
@@ -139,10 +156,15 @@ class NetworkImpairmentRelay(Node):
         return float(msg.stamp.sec) + float(msg.stamp.nanosec) / 1.0e9
 
     @property
+    def total_drop_count(self) -> int:
+        return self.independent_drop_count + self.outage_drop_count
+
+    @property
     def dropped_count(self) -> int:
-        """Backward-compatible total (v1.0 had a single dropped_count
-        counter, before drop_reason existed to distinguish mechanisms)."""
-        return self.dropped_bernoulli_count + self.dropped_outage_count
+        """Backward-compatible alias for total_drop_count (v1.0 had a
+        single dropped_count counter, before drop_reason existed to
+        distinguish mechanisms)."""
+        return self.total_drop_count
 
     def pending_queue_depth(self) -> int:
         """Read-only -- never used to alter scheduling, only exposed so an
@@ -152,15 +174,15 @@ class NetworkImpairmentRelay(Node):
 
     def _on_message(self, msg: EpuckState) -> None:
         self.received_count += 1
-        elapsed = self._now_s() - self._start_s
+        elapsed = self._now_s()
         decision = self.decider.decide(elapsed)
         now = self._now_s()
         source_stamp = self._stamp_s(msg)
         if not decision.forward:
             if decision.drop_reason == "outage":
-                self.dropped_outage_count += 1
+                self.outage_drop_count += 1
             else:
-                self.dropped_bernoulli_count += 1
+                self.independent_drop_count += 1
             self._log(msg.sequence, "dropped", 0.0, now, None, source_stamp, None, decision.drop_reason)
             return
         if self._immediate_passthrough:
@@ -188,13 +210,17 @@ class NetworkImpairmentRelay(Node):
             )
 
     def _publish_status(self) -> None:
+        outage = self.decider.outage_status(self._now_s())
         msg = String()
         msg.data = json.dumps({
             "received_count": self.received_count,
             "forwarded_count": self.forwarded_count,
-            "dropped_bernoulli_count": self.dropped_bernoulli_count,
-            "dropped_outage_count": self.dropped_outage_count,
+            "independent_drop_count": self.independent_drop_count,
+            "outage_drop_count": self.outage_drop_count,
+            "total_drop_count": self.total_drop_count,
             "pending_queue_depth": self.pending_queue_depth(),
+            "outage_active": outage["active"],
+            "current_outage_index": outage["index"],
         })
         self.status_publisher.publish(msg)
 

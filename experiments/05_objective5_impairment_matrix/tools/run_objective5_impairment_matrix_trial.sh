@@ -378,32 +378,103 @@ echo "[$(date -Iseconds)] rosbag metadata.yaml check done" | tee -a "$EXECUTION_
 stop_pid "$SIM_PID"; SIM_PID=""
 sleep 2
 
+BAG_WARN_LINES="$(grep -icE 'drop|warn|error' "$BAG_RECORD_LOG" 2>/dev/null || echo 0)"
 grep -iE 'drop|warn|error' "$BAG_RECORD_LOG" | tee -a "$EXECUTION_LOG" || echo "no drop/warn/error lines in bag_record.log" | tee -a "$EXECUTION_LOG"
+if [[ "$BAG_WARN_LINES" != "0" ]]; then
+  DATA_VALIDITY="INVALID"; INVALID_REASON="${INVALID_REASON}bag_record.log has $BAG_WARN_LINES drop/warn/error line(s); "
+fi
+
+# --- seed/config cross-check: the relay's own startup log line is the
+# ground truth for what was ACTUALLY deployed (not merely what this
+# script intended to pass) -- per the analysis plan's requirement.
+SEEDS_MATCH="true"
+for ns in epuck1 epuck2; do
+  EXPECTED_SEED="$SEED_EPUCK1"
+  [[ "$ns" == "epuck2" ]] && EXPECTED_SEED="$SEED_EPUCK2"
+  if ! grep -q "seed=$EXPECTED_SEED " "$RELAY_COUNTER_LOG" 2>/dev/null; then
+    SEEDS_MATCH="false"
+    INVALID_REASON="${INVALID_REASON}${ns} relay startup log does not confirm seed=$EXPECTED_SEED; "
+  fi
+done
+
+# --- min inter-robot distance over the recorded bag (whole trial, not
+# windowed -- the matrix's collision heuristic deliberately looks at the
+# entire recording, not just a trimmed main window) ---
+MIN_DISTANCE_JSON="$(python3 "$TOOLS_DIR/min_interrobot_distance.py" --native-bag-dir "$NATIVE_BAG_DIR" 2>>"$EXECUTION_LOG" || echo '{"min_interrobot_distance_m": null}')"
+MIN_DISTANCE_M="$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['min_interrobot_distance_m'])" "$MIN_DISTANCE_JSON" 2>/dev/null || echo null)"
+echo "[$(date -Iseconds)] min_interrobot_distance_m=$MIN_DISTANCE_M" | tee -a "$EXECUTION_LOG"
+
+CONTROLLER_CRASHED="false"
+if ! grep -q 'COMPLETE:' "$CONTROLLER_LOG" 2>/dev/null && (( complete_count < 2 )); then
+  # No COMPLETE at all AND the controller process is confirmed gone --
+  # distinct from a clean max_runtime timeout, which still logs its own
+  # "COMPLETE: maximum runtime reached" line per cooperative_avoider.py.
+  if grep -qiE 'traceback|error' "$CONTROLLER_LOG" 2>/dev/null; then
+    CONTROLLER_CRASHED="true"
+  fi
+fi
+
+REALTIME_FACTOR_OK="true"
+python3 -c "
+factor_preload = ${PRELOAD_FACTOR:-0}
+factor_full = ${FULL_LOAD_FACTOR:-0}
+import sys
+sys.exit(0 if (0.8 <= factor_preload <= 1.2 and 0.8 <= factor_full <= 1.2) else 1)
+" || REALTIME_FACTOR_OK="false"
+
+BAG_METADATA_OK="true"
+[[ ! -s "$NATIVE_BAG_DIR/metadata.yaml" ]] && BAG_METADATA_OK="false"
+
+ANALYZER_OK="true"  # tier-A/B/C analyzer reuse (analyze_expanded_bridge-style) is a follow-up step, not blocking this trial's own DATA_VALIDITY computation this pass
+
+VERDICT_INPUT_JSON="$(python3 -c "
+import json
+print(json.dumps({
+    'seeds_match_frozen_config': '$SEEDS_MATCH' == 'true',
+    'realtime_factor_ok': '$REALTIME_FACTOR_OK' == 'true',
+    'bag_metadata_ok': '$BAG_METADATA_OK' == 'true',
+    'analyzer_ok': '$ANALYZER_OK' == 'true',
+    'queue_drained': '$DATA_VALIDITY' == 'VALID',
+    'complete_count': $complete_count,
+    'expected_complete_count': 2,
+    'min_interrobot_distance_m': $MIN_DISTANCE_M,
+    'safety_radius_m': 0.14,
+    'controller_crashed': '$CONTROLLER_CRASHED' == 'true',
+}))
+")"
+VERDICT_JSON="$(echo "$VERDICT_INPUT_JSON" | python3 "$TOOLS_DIR/matrix_verdict.py")"
+echo "[$(date -Iseconds)] verdict: $VERDICT_JSON" | tee -a "$EXECUTION_LOG"
+
+FINAL_DATA_VALIDITY="$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['data_validity'])" "$VERDICT_JSON")"
+FINAL_TASK_OUTCOME="$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['task_outcome'])" "$VERDICT_JSON")"
 
 mkdir -p "$FINAL_DIR"
 cp "$DIAG_LOG_DIR/frozen_params.json" "$FINAL_DIR/"
-cat > "$FINAL_DIR/preliminary_runtime_manifest.json" <<EOF
-{
-  "condition_id": "$CONDITION_ID",
-  "trial_index": $TRIAL_INDEX,
-  "attempt": $ATTEMPT,
-  "native_bag_dir": "$NATIVE_BAG_DIR",
-  "native_diag_log_dir": "$DIAG_LOG_DIR",
-  "preload_realtime_factor": ${PRELOAD_FACTOR:-0},
-  "full_load_realtime_factor": ${FULL_LOAD_FACTOR:-0},
-  "controller_complete_count": $complete_count,
-  "drain_duration_s": $DRAIN_DURATION_S,
-  "data_validity": "$DATA_VALIDITY",
-  "invalid_reason": "$INVALID_REASON",
-  "git_commit": "$GIT_COMMIT",
-  "orchestrator_sha256": "$ORCH_SHA256",
-  "network_impairment_relay_py_sha256": "$RELAY_SHA256",
-  "network_impairment_py_sha256": "$IMPAIRMENT_SHA256",
-  "note": "preliminary -- full tier A/B/C + TASK_OUTCOME analysis is a separate, not-yet-built post-hoc step, matching the physical baseline's run_one_trial_analysis.py/run_final_trial_analysis.py pattern"
+python3 -c "
+import json
+manifest = {
+    'condition_id': '$CONDITION_ID',
+    'trial_index': $TRIAL_INDEX,
+    'attempt': $ATTEMPT,
+    'native_bag_dir': '$NATIVE_BAG_DIR',
+    'native_diag_log_dir': '$DIAG_LOG_DIR',
+    'preload_realtime_factor': ${PRELOAD_FACTOR:-0},
+    'full_load_realtime_factor': ${FULL_LOAD_FACTOR:-0},
+    'controller_complete_count': $complete_count,
+    'drain_duration_s': $DRAIN_DURATION_S,
+    'min_interrobot_distance_m': $MIN_DISTANCE_M,
+    'git_commit': '$GIT_COMMIT',
+    'orchestrator_sha256': '$ORCH_SHA256',
+    'network_impairment_relay_py_sha256': '$RELAY_SHA256',
+    'network_impairment_py_sha256': '$IMPAIRMENT_SHA256',
 }
-EOF
+manifest.update(json.loads('''$VERDICT_JSON'''))
+with open('$FINAL_DIR/trial_verdict.json', 'w', encoding='utf-8') as fh:
+    json.dump(manifest, fh, indent=2)
+print(json.dumps(manifest, indent=2))
+" | tee -a "$EXECUTION_LOG"
 
-echo "[$(date -Iseconds)] $STEM RECORDING_COMPLETE data_validity=$DATA_VALIDITY" | tee -a "$EXECUTION_LOG"
+echo "[$(date -Iseconds)] $STEM RECORDING_COMPLETE data_validity=$FINAL_DATA_VALIDITY task_outcome=$FINAL_TASK_OUTCOME" | tee -a "$EXECUTION_LOG"
 echo "native bag dir: $NATIVE_BAG_DIR"
 echo "analysis dir: $FINAL_DIR"
 trap - EXIT

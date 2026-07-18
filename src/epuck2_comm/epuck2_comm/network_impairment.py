@@ -72,7 +72,7 @@ class ImpairmentConfig:
 class RelayDecision:
     forward: bool
     release_delay_s: float  # extra delay applied on top of "now", 0.0 if forwarding immediately or dropped
-    drop_reason: str = ""  # "" if forwarded, "outage" or "bernoulli" if dropped
+    drop_reason: str = ""  # "" if forwarded, "outage" or "independent" if dropped
 
 
 class ImpairmentDecider:
@@ -84,16 +84,31 @@ class ImpairmentDecider:
         self._rng = random.Random(config.seed)
 
     def _in_outage(self, elapsed_s: float) -> bool:
+        return self.outage_status(elapsed_s)["active"]
+
+    def outage_status(self, elapsed_s: float) -> dict:
+        """Read-only outage classification at a given elapsed_s -- used
+        both by decide() (to decide the current message) and by the
+        relay's relay_status topic (to report outage_active/
+        current_outage_index independent of any specific message,
+        e.g. once per second even when no message arrives that tick).
+        `index` is the 0-based ordinal of the outage window elapsed_s
+        falls in or has most recently passed (None if elapsed_s is
+        before the first window or outage is disabled)."""
         if self.config.outage_period_s <= 0.0 or self.config.outage_duration_s <= 0.0:
-            return False
-        phase = (elapsed_s - self.config.outage_phase_s) % self.config.outage_period_s
-        return phase < self.config.outage_duration_s
+            return {"active": False, "index": None}
+        if elapsed_s < self.config.outage_phase_s:
+            return {"active": False, "index": None}
+        since_phase = elapsed_s - self.config.outage_phase_s
+        index = int(since_phase // self.config.outage_period_s)
+        phase = since_phase % self.config.outage_period_s
+        return {"active": phase < self.config.outage_duration_s, "index": index}
 
     def decide(self, elapsed_s: float = 0.0) -> RelayDecision:
         if self._in_outage(elapsed_s):
             return RelayDecision(forward=False, release_delay_s=0.0, drop_reason="outage")
         if self.config.drop_probability > 0.0 and self._rng.random() < self.config.drop_probability:
-            return RelayDecision(forward=False, release_delay_s=0.0, drop_reason="bernoulli")
+            return RelayDecision(forward=False, release_delay_s=0.0, drop_reason="independent")
         jitter = 0.0
         if self.config.jitter_s > 0.0:
             jitter = self._rng.uniform(-self.config.jitter_s / 2.0, self.config.jitter_s / 2.0)

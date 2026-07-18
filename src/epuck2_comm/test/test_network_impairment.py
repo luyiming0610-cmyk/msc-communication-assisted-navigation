@@ -86,7 +86,7 @@ def test_default_outage_params_are_message_equivalent_to_pre_extension_relay():
     decider = ImpairmentDecider(config)
     for elapsed in (0.0, 1.0, 100.0, 12345.6):
         decision = decider.decide(elapsed)
-        assert decision.drop_reason in ("", "bernoulli")  # never "outage" with outage disabled
+        assert decision.drop_reason in ("", "independent")  # never "outage" with outage disabled
 
 
 def test_outage_window_boundaries_are_closed_open():
@@ -131,12 +131,12 @@ def test_outage_is_a_pure_function_correct_under_backward_time_jump():
     assert decider.decide(5.3).forward is False  # backward jump but still lands inside 1st window
 
 
-def test_outage_combined_with_bernoulli_drop_never_double_counts():
-    """When both outage and independent Bernoulli drop are configured,
+def test_outage_combined_with_independent_drop_never_double_counts():
+    """When both outage and independent (Bernoulli) drop are configured,
     a message inside an outage window is dropped for the OUTAGE reason
     even if drop_probability=1.0 would also have dropped it -- outage is
-    checked first and short-circuits the Bernoulli draw entirely (no RNG
-    call consumed for a message already dropped by the outage)."""
+    checked first and short-circuits the independent-drop draw entirely
+    (no RNG call consumed for a message already dropped by the outage)."""
     config = ImpairmentConfig(
         drop_probability=1.0, outage_period_s=15.0, outage_duration_s=0.7,
         outage_phase_s=5.0, seed=1,
@@ -148,7 +148,23 @@ def test_outage_combined_with_bernoulli_drop_never_double_counts():
     # outside the outage window, drop_probability=1.0 alone still drops everything
     decision2 = decider.decide(10.0)
     assert decision2.forward is False
-    assert decision2.drop_reason == "bernoulli"
+    assert decision2.drop_reason == "independent"
+
+
+def test_outage_status_reports_active_and_index():
+    config = ImpairmentConfig(outage_period_s=15.0, outage_duration_s=0.7, outage_phase_s=5.0)
+    decider = ImpairmentDecider(config)
+    assert decider.outage_status(0.0) == {"active": False, "index": None}
+    assert decider.outage_status(4.9) == {"active": False, "index": None}
+    assert decider.outage_status(5.3) == {"active": True, "index": 0}
+    assert decider.outage_status(6.0) == {"active": False, "index": 0}
+    assert decider.outage_status(20.3) == {"active": True, "index": 1}
+    assert decider.outage_status(35.3) == {"active": True, "index": 2}
+
+
+def test_outage_status_disabled_when_outage_not_configured():
+    decider = ImpairmentDecider(ImpairmentConfig())
+    assert decider.outage_status(100.0) == {"active": False, "index": None}
 
 
 def test_outage_zero_duration_or_zero_period_disables_outage():
