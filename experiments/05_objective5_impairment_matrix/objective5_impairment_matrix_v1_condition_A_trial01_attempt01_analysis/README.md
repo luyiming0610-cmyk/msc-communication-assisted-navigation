@@ -47,7 +47,11 @@ two places, verified identical by SHA-256:
 `DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, `analyzer_ok=true` under
 the strict formal-trial latency schema (p99 is a genuine finite value,
 not null, on both directions). Manual observation confirms avoidance
-completed with no collision, spinning, or desynchronization.
+completed, both robots recovered and auto-stopped normally, and no
+collision, spinning, or desynchronization occurred. (`recovered_and_
+auto_stopped` was originally reported as "no", a fill-in error later
+corrected to "yes" -- see `final_verdict.json`'s `manual_observation.
+correction_note`.)
 `min_interrobot_distance_m=0.1430942842844398` exceeds
 `safety_radius_m=0.14` by a small margin (~3.09mm) -- reported
 explicitly, PASS.

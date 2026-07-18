@@ -106,9 +106,13 @@ remaining trial awaits explicit user confirmation before it runs.**
   1.012/0.963. `min_interrobot_distance_m=0.1430942842844398` vs
   `safety_radius_m=0.14` -- **a small ~3.09mm safety margin, PASS,
   reported explicitly** (see `final_verdict.json`'s `safety` block).
-  Manual real-time observation confirmed: avoidance completed, no
-  collision, no spinning/oscillation, no desynchronization. Process
-  cleanup confirmed CLEAN after the run; raw bag/diag_logs preserved
+  Manual real-time observation confirmed: avoidance completed, both
+  robots recovered and auto-stopped normally, no collision, no
+  spinning/oscillation, no desynchronization (`recovered_and_auto_
+  stopped` was originally recorded as "no", a fill-in error corrected
+  to "yes" -- see `final_verdict.json`'s `manual_observation.
+  correction_note`). Process cleanup confirmed CLEAN after the run; raw
+  bag/diag_logs preserved
   outside git (native WSL + Windows copy, SHA-256-verified identical),
   see `experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_A_trial01_attempt01_analysis/`.
   **Condition A's formal n=5 batch is NOT complete** -- Trials 02-05 not

@@ -23,10 +23,11 @@
     "avoidance_completed": true,
     "collision_observed": false,
     "spinning_or_visible_oscillation_observed": false,
-    "recovered_and_auto_stopped": false,
+    "recovered_and_auto_stopped": true,
     "visible_desynchronization_observed": false,
     "other_notes": "none",
-    "observer": "user, real-time visual observation of the single Webots run"
+    "observer": "user, real-time visual observation of the single Webots run",
+    "correction_note": "recovered_and_auto_stopped was originally recorded as false; the user corrected this to true (a fill-in error, not a re-observation) after the initial Trial 01 report. This correction touches only this manual_observation block -- no automated measurement field in this file, nor any file outside this trial's own analysis directory's manual-observation text, was changed."
   },
   "process_cleanup_check": {
     "checked_patterns": [
@@ -101,5 +102,5 @@
     "realtime_factor_ok": true
   },
   "trial_verdict": "PASS",
-  "trial_verdict_reason": "DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, analyzer_ok=true under the strict formal-trial schema gate, process cleanup CLEAN, bag integrity confirmed, manual observation confirms avoidance completed with no collision/spinning/desync -- min_interrobot_distance_m exceeds safety_radius_m by a small margin (~3.09mm), reported explicitly, not grounds to fail this trial."
+  "trial_verdict_reason": "DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, analyzer_ok=true under the strict formal-trial schema gate, process cleanup CLEAN, bag integrity confirmed, manual observation confirms avoidance completed and both robots recovered and auto-stopped normally, with no collision/spinning/desync -- min_interrobot_distance_m exceeds safety_radius_m by a small margin (~3.09mm), reported explicitly, not grounds to fail this trial."
 }

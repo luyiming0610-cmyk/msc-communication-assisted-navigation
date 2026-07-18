@@ -62,9 +62,13 @@ to alter the frozen geometry or controller.
 ## Manual observation (user, real-time)
 
 Avoidance completed: **yes**. Collision: **no**. Spinning/visible
-oscillation: **no**. Recovered-and-auto-stopped: **no** (not
-applicable -- task completed normally, not via a stale/timeout
-recovery). Visible desynchronization: **no**. Other notes: none.
+oscillation: **no**. Recovered-and-auto-stopped: **yes**. Visible
+desynchronization: **no**. Other notes: none.
+
+*Correction*: `recovered_and_auto_stopped` was originally reported as
+"no" (a fill-in error, not a re-observation) and has been corrected to
+"yes" here and in `final_verdict.json`/`README.md`. No automated
+measurement field, and no other file, was touched by this correction.
 
 ## Process cleanup / data integrity
 
