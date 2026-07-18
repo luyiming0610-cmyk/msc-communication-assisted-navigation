@@ -27,6 +27,7 @@ mismatch be attributed to a specific stage rather than guessed at.
 
 import argparse
 import json
+import math
 import os
 import sys
 import tempfile
@@ -36,6 +37,34 @@ from rclpy.node import Node
 from rclpy.utilities import remove_ros_args
 
 from epuck2_comm_interfaces.msg import EpuckState
+
+
+def _percentile(sorted_values, fraction: float):
+    """Same formula as analyze_comm_performance.py's _percentile, kept in
+    sync deliberately so a live sequence_counter latency figure and an
+    offline bag-based one are comparable."""
+    if not sorted_values:
+        return None
+    if len(sorted_values) == 1:
+        return sorted_values[0]
+    index = fraction * (len(sorted_values) - 1)
+    lower = math.floor(index)
+    upper = math.ceil(index)
+    if lower == upper:
+        return sorted_values[int(index)]
+    weight = index - lower
+    return sorted_values[lower] * (1 - weight) + sorted_values[upper] * weight
+
+
+# protocol_v1.1_stamp_semantics: an age this large cannot be a genuine
+# publisher-to-subscriber transport delay for this system (peer_timeout_s
+# and cpa_horizon_s are both single-digit seconds) -- it is a strong
+# signal of a clock-domain mismatch (e.g. one side reading wall time,
+# the other sim time) rather than real latency. Samples this large are
+# excluded from the reported statistics and counted separately so a bug
+# upstream shows up as a visible anomaly count, never a silently wrong
+# "latency" number.
+_MAX_PLAUSIBLE_AGE_S = 30.0
 
 
 class TopicCounter:
@@ -50,8 +79,11 @@ class TopicCounter:
         self.last_ros_time_s = None
         self._seen = set()
         self._previous_sequence = None
+        self._ages_s = []
+        self.negative_age_sample_count = 0
+        self.anomalous_age_sample_count = 0
 
-    def observe(self, sequence: int, now_s: float) -> None:
+    def observe(self, sequence: int, now_s: float, stamp_s: float = None) -> None:
         self.received_count += 1
         if self.first_sequence is None:
             self.first_sequence = sequence
@@ -71,10 +103,20 @@ class TopicCounter:
                 self.sequence_gap_count += sequence - self._previous_sequence - 1
         self._previous_sequence = sequence
 
+        if stamp_s is not None:
+            age_s = now_s - stamp_s
+            if age_s < 0.0:
+                self.negative_age_sample_count += 1
+            elif age_s > _MAX_PLAUSIBLE_AGE_S:
+                self.anomalous_age_sample_count += 1
+            else:
+                self._ages_s.append(age_s)
+
     def summary(self) -> dict:
         expected_count = None
         if self.first_sequence is not None and self.last_sequence is not None:
             expected_count = self.last_sequence - self.first_sequence + 1
+        ages_sorted = sorted(self._ages_s)
         return {
             "first_sequence": self.first_sequence,
             "last_sequence": self.last_sequence,
@@ -86,6 +128,13 @@ class TopicCounter:
             "out_of_order_count": self.out_of_order_count,
             "first_ros_time_s": self.first_ros_time_s,
             "last_ros_time_s": self.last_ros_time_s,
+            "valid_age_sample_count": len(ages_sorted),
+            "negative_age_sample_count": self.negative_age_sample_count,
+            "anomalous_age_sample_count": self.anomalous_age_sample_count,
+            "mean_message_age_s": (sum(ages_sorted) / len(ages_sorted)) if ages_sorted else None,
+            "median_message_age_s": _percentile(ages_sorted, 0.50),
+            "p95_message_age_s": _percentile(ages_sorted, 0.95),
+            "max_message_age_s": ages_sorted[-1] if ages_sorted else None,
         }
 
 
@@ -131,7 +180,8 @@ class SequenceCounterNode(Node):
 
     def _make_callback(self, topic):
         def _cb(msg):
-            self.counters[topic].observe(int(msg.sequence), self._now_s())
+            stamp_s = float(msg.stamp.sec) + float(msg.stamp.nanosec) / 1.0e9
+            self.counters[topic].observe(int(msg.sequence), self._now_s(), stamp_s)
         return _cb
 
     def _payload(self, complete: bool) -> dict:

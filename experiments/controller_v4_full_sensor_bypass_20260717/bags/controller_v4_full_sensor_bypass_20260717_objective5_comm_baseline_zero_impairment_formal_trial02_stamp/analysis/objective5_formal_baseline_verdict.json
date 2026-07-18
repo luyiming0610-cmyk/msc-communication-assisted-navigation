@@ -1,0 +1,145 @@
+{
+  "verdict": "PASS",
+  "fail_reasons": [],
+  "per_robot": {
+    "epuck1": {
+      "bag_raw": {
+        "received_count": 819,
+        "unique_sequence_count": 819,
+        "first_sequence": 30,
+        "last_sequence": 848,
+        "duplicate_count": 0,
+        "out_of_order_count": 0
+      },
+      "bag_relayed": {
+        "received_count": 806,
+        "unique_sequence_count": 806,
+        "first_sequence": 30,
+        "last_sequence": 835,
+        "duplicate_count": 0,
+        "out_of_order_count": 0
+      },
+      "relay": {
+        "forwarded": 836,
+        "dropped": 0,
+        "first_sequence": 0,
+        "last_sequence": 835
+      },
+      "counter_relayed": {
+        "first_sequence": 0,
+        "last_sequence": 835,
+        "received_count": 836,
+        "unique_sequence_count": 836,
+        "expected_count": 836,
+        "sequence_gap_count": 0,
+        "duplicate_count": 0,
+        "out_of_order_count": 0,
+        "first_ros_time_s": 11.48,
+        "last_ros_time_s": 103.76,
+        "valid_age_sample_count": 836,
+        "negative_age_sample_count": 0,
+        "anomalous_age_sample_count": 0,
+        "mean_message_age_s": 0.0,
+        "median_message_age_s": 0.0,
+        "p95_message_age_s": 0.0,
+        "max_message_age_s": 0.0
+      },
+      "counter_complete": true,
+      "relay_config": {
+        "delay_s": 0.0,
+        "jitter_s": 0.0,
+        "drop_probability": 0.0,
+        "immediate_passthrough": true
+      },
+      "aligned_window_pdr_bag_vs_relay": 1.0
+    },
+    "epuck2": {
+      "bag_raw": {
+        "received_count": 818,
+        "unique_sequence_count": 818,
+        "first_sequence": 31,
+        "last_sequence": 848,
+        "duplicate_count": 0,
+        "out_of_order_count": 0
+      },
+      "bag_relayed": {
+        "received_count": 805,
+        "unique_sequence_count": 805,
+        "first_sequence": 31,
+        "last_sequence": 835,
+        "duplicate_count": 0,
+        "out_of_order_count": 0
+      },
+      "relay": {
+        "forwarded": 823,
+        "dropped": 0,
+        "first_sequence": 13,
+        "last_sequence": 835
+      },
+      "counter_relayed": {
+        "first_sequence": 13,
+        "last_sequence": 835,
+        "received_count": 823,
+        "unique_sequence_count": 823,
+        "expected_count": 823,
+        "sequence_gap_count": 0,
+        "duplicate_count": 0,
+        "out_of_order_count": 0,
+        "first_ros_time_s": 13.0,
+        "last_ros_time_s": 103.76,
+        "valid_age_sample_count": 823,
+        "negative_age_sample_count": 0,
+        "anomalous_age_sample_count": 0,
+        "mean_message_age_s": 0.0,
+        "median_message_age_s": 0.0,
+        "p95_message_age_s": 0.0,
+        "max_message_age_s": 0.0
+      },
+      "counter_complete": true,
+      "relay_config": {
+        "delay_s": 0.0,
+        "jitter_s": 0.0,
+        "drop_probability": 0.0,
+        "immediate_passthrough": true
+      },
+      "aligned_window_pdr_bag_vs_relay": 1.0
+    }
+  },
+  "complete_count": 2,
+  "communication_metrics": {
+    "/epuck1/state": {
+      "packet_delivery_ratio": 1.0,
+      "actual_rate_hz": 8.691791270309283,
+      "mean_bandwidth_bytes_per_s": 696.246344873606,
+      "bag_based_mean_message_age_s": "N/A",
+      "bag_based_p95_message_age_s": "N/A",
+      "bag_based_latency_domain_mismatch_detected": true,
+      "live_counter_mean_message_age_s": 0.0,
+      "live_counter_median_message_age_s": 0.0,
+      "live_counter_p95_message_age_s": 0.0,
+      "live_counter_max_message_age_s": 0.0,
+      "live_counter_valid_age_sample_count": 836,
+      "live_counter_negative_age_sample_count": 0,
+      "live_counter_anomalous_age_sample_count": 0
+    },
+    "/epuck2/state": {
+      "packet_delivery_ratio": 1.0,
+      "actual_rate_hz": 8.690203513139396,
+      "mean_bandwidth_bytes_per_s": 696.1203334322325,
+      "bag_based_mean_message_age_s": "N/A",
+      "bag_based_p95_message_age_s": "N/A",
+      "bag_based_latency_domain_mismatch_detected": true,
+      "live_counter_mean_message_age_s": 0.0,
+      "live_counter_median_message_age_s": 0.0,
+      "live_counter_p95_message_age_s": 0.0,
+      "live_counter_max_message_age_s": 0.0,
+      "live_counter_valid_age_sample_count": 823,
+      "live_counter_negative_age_sample_count": 0,
+      "live_counter_anomalous_age_sample_count": 0
+    }
+  },
+  "bag_record_drop_warn_error_lines": [],
+  "preload_realtime_factor": 0.996,
+  "full_load_realtime_factor": 1.003,
+  "realtime_factor_ok": true
+}

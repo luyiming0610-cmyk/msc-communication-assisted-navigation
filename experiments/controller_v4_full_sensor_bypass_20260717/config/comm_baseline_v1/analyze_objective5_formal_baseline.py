@@ -140,24 +140,45 @@ def main():
     if not realtime_ok:
         reasons_fail.append(f"realtime factor out of range (preload={args.preload_factor}, full_load={args.full_load_factor})")
 
+    def _or_na(value):
+        # dict.get(key, "N/A") only falls back when the key is MISSING; a
+        # key present with value None (e.g. every age sample excluded as a
+        # clock-domain-mismatch anomaly) would otherwise render as JSON
+        # null, not the required "N/A".
+        return value if value is not None else "N/A"
+
     # Communication metrics: pulled from analyze_comm_performance's own
     # output (already run against the same bag before this script, see
     # the orchestration .sh). Never recomputed here; N/A if missing.
+    # Latency specifically also cross-checked against sequence_counter's
+    # own live, same-clock-domain measurement (message.stamp vs its own
+    # get_clock().now() at receipt) -- see protocol_v1.1_stamp_semantics.
     comm_perf_path = args.diag_log_dir / "comm_performance_summary.json"
     comm_metrics = {"note": "comm_performance_summary.json not found -- N/A"}
     if comm_perf_path.exists():
         comm_perf = json.loads(comm_perf_path.read_text(encoding="utf-8"))
         comm_metrics = {}
         for topic in RELAYED_TOPICS:
+            namespace = topic.split("/")[1]
             topic_data = comm_perf.get("topics", {}).get(topic, {})
             sessions = topic_data.get("sessions", [])
             session = sessions[0] if sessions else {}
+            counter_relayed = per_robot.get(namespace, {}).get("counter_relayed") or {}
+            mismatch = session.get("latency_domain_mismatch_detected", False)
             comm_metrics[topic] = {
-                "packet_delivery_ratio": topic_data.get("overall_packet_delivery_ratio", "N/A"),
-                "actual_rate_hz": session.get("actual_rate_hz", "N/A"),
-                "mean_message_age_s": session.get("mean_message_age_s", "N/A"),
-                "p95_message_age_s": session.get("p95_message_age_s", "N/A"),
-                "mean_bandwidth_bytes_per_s": session.get("mean_bandwidth_bytes_per_s", "N/A"),
+                "packet_delivery_ratio": _or_na(topic_data.get("overall_packet_delivery_ratio")),
+                "actual_rate_hz": _or_na(session.get("actual_rate_hz")),
+                "mean_bandwidth_bytes_per_s": _or_na(session.get("mean_bandwidth_bytes_per_s")),
+                "bag_based_mean_message_age_s": "N/A" if mismatch else _or_na(session.get("mean_message_age_s")),
+                "bag_based_p95_message_age_s": "N/A" if mismatch else _or_na(session.get("p95_message_age_s")),
+                "bag_based_latency_domain_mismatch_detected": mismatch,
+                "live_counter_mean_message_age_s": _or_na(counter_relayed.get("mean_message_age_s")),
+                "live_counter_median_message_age_s": _or_na(counter_relayed.get("median_message_age_s")),
+                "live_counter_p95_message_age_s": _or_na(counter_relayed.get("p95_message_age_s")),
+                "live_counter_max_message_age_s": _or_na(counter_relayed.get("max_message_age_s")),
+                "live_counter_valid_age_sample_count": _or_na(counter_relayed.get("valid_age_sample_count")),
+                "live_counter_negative_age_sample_count": _or_na(counter_relayed.get("negative_age_sample_count")),
+                "live_counter_anomalous_age_sample_count": _or_na(counter_relayed.get("anomalous_age_sample_count")),
             }
 
     verdict = "PASS" if not reasons_fail else "FAIL"

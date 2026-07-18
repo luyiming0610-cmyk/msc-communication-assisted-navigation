@@ -100,13 +100,21 @@ documented configuration, typically part of an n≥5 batch.
 **Diagnostic/pilot** (`evidence_level=PILOT`): exploratory, debugging,
 measurement-chain-isolation, or pre-validation runs. **Never pooled with
 formal statistics, regardless of PASS/FAIL.** Most of the Objective 5
-comm-baseline work is still diagnostic-only; the exception is
-`objective5_comm_baseline_zero_impairment_formal_trial01`
-(`evidence_level=FORMAL_SIM`, PASS) — a genuine task-level run (real
+comm-baseline work is still diagnostic-only; the exceptions are two
+formal, separately-registered zero-impairment trials (`evidence_level=
+FORMAL_SIM`, both PASS, both genuine task-level runs — real
 `cooperative_avoider` task completion, native WSL bag path, PDR=1.0,
-zero gaps/duplicates/out-of-order) that is now formal Objective 5
-evidence for PDR/rate/bandwidth. Message age/latency from that trial is
-**N/A**, not a real number — see known limitation 3 below.
+zero gaps/duplicates/out-of-order):
+- `objective5_comm_baseline_zero_impairment_formal_trial01` — metric_coverage
+  `PDR=VALID sequence_integrity=VALID throughput=VALID task_behavior=VALID
+  latency=NOT_MEASURED`. Message age/latency from this trial is **N/A**,
+  permanently — not re-analyzed or backfilled. See known limitation 3
+  below for the actual root cause (corrected from an earlier, wrong
+  statement in this document).
+- `objective5_comm_baseline_zero_impairment_formal_trial02_stamp` — latency-
+  complete companion (protocol_v1.1_stamp_semantics), metric_coverage all
+  five metrics VALID. **Does not replace trial01** — both remain
+  separately registered.
 
 Full machine-readable record: `experiments/experiment_registry.csv` (one
 row per experiment/batch — `status`, `evidence_level`,
@@ -116,19 +124,25 @@ row per experiment/batch — `status`, `evidence_level`,
 
 1. Phase 4's combined scenario (5/5 formal) triggers via `PROXIMITY_FALLBACK` in every trial, never `PREDICTED_CPA` — must be named "staged local-obstacle avoidance followed by communication-assisted proximity/cooperative avoidance," never described as preventing a certain collision.
 2. 5 pre-protocol-freeze bags cannot be reprocessed by current analyzers (old `EpuckState` wire shape) — original historical analysis remains valid, re-analysis does not work.
-3. `/mnt/c` rosbag-write message loss (confirmed via two native-path diagnostic trials) is fully resolved for formal work by using the native WSL ext4 bag path — `objective5_comm_baseline_zero_impairment_formal_trial01` validated this at the task level (PASS). Separately, `analyze_comm_performance.py`'s `mean_message_age_s`/`p95_message_age_s` are **not reliable**: `EpuckState.stamp` is never populated by `state_publisher.py`, so the "age" reduces to absolute epoch bag-receive time, not a true latency delta — treat message age/latency as N/A until `state_publisher` sets `stamp`. PDR/rate/bandwidth are unaffected.
-4. `sequence_counter` was rewritten this session (periodic atomic checkpoints + a `finally`-block final write, no custom SIGINT handler) and verified working in the formal baseline PASS (`complete=true` both robots). A related orchestration-script bug — the shell script signaling only the relay+counter launch-service's own PID, not its child processes — caused the first 3 attempts at the formal baseline to fail with `complete=false`; fixed by running that process tree under `setsid` and signaling the whole process group on shutdown (`run_objective5_comm_baseline_formal_trial.sh`'s `stop_pid_group`).
-5. Webots R2025a is used, not Gazebo as the Spec names — this is a disclosed, deliberate deviation (protocol/library are simulator-agnostic; see `HANDOFF_20260717.md` for the full risk note and the recommendation to confirm with the supervisor). Do not silently redo the platform in Gazebo.
-6. No CPU/memory overhead measurement exists yet (would need a live psutil-style sampling companion).
-7. No physical-hardware clock-sync procedure exists yet (`verify_clock_sync()` intentionally raises `NotImplementedError` until Objective 6 begins).
+3. `/mnt/c` rosbag-write message loss (confirmed via two native-path diagnostic trials) is fully resolved for formal work by using the native WSL ext4 bag path — both formal zero-impairment trials validated this at the task level (PASS). **Corrected** (an earlier pass of this document said `EpuckState.stamp` was "never populated by `state_publisher.py`" — that was wrong; it does set it, via `self.get_clock().now().to_msg()`): the real root cause of trial01's epoch-scale "age" figures was `analyze_comm_performance.py` computing age as `bag_record_time (rosbag2's own wall-clock recording timestamp) - message.stamp (sim time)` — two different clock domains. Fixed this session under the `protocol_v1.1_stamp_semantics` patch label (wire schema unchanged, still `PROTOCOL_VERSION=1`): `state_publisher.py` now holds publication (`WAITING_FOR_CLOCK`) until the clock is valid; `analyze_comm_performance.py` now detects and excludes negative/implausible ages rather than silently averaging them in; `sequence_counter.py` now computes its own live, same-clock-domain latency (validated by `objective5_timestamp_latency_validation_pilot01`, then used for trial02_stamp's latency=VALID coverage). PDR/rate/bandwidth were never affected by this bug. trial01 itself is **not** re-analyzed or backfilled — it stays registered as `latency=NOT_MEASURED` permanently.
+4. `sequence_counter` was rewritten this session (periodic atomic checkpoints + a `finally`-block final write, no custom SIGINT handler) and verified working in the formal baseline PASS (`complete=true` both robots). A related orchestration-script bug — the shell script signaling only the relay+counter launch-service's own PID, not its child processes — caused the first 3 attempts at trial01 to fail with `complete=false` (these 3 failed attempts are documented, not hidden, in `experiments/controller_v4_full_sensor_bypass_20260717/README.md`'s execution_attempts table); fixed by running that process tree under `setsid` and signaling the whole process group on shutdown (`run_objective5_comm_baseline_formal_trial.sh`'s `stop_pid_group`).
+5. `peer_timeout_s` audit finding (read-only; frozen `cooperative_avoider` NOT modified): peer freshness is judged by callback receipt time, not `msg.stamp`. A constant relay delay does not by itself trigger `peer_timeout` — only jitter or real loss can plausibly do that. An earlier impairment-matrix draft's "0.6s delay triggers timeout" claim is retracted.
+6. Webots R2025a is used, not Gazebo as the Spec names — this is a disclosed, deliberate deviation (protocol/library are simulator-agnostic; see `HANDOFF_20260717.md` for the full risk note and the recommendation to confirm with the supervisor). Do not silently redo the platform in Gazebo.
+7. No CPU/memory overhead measurement exists yet (would need a live psutil-style sampling companion).
+8. No physical-hardware clock-sync procedure exists yet (`verify_clock_sync()` intentionally raises `NotImplementedError` until Objective 6 begins).
 
 ## Current single next step
 
-The formal zero-impairment Objective 5 baseline
-(`objective5_comm_baseline_zero_impairment_formal_trial01`) has PASSED.
-Next: design the delay/loss impairment matrix (A-F conditions: no-peer /
-baseline / medium-delay / high-delay / medium-loss / high-loss) and
-submit it for explicit user confirmation before running any of it — do
+Both formal zero-impairment Objective 5 baselines
+(`objective5_comm_baseline_zero_impairment_formal_trial01` and
+`_formal_trial02_stamp`) have PASSED, and the timestamp/latency
+measurement chain was independently validated
+(`objective5_timestamp_latency_validation_pilot01`, PASS). Next: design
+the delay/loss impairment matrix (A-G conditions, evidence-based tiers
+derived from the measured baseline p95 latency, publish period,
+`peer_timeout_s`'s real callback-receipt-time semantics, CPA horizon,
+and controller decision period — not guessed) and submit it for
+explicit user confirmation before running any of it — do
 not auto-run the matrix after a baseline PASS.
 
 ## What to read first, in order

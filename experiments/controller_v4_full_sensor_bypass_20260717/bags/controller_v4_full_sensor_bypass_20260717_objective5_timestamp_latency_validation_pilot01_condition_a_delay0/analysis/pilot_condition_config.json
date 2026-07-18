@@ -1,0 +1,10 @@
+{
+  "condition": "condition_a_delay0",
+  "configured_delay_s": 0.0,
+  "configured_jitter_s": 0.0,
+  "configured_drop_probability": 0.0,
+  "seed": 4001,
+  "collect_s": 20,
+  "preload_realtime_factor": 1.012,
+  "full_load_realtime_factor": 0.998
+}

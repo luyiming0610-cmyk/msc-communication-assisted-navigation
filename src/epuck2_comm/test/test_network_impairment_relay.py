@@ -5,19 +5,24 @@ v4 integration tests) with a monkeypatched fake clock, rather than relying
 on real timer threads -- deterministic and fast.
 """
 
+import csv
+
 import rclpy
 
 from epuck2_comm.network_impairment_relay import NetworkImpairmentRelay
 from epuck2_comm_interfaces.msg import EpuckState
 
 
-def _state(sequence):
+def _state(sequence, stamp_s=None):
     msg = EpuckState()
     msg.version = EpuckState.PROTOCOL_VERSION
     msg.sequence = sequence
     msg.robot_id = 1
     msg.x_m = 0.123
     msg.y_m = -0.456
+    if stamp_s is not None:
+        msg.stamp.sec = int(stamp_s)
+        msg.stamp.nanosec = int(round((stamp_s - int(stamp_s)) * 1.0e9))
     return msg
 
 
@@ -115,3 +120,30 @@ def test_message_content_is_never_mutated_by_the_relay(monkeypatch):
     finally:
         node.destroy_node()
         rclpy.shutdown()
+
+
+def test_relay_csv_records_source_stamp_and_actual_release_time(tmp_path, monkeypatch):
+    fake_clock = {"t": 100.0}
+    monkeypatch.setattr(
+        "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
+        lambda self: fake_clock["t"],
+    )
+    log_path = str(tmp_path / "relay.csv")
+    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.2", "-p", f"log_path:={log_path}"])
+    try:
+        node = NetworkImpairmentRelay()
+        node._on_message(_state(1, stamp_s=99.5))
+        fake_clock["t"] = 100.2
+        node._flush_queue()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+    with open(log_path, encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["received_seq"] == "1"
+    assert row["action"] == "forwarded"
+    assert abs(float(row["source_stamp_s"]) - 99.5) < 1e-6
+    assert abs(float(row["actual_release_time_s"]) - 100.2) < 1e-6

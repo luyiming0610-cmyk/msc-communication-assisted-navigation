@@ -106,6 +106,15 @@ class StatePublisher(Node):
         self.sequence = 0
         self.published_count = 0
         self.start_time = time.monotonic()
+        # protocol_v1.1_stamp_semantics: msg.stamp is only trustworthy once
+        # the ROS clock has a valid, nonzero sample (under use_sim_time=true,
+        # before the first /clock message this reads back as 0.0). Publishing
+        # a formal EpuckState with a fake zero stamp would corrupt any
+        # downstream latency calculation, so hold here instead -- same
+        # principle as cooperative_avoider's WAITING_FOR_CLOCK gate, applied
+        # to this node's own publish path (this node is not the frozen
+        # controller, so this addition is in scope).
+        self._clock_wait_logged = False
 
         self.timer = self.create_timer(min(0.02, minimum_interval_s), self._timer_callback)
         self.get_logger().info(
@@ -249,6 +258,11 @@ class StatePublisher(Node):
 
     def _timer_callback(self) -> None:
         now = self._now_s()
+        if now <= 0.0:
+            if not self._clock_wait_logged:
+                self.get_logger().info("WAITING_FOR_CLOCK: ROS clock not yet valid, holding state publication")
+                self._clock_wait_logged = True
+            return
         snapshot = self._snapshot(now)
         if not self.policy.should_publish(snapshot, now):
             return

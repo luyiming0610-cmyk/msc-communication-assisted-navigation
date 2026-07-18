@@ -122,6 +122,78 @@ def test_atomic_write_json_does_not_corrupt_existing_file_on_serialization_failu
     assert leftovers == []
 
 
+def test_message_age_is_computed_from_stamp_and_reported_as_mean_median_p95_max():
+    counter = TopicCounter()
+    # now_s - stamp_s = age; ages here are 0.10, 0.20, 0.30, 0.40, 0.50s.
+    for i, age in enumerate((0.10, 0.20, 0.30, 0.40, 0.50)):
+        counter.observe(i, now_s=100.0 + i, stamp_s=100.0 + i - age)
+    summary = counter.summary()
+    assert summary["valid_age_sample_count"] == 5
+    assert abs(summary["mean_message_age_s"] - 0.30) < 1e-9
+    assert abs(summary["median_message_age_s"] - 0.30) < 1e-9
+    assert abs(summary["max_message_age_s"] - 0.50) < 1e-9
+    assert summary["negative_age_sample_count"] == 0
+    assert summary["anomalous_age_sample_count"] == 0
+
+
+def test_negative_age_sample_is_excluded_from_stats_and_counted_separately():
+    counter = TopicCounter()
+    counter.observe(0, now_s=100.0, stamp_s=100.5)  # stamp AFTER receipt -> negative age
+    counter.observe(1, now_s=101.0, stamp_s=100.9)  # normal positive age
+    summary = counter.summary()
+    assert summary["negative_age_sample_count"] == 1
+    assert summary["valid_age_sample_count"] == 1
+    assert abs(summary["mean_message_age_s"] - 0.1) < 1e-9
+
+
+def test_implausibly_large_age_is_flagged_anomalous_not_reported_as_real_latency():
+    counter = TopicCounter()
+    # Simulates the clock-domain-mismatch symptom this session found: an
+    # epoch-scale "age" must never be silently averaged into the reported
+    # latency statistics.
+    counter.observe(0, now_s=1_784_360_987.0, stamp_s=12.5)
+    summary = counter.summary()
+    assert summary["anomalous_age_sample_count"] == 1
+    assert summary["valid_age_sample_count"] == 0
+    assert summary["mean_message_age_s"] is None
+    assert summary["p95_message_age_s"] is None
+    assert summary["max_message_age_s"] is None
+
+
+def test_no_stamp_provided_leaves_age_fields_as_none_not_zero():
+    counter = TopicCounter()
+    counter.observe(0, now_s=100.0)  # stamp_s omitted, matches non-EpuckState callers
+    summary = counter.summary()
+    assert summary["valid_age_sample_count"] == 0
+    assert summary["mean_message_age_s"] is None
+
+
+def test_node_callback_extracts_stamp_and_computes_a_plausible_live_age(monkeypatch, tmp_path):
+    output_path = str(tmp_path / "checkpoint.json")
+    fake_clock = {"t": 100.2}
+    monkeypatch.setattr(
+        "epuck2_comm.sequence_counter.SequenceCounterNode._now_s",
+        lambda self: fake_clock["t"],
+    )
+    rclpy.init()
+    try:
+        node = SequenceCounterNode(["state"], output_path, checkpoint_period_s=1000.0)
+        callback = node._make_callback("state")
+
+        msg = EpuckState()
+        msg.sequence = 1
+        msg.stamp.sec = 100
+        msg.stamp.nanosec = 100_000_000  # stamp_s = 100.1, receipt at 100.2 -> age=0.1s
+        callback(msg)
+
+        summary = node.counters["state"].summary()
+        assert summary["valid_age_sample_count"] == 1
+        assert abs(summary["mean_message_age_s"] - 0.1) < 1e-6
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
 def test_periodic_checkpoint_writes_complete_false_and_final_write_sets_complete_true(monkeypatch, tmp_path):
     output_path = str(tmp_path / "checkpoint.json")
     fake_clock = {"t": 0.0}

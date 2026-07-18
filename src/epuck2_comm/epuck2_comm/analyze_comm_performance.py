@@ -11,11 +11,25 @@ controller, or any existing bag -- it only reads.
 Time-measurement rules (see PROTOCOL_FREEZE_20260717.md and this session's
 communication-phase instructions):
 
-- All timestamps used here (the bag's own record timestamp, and each
-  message's own `stamp` field) are ROS/sim time under `use_sim_time=true`,
-  from a single shared /clock domain (one Webots session, one ROS graph).
-  "Message age" = bag_record_time - message.stamp is therefore a valid,
-  same-clock-domain latency measurement for these simulation bags.
+- CORRECTED (protocol_v1.1_stamp_semantics): the bag's own record
+  timestamp (`timestamp_ns` from rosbag2_py's SequentialReader) is NOT
+  guaranteed to be ROS/sim time -- `ros2 bag record`'s default recording
+  clock is the recorder process's own system/wall clock, a different
+  domain from `message.stamp` (which IS ROS/sim time under
+  `use_sim_time=true`, since state_publisher.py sets it from
+  `self.get_clock().now()`). A prior analysis pass wrongly assumed both
+  timestamps shared one clock domain; "message age" computed as
+  bag_record_time - message.stamp under that assumption produced
+  epoch-scale nonsense (~1.78e9 "seconds"), not real latency, for
+  objective5_comm_baseline_zero_impairment_formal_trial01 -- see that
+  trial's known_limitations entry in experiment_registry.csv.
+  `_state_age_stats()` below now excludes any sample whose computed age
+  is negative or implausibly large (see `_MAX_PLAUSIBLE_AGE_S`) rather
+  than silently reporting it, and reports how many samples were
+  excluded. The live, same-clock-domain alternative is
+  sequence_counter.py's own age tracking (message.stamp vs its own
+  get_clock().now() at receipt, both under the node's own use_sim_time),
+  which does not have this bag-recording-clock mismatch.
 - This does NOT generalize to a physical Pi-puck without first verifying
   clock synchronization (NTP/chrony) between devices -- see
   `verify_clock_sync()` below, which is a stub that must be filled in and
@@ -103,6 +117,13 @@ def _stamp_ns(message) -> int:
     return int(message.stamp.sec) * 1_000_000_000 + int(message.stamp.nanosec)
 
 
+# protocol_v1.1_stamp_semantics: see the module docstring's clock-domain
+# note. An age this large cannot be genuine transport latency for this
+# system and is treated as a clock-domain-mismatch symptom, excluded from
+# the reported statistics rather than silently averaged in.
+_MAX_PLAUSIBLE_AGE_S = 30.0
+
+
 def _split_sessions(rows):
     """rows: list of (bag_ns, seq, stamp_ns, size_bytes) sorted by bag_ns.
     Returns list of sessions, each a list of rows, split on a detected
@@ -150,11 +171,17 @@ def _session_metrics(session_rows, peer_timeout_s: float):
     missing_count = max(0, expected_count - unique_received)
     pdr = unique_received / expected_count if expected_count > 0 else None
 
-    ages_s = [
-        (row[0] - row[2]) / 1.0e9 for row in session_rows if row[0] >= row[2]
-    ]
-    negative_age_count = sum(1 for row in session_rows if row[0] < row[2])
+    all_ages_s = [(row[0] - row[2]) / 1.0e9 for row in session_rows]
+    negative_age_count = sum(1 for age in all_ages_s if age < 0.0)
+    anomalous_age_count = sum(1 for age in all_ages_s if age > _MAX_PLAUSIBLE_AGE_S)
+    ages_s = [age for age in all_ages_s if 0.0 <= age <= _MAX_PLAUSIBLE_AGE_S]
     ages_sorted = sorted(ages_s)
+    # If every sample was excluded (all negative and/or anomalous), there is
+    # no valid latency data at all for this session -- likely a clock-domain
+    # mismatch between the bag's own record timestamp and message.stamp
+    # (see module docstring). Report explicitly rather than defaulting the
+    # stats fields to None with no indication of why.
+    latency_domain_mismatch_detected = bool(all_ages_s) and not ages_s
 
     bag_times_s = [row[0] / 1.0e9 for row in session_rows]
     intervals_s = [
@@ -178,6 +205,9 @@ def _session_metrics(session_rows, peer_timeout_s: float):
         "out_of_order_count": out_of_order_count,
         "packet_delivery_ratio": pdr,
         "negative_age_sample_count": negative_age_count,
+        "anomalous_age_sample_count": anomalous_age_count,
+        "valid_age_sample_count": len(ages_sorted),
+        "latency_domain_mismatch_detected": latency_domain_mismatch_detected,
         "mean_message_age_s": (sum(ages_s) / len(ages_s)) if ages_s else None,
         "p50_message_age_s": _percentile(ages_sorted, 0.50),
         "p95_message_age_s": _percentile(ages_sorted, 0.95),

@@ -1,0 +1,41 @@
+{
+  "state_raw": {
+    "first_sequence": 0,
+    "last_sequence": 514,
+    "received_count": 515,
+    "unique_sequence_count": 515,
+    "expected_count": 515,
+    "sequence_gap_count": 0,
+    "duplicate_count": 0,
+    "out_of_order_count": 0,
+    "first_ros_time_s": 14.2,
+    "last_ros_time_s": 70.2,
+    "valid_age_sample_count": 515,
+    "negative_age_sample_count": 0,
+    "anomalous_age_sample_count": 0,
+    "mean_message_age_s": 0.0023300970873786327,
+    "median_message_age_s": 0.0,
+    "p95_message_age_s": 0.0,
+    "max_message_age_s": 0.47999999999999865
+  },
+  "state": {
+    "first_sequence": 0,
+    "last_sequence": 514,
+    "received_count": 515,
+    "unique_sequence_count": 515,
+    "expected_count": 515,
+    "sequence_gap_count": 0,
+    "duplicate_count": 0,
+    "out_of_order_count": 0,
+    "first_ros_time_s": 13.72,
+    "last_ros_time_s": 70.2,
+    "valid_age_sample_count": 515,
+    "negative_age_sample_count": 0,
+    "anomalous_age_sample_count": 0,
+    "mean_message_age_s": 0.0,
+    "median_message_age_s": 0.0,
+    "p95_message_age_s": 0.0,
+    "max_message_age_s": 0.0
+  },
+  "complete": true
+}

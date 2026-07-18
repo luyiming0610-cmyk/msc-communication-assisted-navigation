@@ -64,8 +64,17 @@ class NetworkImpairmentRelay(Node):
         log_path = str(self.get_parameter("log_path").value)
         self._log_file = open(log_path, "w", encoding="utf-8") if log_path else None
         if self._log_file:
+            # source_stamp_s/actual_release_time_s appended (not inserted)
+            # so existing readers keyed by column name (received_seq,
+            # action, receive_time_s, release_time_s) are unaffected.
+            # release_time_s remains the value SCHEDULED at receive time;
+            # actual_release_time_s is when publish() actually ran (may
+            # differ by up to one flush-timer period, 0.01s, for delayed
+            # messages -- identical to release_time_s for immediate
+            # passthrough, since that path is synchronous).
             self._log_file.write(
-                "received_seq,action,scheduled_delay_s,receive_time_s,release_time_s\n"
+                "received_seq,action,scheduled_delay_s,receive_time_s,release_time_s,"
+                "source_stamp_s,actual_release_time_s\n"
             )
 
         self.get_logger().info(
@@ -80,18 +89,23 @@ class NetworkImpairmentRelay(Node):
     def _now_s(self) -> float:
         return self.get_clock().now().nanoseconds / 1.0e9
 
+    @staticmethod
+    def _stamp_s(msg: EpuckState) -> float:
+        return float(msg.stamp.sec) + float(msg.stamp.nanosec) / 1.0e9
+
     def _on_message(self, msg: EpuckState) -> None:
         self.received_count += 1
         decision = self.decider.decide()
         now = self._now_s()
+        source_stamp = self._stamp_s(msg)
         if not decision.forward:
             self.dropped_count += 1
-            self._log(msg.sequence, "dropped", 0.0, now, None)
+            self._log(msg.sequence, "dropped", 0.0, now, None, source_stamp, None)
             return
         if self._immediate_passthrough:
             self.publisher.publish(msg)
             self.forwarded_count += 1
-            self._log(msg.sequence, "forwarded", 0.0, now, now)
+            self._log(msg.sequence, "forwarded", 0.0, now, now, source_stamp, now)
             return
         release_time = now + decision.release_delay_s
         self._counter += 1
@@ -106,14 +120,23 @@ class NetworkImpairmentRelay(Node):
             release_time, _, msg, scheduled_delay, receive_time = heapq.heappop(self._queue)
             self.publisher.publish(msg)
             self.forwarded_count += 1
-            self._log(msg.sequence, "forwarded", scheduled_delay, receive_time, release_time)
+            actual_release_time = self._now_s()
+            self._log(
+                msg.sequence, "forwarded", scheduled_delay, receive_time, release_time,
+                self._stamp_s(msg), actual_release_time,
+            )
 
-    def _log(self, seq, action, scheduled_delay_s, receive_time_s, release_time_s) -> None:
+    def _log(
+        self, seq, action, scheduled_delay_s, receive_time_s, release_time_s,
+        source_stamp_s, actual_release_time_s,
+    ) -> None:
         if self._log_file is None:
             return
         release_field = f"{release_time_s:.6f}" if release_time_s is not None else ""
+        actual_release_field = f"{actual_release_time_s:.6f}" if actual_release_time_s is not None else ""
         self._log_file.write(
-            f"{seq},{action},{scheduled_delay_s:.6f},{receive_time_s:.6f},{release_field}\n"
+            f"{seq},{action},{scheduled_delay_s:.6f},{receive_time_s:.6f},{release_field},"
+            f"{source_stamp_s:.6f},{actual_release_field}\n"
         )
         self._log_file.flush()
 
