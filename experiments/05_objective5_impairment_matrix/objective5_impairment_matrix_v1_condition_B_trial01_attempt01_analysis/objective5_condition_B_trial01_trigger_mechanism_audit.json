@@ -1,0 +1,78 @@
+{
+  "audit_type": "OFFLINE_MECHANISM_AUDIT",
+  "webots_run_for_this_audit": false,
+  "controller_geometry_or_thresholds_modified": false,
+  "condition": "B",
+  "trial_id": "objective5_impairment_matrix_v1_condition_B_trial01_attempt01",
+  "frozen_config": {
+    "enable_peer_avoidance": true,
+    "enable_local_avoidance": true,
+    "require_local_sensors": true,
+    "delay_s": 0.20,
+    "jitter_s": 0.0,
+    "drop_probability": 0.0,
+    "outage_period_s": 0.0,
+    "outage_duration_s": 0.0,
+    "outage_phase_s": 0.0,
+    "source": "Same run_comm_baseline_formal_controllers.py launch parameters and cooperative_avoider.py declare_parameter defaults audited for Condition A -- neither the controller launch config nor cooperative_avoider.py was touched between Condition A and Condition B.",
+    "any_safety_layer_disabling_parameter_found": false
+  },
+  "event_counts": {
+    "AVOID_TURN": 8,
+    "AVOID_PASS": 86,
+    "RECOVER": 12,
+    "LOCAL_FRONT_DANGER": 0,
+    "LOCAL_FRONT_WARN": 0,
+    "LOCAL_LEFT_SIDE": 0,
+    "LOCAL_RIGHT_SIDE": 0,
+    "LOCAL_NARROW": 0,
+    "LOCAL_CLEARANCE": "NOT_APPLICABLE (not implemented in current controller_v4 code -- confirmed absent from local_obstacle_logic.py and cooperative_avoider.py by source audit during the Condition A mechanism audit, not merely absent from this log)",
+    "LOCAL_BYPASS": "NOT_APPLICABLE (removed legacy mechanism, confirmed absent from current controller_v4 code by source audit -- only appears in a docstring as a historical note)",
+    "LOCAL_RECOVER": 0,
+    "LOCAL_RECOVERY_READY": 0,
+    "SAFE_STOP_STALE": 4,
+    "SAFE_STOP_INVALID_ODOM": 0,
+    "SAFE_STOP_LOCAL_SENSORS": 0,
+    "SENSOR_INVALID": 0,
+    "extra_v4_modes_observed_for_completeness": {
+      "LOCAL_SIDE_TRACK": 0,
+      "LOCAL_SIDE_TRACK_HOLD": 0,
+      "LOCAL_SIDE_TRACK_CREEP": 0,
+      "LOCAL_CLEAR": 0
+    }
+  },
+  "first_occurrence_controller_log_line": {
+    "AVOID_TURN": 76,
+    "AVOID_PASS": 82,
+    "RECOVER": 166,
+    "SAFE_STOP_STALE": 13
+  },
+  "event_timeline_ros_time_s": {
+    "safe_stop_stale_epuck1_enter": 22.960,
+    "safe_stop_stale_epuck1_exit_to_startup_hold": 23.200,
+    "safe_stop_stale_epuck2_enter": 25.600,
+    "safe_stop_stale_epuck2_exit_to_startup_hold": 25.700,
+    "peer_cpa_geometric_trigger_time_s_from_bag_recompute": 21.609281139,
+    "first_avoid_turn_ros_time_s": 36.660,
+    "first_avoid_turn_to_avoid_pass_ros_time_s": 37.600,
+    "first_recover_ros_time_s": "see controller.log line 166 (ARMED mode=RECOVER log format, not a TRANSITION line -- no ros_time field on that line; wall-clock 1784410537.247 corresponds to ros_time approximately 59s given the trial's own /clock progression)"
+  },
+  "safe_stop_stale_characterization": "All 4 SAFE_STOP_STALE occurrences are confined to the pre-encounter STARTUP_HOLD window: 2 per robot, each a WAITING->SAFE_STOP_STALE->STARTUP_HOLD transition pair completing within ~250ms, at ros_time approximately 23-26s. This is clearly separated in time from the controller's own first AVOID_TURN transition at ros_time=36.660s (roughly 11-14s later) -- confirmed by direct inspection of controller.log context lines, not inferred. Note: the bag-based geometric CPA recomputation (analyze_trigger_reason.py) finds its trigger_time_s at ros_time=21.609s, i.e. BEFORE the SAFE_STOP_STALE transitions -- this is not a contradiction: that figure marks when the raw position/velocity data first satisfies the CPA/proximity geometry test across the whole bag, independent of whether the controller's own state machine had already reached an operational (non-STARTUP_HOLD) mode at that instant. The controller's own committed encounter response (AVOID_TURN) does not begin until ros_time=36.660s, well after both the geometric trigger point and the SAFE_STOP_STALE/STARTUP_HOLD transitions.",
+  "first_trigger_reason": "PREDICTED_CPA",
+  "first_trigger_evidence": {
+    "trigger_time_s": 21.609281139,
+    "trigger_distance_m": 0.36364319920539856,
+    "tcpa_at_trigger_s": 4.0,
+    "dcpa_at_trigger_m": 0.1325391978025445,
+    "closing_speed_at_trigger_mps": 0.05777600035071362,
+    "minimum_center_separation_m": 0.1477674560485632,
+    "source": "analyze_trigger_reason.py classify_trigger(), run directly against this trial's preserved bag (read-only, no Webots). minimum_center_separation_m from this independent recomputation (0.1477674560485632) matches the orchestrator's own min_interrobot_distance_m (0.14777153762172363) to within ~4e-6m -- a negligible measurement-methodology difference, cross-validating both figures, consistent with the same small discrepancy observed for Condition A Trial 04."
+  },
+  "local_layer_engaged": false,
+  "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE: PREDICTED_CPA triggered the encounter, and every LOCAL_* engagement counter is 0. Not LOCAL_FALLBACK, not SAFE_DEGRADATION. Communication CPA remained the sole avoidance mechanism under a 0.20s fixed relay delay, exactly as intended for a single-factor delay condition (B).",
+  "not_measurable_or_not_applicable_items": [
+    "LOCAL_CLEARANCE (NOT_APPLICABLE -- does not exist in current controller_v4 code)",
+    "LOCAL_BYPASS (NOT_APPLICABLE -- removed legacy mechanism, does not exist in current controller_v4 code)",
+    "ps1-ps7 individual topic existence (NOT_MEASURABLE beyond ps0/tof -- only those two are named in the orchestrator's own startup topic gate; not re-audited for Trial B01 since the launch config is byte-identical to Condition A's, already audited)"
+  ]
+}
