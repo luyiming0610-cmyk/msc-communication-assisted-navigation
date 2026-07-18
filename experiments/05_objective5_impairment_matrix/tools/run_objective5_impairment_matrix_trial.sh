@@ -295,11 +295,20 @@ SIM_PID=""; STATE1_PID=""; STATE2_PID=""; RELAY_COUNTER_PID=""
 CONTROLLER_PID=""; BAG_PID=""
 DATA_VALIDITY="VALID"
 INVALID_REASON=""
+# Each of these tracks ONE specific check, independently of the shared
+# DATA_VALIDITY accumulator above -- feeding an overloaded "something
+# failed somewhere" flag into a single named matrix_verdict.py field was
+# a real bug (found in Pilot 2/Condition F: a queue-drain result got
+# mislabeled by an unrelated later check). DATA_VALIDITY still gates the
+# overall pass/fail printed during the run; these dedicated flags are
+# what actually get reported into their own named verdict fields below.
+QUEUE_DRAINED="true"
+BAG_LOG_CLEAN="true"
 
 cleanup() {
   stop_pid "$STATE1_PID" || true
   stop_pid "$STATE2_PID" || true
-  stop_pid "$CONTROLLER_PID" || true
+  stop_pid_group "$CONTROLLER_PID" || true
   stop_pid_group "$RELAY_COUNTER_PID" || true
   stop_pid "$BAG_PID" || true
   stop_pid "$SIM_PID" || true
@@ -369,8 +378,13 @@ echo "[$(date -Iseconds)] rosbag recording to NATIVE path: $NATIVE_BAG_DIR" | te
 FULL_LOAD_OUTPUT="$(verify_realtime_factor FULL_LOAD | tee -a "$EXECUTION_LOG")"
 FULL_LOAD_FACTOR="$(grep -o 'FULL_LOAD_REALTIME_FACTOR=[0-9.]*' <<<"$FULL_LOAD_OUTPUT" | cut -d= -f2)"
 
-# Controller launched LAST, exactly as the formal baseline does.
-stdbuf -oL -eL python3 "$BASELINE_CONFIG_DIR/run_comm_baseline_formal_controllers.py" \
+# Controller launched LAST, exactly as the formal baseline does. This is
+# a launch.LaunchService managing cooperative_avoider as separate rclpy
+# child processes -- same rationale as the relay+counter launch above --
+# so it must run under setsid (its own process group) and be stopped via
+# stop_pid_group, never plain stop_pid, or a single-PID signal can leave
+# orphaned children when the parent doesn't forward it in time.
+setsid stdbuf -oL -eL python3 "$BASELINE_CONFIG_DIR/run_comm_baseline_formal_controllers.py" \
   >"$CONTROLLER_LOG" 2>&1 &
 CONTROLLER_PID=$!
 
@@ -396,7 +410,7 @@ echo "[$(date -Iseconds)] controller stage finished (complete_count=$complete_co
 # queue-drain rule (design doc section 5): pending queued messages must
 # not be miscounted as "dropped" by stopping the relay too early.
 echo "[$(date -Iseconds)] stopping controller (relay/bag/counter/sim remain running for drain)" | tee -a "$EXECUTION_LOG"
-stop_pid "$CONTROLLER_PID"; CONTROLLER_PID=""
+stop_pid_group "$CONTROLLER_PID"; CONTROLLER_PID=""
 stop_pid "$STATE1_PID"; STATE1_PID=""
 stop_pid "$STATE2_PID"; STATE2_PID=""
 
@@ -430,6 +444,7 @@ except Exception:
   if [[ "$PENDING" != "0" ]]; then
     echo "[$(date -Iseconds)] $ns relay queue NOT drained (pending=$PENDING) -- DATA_VALIDITY=INVALID, not a network-impairment result" | tee -a "$EXECUTION_LOG"
     DATA_VALIDITY="INVALID"
+    QUEUE_DRAINED="false"
     INVALID_REASON="${INVALID_REASON}${ns} relay queue not drained (pending=$PENDING); "
   fi
 done
@@ -442,7 +457,7 @@ echo "[$(date -Iseconds)] stopping rosbag recorder" | tee -a "$EXECUTION_LOG"
 stop_pid "$BAG_PID"; BAG_PID=""
 
 if [[ ! -s "$NATIVE_BAG_DIR/metadata.yaml" ]]; then
-  echo "rosbag metadata is missing or empty (native path)" >&2
+  echo "[$(date -Iseconds)] rosbag metadata is missing or empty (native path)" | tee -a "$EXECUTION_LOG" >&2
   DATA_VALIDITY="INVALID"; INVALID_REASON="${INVALID_REASON}bag metadata missing/empty; "
 fi
 echo "[$(date -Iseconds)] rosbag metadata.yaml check done" | tee -a "$EXECUTION_LOG"
@@ -453,7 +468,9 @@ sleep 2
 BAG_WARN_LINES="$(grep -icE 'drop|warn|error' "$BAG_RECORD_LOG" 2>/dev/null || echo 0)"
 grep -iE 'drop|warn|error' "$BAG_RECORD_LOG" | tee -a "$EXECUTION_LOG" || echo "no drop/warn/error lines in bag_record.log" | tee -a "$EXECUTION_LOG"
 if [[ "$BAG_WARN_LINES" != "0" ]]; then
-  DATA_VALIDITY="INVALID"; INVALID_REASON="${INVALID_REASON}bag_record.log has $BAG_WARN_LINES drop/warn/error line(s); "
+  DATA_VALIDITY="INVALID"
+  BAG_LOG_CLEAN="false"
+  INVALID_REASON="${INVALID_REASON}bag_record.log has $BAG_WARN_LINES drop/warn/error line(s); "
 fi
 
 # --- seed/config cross-check: the relay's own startup log line is the
@@ -506,7 +523,8 @@ print(json.dumps({
     'realtime_factor_ok': '$REALTIME_FACTOR_OK' == 'true',
     'bag_metadata_ok': '$BAG_METADATA_OK' == 'true',
     'analyzer_ok': '$ANALYZER_OK' == 'true',
-    'queue_drained': '$DATA_VALIDITY' == 'VALID',
+    'queue_drained': '$QUEUE_DRAINED' == 'true',
+    'bag_log_clean': '$BAG_LOG_CLEAN' == 'true',
     'complete_count': $complete_count,
     'expected_complete_count': 2,
     'min_interrobot_distance_m': $MIN_DISTANCE_M,

@@ -29,13 +29,23 @@ class DataValidityCheck:
     bag_metadata_ok: bool
     analyzer_ok: bool
     queue_drained: bool
+    bag_log_clean: bool = True
 
 
 def classify_data_validity(check: DataValidityCheck) -> tuple:
     """Returns (verdict, reasons). verdict is "VALID" only if every
     individual check passed; otherwise "INVALID" with every failing
     check named (not just the first one found) so a single diagnosis
-    pass can see everything that went wrong at once."""
+    pass can see everything that went wrong at once.
+
+    Each field must be sourced from its OWN dedicated signal by the
+    caller, never from a shared/overloaded "something failed somewhere"
+    flag -- doing so was a real bug found during Pilot 2 (Condition F):
+    the orchestrator fed one shared bash accumulator into queue_drained,
+    so a bag-recorder-log warning got misreported as "queue not
+    drained" even though the queue genuinely was drained. Each reason
+    string here is a specific, falsifiable claim; it must only fire for
+    the check it names."""
     reasons = []
     if not check.seeds_match_frozen_config:
         reasons.append("deployed relay seed(s) do not match the frozen conditions CSV")
@@ -47,6 +57,8 @@ def classify_data_validity(check: DataValidityCheck) -> tuple:
         reasons.append("analyzer failed or did not run to completion")
     if not check.queue_drained:
         reasons.append("relay pending_queue_depth was not confirmed 0 before shutdown (queue-drain rule)")
+    if not check.bag_log_clean:
+        reasons.append("bag_record.log contained drop/warn/error line(s)")
     verdict = "INVALID" if reasons else "VALID"
     return verdict, reasons
 
@@ -107,6 +119,7 @@ def main():
         bag_metadata_ok=payload["bag_metadata_ok"],
         analyzer_ok=payload["analyzer_ok"],
         queue_drained=payload["queue_drained"],
+        bag_log_clean=payload.get("bag_log_clean", True),
     ))
     task_outcome, task_outcome_reason = classify_task_outcome(data_validity, TaskOutcomeSignals(
         complete_count=payload["complete_count"],

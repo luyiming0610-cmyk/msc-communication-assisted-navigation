@@ -26,6 +26,25 @@ def test_data_validity_queue_not_drained_alone_is_invalid():
     assert any("queue-drain" in r for r in reasons)
 
 
+def test_data_validity_bag_log_not_clean_alone_is_invalid_and_not_mislabeled_as_queue():
+    """Regression test for the real Pilot 2 (Condition F) bug: a
+    bag_record.log warning must be attributed to its own bag_log_clean
+    reason, never to the unrelated queue-drain reason, even though both
+    ultimately gate the same overall DATA_VALIDITY verdict."""
+    verdict, reasons = classify_data_validity(
+        DataValidityCheck(True, True, True, True, True, bag_log_clean=False)
+    )
+    assert verdict == "INVALID"
+    assert any("bag_record.log" in r for r in reasons)
+    assert not any("queue-drain" in r for r in reasons)
+
+
+def test_data_validity_bag_log_clean_defaults_true_for_backward_compatibility():
+    verdict, reasons = classify_data_validity(DataValidityCheck(True, True, True, True, True))
+    assert verdict == "VALID"
+    assert reasons == []
+
+
 def test_task_outcome_not_evaluable_when_data_invalid():
     signals = TaskOutcomeSignals(
         complete_count=2, expected_complete_count=2, min_interrobot_distance_m=0.5,
