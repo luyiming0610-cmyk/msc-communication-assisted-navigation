@@ -7,7 +7,9 @@ happened before the trial started -- the delta must isolate the trial's
 own window, not silently inherit pre-existing cumulative state as if it
 were this trial's own result.
 """
-from compute_tier_a_delta import compute_delta
+import pytest
+
+from compute_tier_a_delta import compute_delta, load_snapshot_json
 
 
 def _snapshot(seq_last, unique_received, missing=0, out_of_order=0, crc_errors=0, seq_first=0):
@@ -63,3 +65,36 @@ def test_duplicate_count_always_none_not_measurable():
     end = _snapshot(seq_last=100, unique_received=100)
     result = compute_delta(start, end)
     assert result["duplicate_count_SEPARATELY_TRACKED"] is None
+
+
+def test_load_snapshot_json_handles_real_ros2_topic_echo_output_format(tmp_path):
+    """Regression test for the bug found running trial02_attempt02: the
+    bridge-status snapshot files are written from `ros2 topic echo --field
+    data --once`, which ALWAYS appends a YAML document-end marker line
+    ("---") after the JSON value regardless of --field -- the file is one
+    JSON line followed by that marker, not pure JSON. A naive
+    json.loads(file.read()) raises json.decoder.JSONDecodeError: Extra
+    data. This is exactly the raw byte layout captured from the real
+    trial02_attempt02 run (confirmed via `cat -A`)."""
+    path = tmp_path / "bridge_status_trial_start.json"
+    path.write_text(
+        '{"connected": true, "crc_errors": 0, "state_seq_last": 56571, '
+        '"state_unique_received": 56572, "state_missing": 0, "state_out_of_order": 0, '
+        '"state_seq_first": 0}\n---\n',
+        encoding="utf-8",
+    )
+    result = load_snapshot_json(str(path))
+    assert result["state_seq_last"] == 56571
+    assert result["connected"] is True
+
+
+def test_load_snapshot_json_rejects_empty_file():
+    import tempfile
+    import os
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
+    try:
+        with pytest.raises(ValueError):
+            load_snapshot_json(path)
+    finally:
+        os.unlink(path)

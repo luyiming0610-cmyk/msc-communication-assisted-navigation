@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from window_calc import evaluate_window
-from compute_tier_a_delta import compute_delta
+from compute_tier_a_delta import compute_delta, load_snapshot_json
 
 import yaml
 
@@ -76,8 +76,8 @@ def main():
         fail_reasons.append(f"window: SHORT_WINDOW, overlap={window['common_overlap_span_s']:.3f}s < {window['required_total_s']:.3f}s required")
 
     # --- tier A delta ---
-    start_snapshot = json.loads((args.diag_dir / "bridge_status_trial_start.json").read_text(encoding="utf-8"))
-    end_snapshot = json.loads((args.diag_dir / "bridge_status_trial_end.json").read_text(encoding="utf-8"))
+    start_snapshot = load_snapshot_json(str(args.diag_dir / "bridge_status_trial_start.json"))
+    end_snapshot = load_snapshot_json(str(args.diag_dir / "bridge_status_trial_end.json"))
     tier_a_delta = compute_delta(start_snapshot, end_snapshot)
     if tier_a_delta["trial_state_missing_delta"] != 0:
         fail_reasons.append(f"tier A delta: state_missing_delta={tier_a_delta['trial_state_missing_delta']} (expected 0)")

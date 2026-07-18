@@ -19,6 +19,22 @@ import argparse
 import json
 
 
+def load_snapshot_json(path: str) -> dict:
+    """The bridge-status snapshot files written by run_baseline_v1_trial_v2.sh
+    come from `ros2 topic echo --field data --once`, which appends a YAML
+    document-end marker line ("---") after the value regardless of --field
+    -- the file is NOT pure JSON, it is one JSON line followed by that
+    marker. Only the first non-empty line is parsed; the marker (and any
+    trailing blank lines) is intentionally ignored, not treated as a
+    malformed file."""
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            stripped = line.strip()
+            if stripped:
+                return json.loads(stripped)
+    raise ValueError(f"{path}: no non-empty line found")
+
+
 def compute_delta(start_snapshot: dict, end_snapshot: dict) -> dict:
     def _i(snap, key):
         return int(snap[key])
@@ -69,8 +85,8 @@ def main():
     parser.add_argument("--start-json", required=True)
     parser.add_argument("--end-json", required=True)
     args = parser.parse_args()
-    start_snapshot = json.loads(open(args.start_json, encoding="utf-8").read())
-    end_snapshot = json.loads(open(args.end_json, encoding="utf-8").read())
+    start_snapshot = load_snapshot_json(args.start_json)
+    end_snapshot = load_snapshot_json(args.end_json)
     print(json.dumps(compute_delta(start_snapshot, end_snapshot), indent=2))
 
 
