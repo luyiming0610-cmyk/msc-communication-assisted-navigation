@@ -1,0 +1,446 @@
+{
+  "trial": "trial03_attempt01",
+  "verdict": "FINAL_PASS",
+  "scope": "physical_single_device_zero_impairment_baseline_v1 -- same driver/expanded-server/WSL-bridge continuous session, 5 SEPARATE measurement windows, not 5 independent cold-start sessions",
+  "fail_reasons": [],
+  "window_audit_4source": {
+    "sources": {
+      "bag": {
+        "start_unix_s": 1784386339.4831796,
+        "end_unix_s": 1784386650.4037771,
+        "span_s": 310.9205975532532
+      },
+      "status_csv": {
+        "start_unix_s": 1784386337.319,
+        "end_unix_s": 1784386652.305,
+        "span_s": 314.98600006103516
+      },
+      "system_csv": {
+        "start_unix_s": 1784386338.05,
+        "end_unix_s": 1784386672.905,
+        "span_s": 334.8550000190735
+      },
+      "pi_batch_csv": {
+        "start_unix_s": 1784382484.714,
+        "end_unix_s": 1784392175.496,
+        "span_s": 9690.78200006485
+      }
+    },
+    "common_overlap_start_unix_s": 1784386339.4831796,
+    "common_overlap_end_unix_s": 1784386650.4037771,
+    "common_overlap_span_s": 310.9205975532532,
+    "limiting_start_source": "bag",
+    "limiting_end_source": "bag",
+    "required_total_s": 300.0,
+    "main_span_s": 240.0,
+    "min_buffer_s": 30.0,
+    "verdict": "OK",
+    "main_window_start_unix_s": 1784386374.9434783,
+    "main_window_end_unix_s": 1784386614.9434783,
+    "left_buffer_s": 35.46029877662659,
+    "right_buffer_s": 35.46029877662659
+  },
+  "tier_a_delta": {
+    "computation": "trial-start-vs-trial-end snapshot delta of the bridge's own cumulative counters (never the all-time absolute values)",
+    "start_snapshot": {
+      "state_seq_first": 0,
+      "state_seq_last": 62494,
+      "state_unique_received": 62495,
+      "state_missing": 0,
+      "state_out_of_order": 0,
+      "crc_errors": 0
+    },
+    "end_snapshot": {
+      "state_seq_first": 0,
+      "state_seq_last": 65402,
+      "state_unique_received": 65403,
+      "state_missing": 0,
+      "state_out_of_order": 0,
+      "crc_errors": 0
+    },
+    "trial_seq_last_delta": 2908,
+    "trial_unique_received_delta": 2908,
+    "trial_state_missing_delta": 0,
+    "trial_state_out_of_order_delta": 0,
+    "trial_crc_errors_delta": 0,
+    "trial_expected_count_delta": 2908,
+    "APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO_delta": 1.0,
+    "duplicate_count_SEPARATELY_TRACKED": null,
+    "duplicate_note": "NOT_MEASURABLE -- the bridge's own update_sequence_stats() does not distinguish a true duplicate from a generic out-of-order/backward arrival; both increment the same out_of_order counter. Not fabricated here."
+  },
+  "pi_metrics_slice": {
+    "source_batch_csv_path": "/home/eamon/epuck_comm_bags/physical_single_device_zero_impairment_baseline_v1_batch/pi_system_metrics_batch_raw.csv",
+    "source_batch_csv_sha256": "92867ec82be0f08eedbac98a1722ac01e71083bff8b6addd59b68ed4a3cabff7",
+    "slice_window_start_unix_s": 1784386374.9434783,
+    "slice_window_end_unix_s": 1784386614.9434783,
+    "original_row_number_range": [
+      3868,
+      4106
+    ],
+    "sliced_sample_count": 239,
+    "derived_file_path": "/home/eamon/epuck_comm_bags/physical_single_device_zero_impairment_baseline_v1_trial03_attempt01_analysis/pi_system_metrics_window.csv",
+    "derived_file_sha256": "edaf6f3d20cf493d1630d3b2e2bc14d92a083fa4b62d6ab5c1fb70b049bf0c57",
+    "slicing_method": "real Unix-timestamp inclusion in [window_start, window_end], never row-number alignment, never the full batch file",
+    "tool_version": "slice_pi_metrics.py",
+    "pi_cpu_percent": {
+      "sample_count": 239,
+      "mean": 14.199623430962344,
+      "median": 14.18,
+      "p95": 15.766,
+      "p99": 16.334400000000002,
+      "max": 16.67,
+      "min": 11.9
+    },
+    "pi_mem_used_mb": {
+      "sample_count": 239,
+      "mean": 215.52075313807532,
+      "median": 215.69,
+      "p95": 216.41,
+      "p99": 216.46,
+      "max": 216.47,
+      "min": 214.32
+    },
+    "pi_mem_available_mb": {
+      "sample_count": 239,
+      "mean": 149.01083682008365,
+      "median": 148.84,
+      "p95": 150.1,
+      "p99": 150.15,
+      "max": 150.21,
+      "min": 148.06
+    },
+    "pi_wifi_link_quality": {
+      "sample_count": 239,
+      "mean": 70.0,
+      "median": 70.0,
+      "p95": 70.0,
+      "p99": 70.0,
+      "max": 70.0,
+      "min": 70.0
+    },
+    "pi_wifi_signal_dbm": {
+      "sample_count": 239,
+      "mean": -31.89958158995816,
+      "median": -29.0,
+      "p95": -28.0,
+      "p99": -28.0,
+      "max": -28.0,
+      "min": -38.0
+    },
+    "pi_net_rx_bytes_delta": {
+      "sample_count": 239,
+      "mean": 3051.5774058577404,
+      "median": 2992.0,
+      "p95": 3210.0,
+      "p99": 3249.62,
+      "max": 3436.0,
+      "min": 2907.0
+    },
+    "pi_net_tx_bytes_delta": {
+      "sample_count": 239,
+      "mean": 38397.33472803347,
+      "median": 37524.0,
+      "p95": 41503.899999999994,
+      "p99": 42249.58,
+      "max": 42428.0,
+      "min": 35725.0
+    }
+  },
+  "epuckstate_actual_hz_main_window": 8.883333333333333,
+  "recorder_traceback_observed": false,
+  "analyzer_verdict": {
+    "verdict": "PASS_WITH_LIMITATION",
+    "experiment_kind": "DIAGNOSTIC_PHYSICAL",
+    "scope_note": "Expanded bridge + EpuckState stationary integration check. NOT a formal baseline. No ground motion, no controller.",
+    "fail_reasons": [],
+    "not_measurable": [
+      "tier A duplicate_count: the expanded bridge's own update_sequence_stats() does not separately track duplicates from generic out-of-order arrivals -- both increment the same out_of_order counter. Not fabricated as a separate number here."
+    ],
+    "not_valid": [
+      "one_way_latency_ms (Pi sensor acquisition -> WSL receipt/publish): NOT COMPUTED. No NTP/chrony clock-sync procedure has been run or verified between the Pi and WSL/laptop. RTT and last_state_age_s remain VALID (single WSL clock domain, see prior pilot's documented formula)."
+    ],
+    "timestamp_integrity": [
+      {
+        "label": "wsl_expanded_status",
+        "path": "/home/eamon/epuck_comm_bags/physical_single_device_zero_impairment_baseline_v1_trial03_attempt01_diag/wsl_expanded_status.csv",
+        "valid_rows": 316,
+        "monotonic_non_decreasing": true,
+        "duplicate_timestamp_count": 0,
+        "first_time_unix_s": 1784386337.319,
+        "last_time_unix_s": 1784386652.305,
+        "span_s": 314.98600006103516,
+        "max_gap_s": 1.003000020980835,
+        "min_gap_s": 0.9869999885559082,
+        "mean_gap_s": 0.9999555557493179
+      },
+      {
+        "label": "wsl_system_metrics",
+        "path": "/home/eamon/epuck_comm_bags/physical_single_device_zero_impairment_baseline_v1_trial03_attempt01_diag/wsl_system_metrics.csv",
+        "valid_rows": 342,
+        "monotonic_non_decreasing": true,
+        "duplicate_timestamp_count": 0,
+        "first_time_unix_s": 1784386338.05,
+        "last_time_unix_s": 1784386672.905,
+        "span_s": 334.8550000190735,
+        "max_gap_s": 1.003000020980835,
+        "min_gap_s": 0.3659999370574951,
+        "mean_gap_s": 0.9819794721966965
+      },
+      {
+        "label": "pi_system_metrics",
+        "path": "/home/eamon/epuck_comm_bags/physical_single_device_zero_impairment_baseline_v1_trial03_attempt01_analysis/pi_system_metrics_window.csv",
+        "valid_rows": 239,
+        "monotonic_non_decreasing": true,
+        "duplicate_timestamp_count": 0,
+        "first_time_unix_s": 1784386375.115,
+        "last_time_unix_s": 1784386614.618,
+        "span_s": 239.50300002098083,
+        "max_gap_s": 1.0130000114440918,
+        "min_gap_s": 1.0049998760223389,
+        "mean_gap_s": 1.006315126138575
+      }
+    ],
+    "run_window": {
+      "main_window_start_unix_s": 1784386374.9434783,
+      "main_window_end_unix_s": 1784386614.9434783,
+      "main_window_span_s": 240.0
+    },
+    "connected_fraction": 1.0,
+    "reconnect_count": 0,
+    "crc_errors_delta": 0,
+    "rtt_status_snapshot_ms": {
+      "sample_count": 240,
+      "mean": 31.14010929584765,
+      "median": 8.114829000987811,
+      "p95": 116.28544719997079,
+      "p99": 121.1650495204776,
+      "max": 138.5038419994089,
+      "min": 6.152079999083071,
+      "tail": {
+        "count_gt_50ms": 50,
+        "percent_gt_50ms": 20.833333333333332,
+        "count_gt_100ms": 50,
+        "percent_gt_100ms": 20.833333333333332,
+        "count_gt_200ms": 0,
+        "percent_gt_200ms": 0.0,
+        "longest_consecutive_status_ticks_gt_50ms": 4
+      },
+      "provenance": "1Hz /epuck_bridge/status snapshot of most recently completed individual RTT, not a full transaction census"
+    },
+    "state_age_s": {
+      "sample_count": 240,
+      "mean": 0.05805642108122508,
+      "median": 0.05923914909362793,
+      "p95": 0.10643383264541625,
+      "p99": 0.11503083229064934,
+      "max": 0.12561607360839844,
+      "min": 0.0019130706787109375,
+      "formula": "time.time() - self._last_state_time, both WSL time.time() calls, single clock domain, VALID"
+    },
+    "tier_a_pi_to_wsl_app_delivery": {
+      "state_seq_first": 0,
+      "state_seq_last": 65048,
+      "state_unique_received": 65049,
+      "state_missing": 0,
+      "state_out_of_order_INCLUDES_ANY_DUPLICATE": 0,
+      "duplicate_count_SEPARATELY_TRACKED": null,
+      "duplicate_note": "the bridge's own update_sequence_stats() does not distinguish a true duplicate from a generic out-of-order/backward arrival -- both increment the same counter. Not fabricated here.",
+      "APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO": 1.0,
+      "naming_note": "this is Pi application-level state-sequence receipt completeness at the WSL bridge. It is NOT IP packet loss, NOT TCP packet loss, and is NOT automatically equal to the EpuckState bag capture ratio (tier B) or any rosbag PDR."
+    },
+    "tier_b_state_publisher_to_bag_capture": {
+      "message_count": 2132,
+      "first_sequence": 363,
+      "last_sequence": 2494,
+      "unique_sequence_count": 2132,
+      "expected_sequence_count": 2132,
+      "gap_count": 0,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "bag_capture_ratio": 1.0,
+      "note": "measures whether the bag captured every state_publisher-generated EpuckState message; does NOT measure Pi-to-WSL bridge transport loss (see tier A)"
+    },
+    "tier_c_raw_sensor_topics": {
+      "/odom": {
+        "message_count": 2205,
+        "duration_s": 239.81868648529053,
+        "avg_rate_hz": 9.194446155617841,
+        "max_gap_s": 0.1409435272216797,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/scan": {
+        "message_count": 2205,
+        "duration_s": 239.8188886642456,
+        "avg_rate_hz": 9.194438404253775,
+        "max_gap_s": 0.14082980155944824,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/tof": {
+        "message_count": 2206,
+        "duration_s": 239.94028639793396,
+        "avg_rate_hz": 9.19395418383978,
+        "max_gap_s": 0.140855073928833,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/ps0": {
+        "message_count": 2205,
+        "duration_s": 239.81875228881836,
+        "avg_rate_hz": 9.194443632766781,
+        "max_gap_s": 0.14090466499328613,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/ps1": {
+        "message_count": 2205,
+        "duration_s": 239.81868481636047,
+        "avg_rate_hz": 9.194446219603213,
+        "max_gap_s": 0.14091181755065918,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/ps2": {
+        "message_count": 2205,
+        "duration_s": 239.81871056556702,
+        "avg_rate_hz": 9.194445232400446,
+        "max_gap_s": 0.14085650444030762,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/ps3": {
+        "message_count": 2205,
+        "duration_s": 239.81871151924133,
+        "avg_rate_hz": 9.194445195837384,
+        "max_gap_s": 0.1410691738128662,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/ps4": {
+        "message_count": 2205,
+        "duration_s": 239.81869530677795,
+        "avg_rate_hz": 9.194445817409468,
+        "max_gap_s": 0.14104771614074707,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/ps5": {
+        "message_count": 2205,
+        "duration_s": 239.81872463226318,
+        "avg_rate_hz": 9.194444693095319,
+        "max_gap_s": 0.1410520076751709,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/ps6": {
+        "message_count": 2206,
+        "duration_s": 239.94024229049683,
+        "avg_rate_hz": 9.193955873934582,
+        "max_gap_s": 0.14088201522827148,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      },
+      "/ps7": {
+        "message_count": 2206,
+        "duration_s": 239.940256357193,
+        "avg_rate_hz": 9.193955334931307,
+        "max_gap_s": 0.1408100128173828,
+        "total_stall_s": 0,
+        "note": "no source-side sequence exists for this topic; PDR is not claimed"
+      }
+    },
+    "epuckstate_field_errors": [],
+    "validity_flags_durations_s": {
+      "7": 239.80019279099994
+    },
+    "nan_inf_accounting": {
+      "protocol_allowed_inf_count": 13042,
+      "nan_count": 0,
+      "nan_sample_locations": [],
+      "unexpected_inf_count_in_pose_velocity_fields": 0
+    },
+    "cmd_vel_nonzero_in_bag": 0,
+    "cmd_vel_checkpoints": [
+      {
+        "label": "start",
+        "unix_time_s": 1784386337.3193874,
+        "publisher_count": 0,
+        "publisher_node_names": []
+      },
+      {
+        "label": "mid",
+        "unix_time_s": 1784386491.3042202,
+        "publisher_count": 0,
+        "publisher_node_names": []
+      },
+      {
+        "label": "end",
+        "unix_time_s": 1784386644.304186,
+        "publisher_count": 0,
+        "publisher_node_names": []
+      }
+    ],
+    "bag_record_warning_lines": [],
+    "wsl_system_metrics_main_window": {
+      "cpu_percent": {
+        "sample_count": 244,
+        "mean": 6.261434426229508,
+        "median": 6.609999999999999,
+        "p95": 8.827499999999999,
+        "p99": 9.29,
+        "max": 9.48,
+        "min": 0.78
+      },
+      "mem_used_mb": {
+        "sample_count": 244,
+        "mean": 667.2031967213114,
+        "median": 667.29,
+        "p95": 669.0,
+        "p99": 669.16,
+        "max": 669.29,
+        "min": 665.01
+      }
+    },
+    "pi_system_metrics_main_window": {
+      "cpu_percent": {
+        "sample_count": 239,
+        "mean": 14.199623430962344,
+        "median": 14.18,
+        "p95": 15.766,
+        "p99": 16.334400000000002,
+        "max": 16.67,
+        "min": 11.9
+      },
+      "mem_used_mb": {
+        "sample_count": 239,
+        "mean": 215.52075313807532,
+        "median": 215.69,
+        "p95": 216.41,
+        "p99": 216.46,
+        "max": 216.47,
+        "min": 214.32
+      },
+      "wifi_link_quality": {
+        "sample_count": 239,
+        "mean": 70.0,
+        "median": 70.0,
+        "p95": 70.0,
+        "p99": 70.0,
+        "max": 70.0,
+        "min": 70.0
+      },
+      "wifi_signal_dbm": {
+        "sample_count": 239,
+        "mean": -31.89958158995816,
+        "median": -29.0,
+        "p95": -28.0,
+        "p99": -28.0,
+        "max": -28.0,
+        "min": -38.0
+      }
+    }
+  },
+  "one_way_latency_note": "Pi-to-WSL one-way latency is NOT reported -- no NTP/chrony clock-sync procedure between Pi and WSL has been verified. RTT and state_age_s remain valid (single WSL clock domain).",
+  "tier_a_semantics_note": "APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO is Pi application-level state-sequence receipt completeness, NOT IP/TCP packet loss."
+}

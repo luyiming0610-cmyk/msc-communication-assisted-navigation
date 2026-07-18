@@ -1,0 +1,6 @@
+trial,verdict,window_overlap_s,main_window_s,left_buffer_s,right_buffer_s,tier_a_seq_last_delta,tier_a_delivery_ratio,tier_b_msg_count,epuckstate_actual_hz,tier_b_capture_ratio,rtt_median_ms,rtt_p95_ms,rtt_pct_gt_50ms,rtt_pct_gt_100ms,rtt_pct_gt_200ms,rtt_longest_run_gt_50ms,crc_errors_delta,cmd_vel_nonzero,nan_count,pi_cpu_mean_pct,pi_cpu_p95_pct,pi_mem_used_mb_mean,pi_wifi_quality_mean,pi_wifi_dbm_mean,pi_sample_count
+trial01_attempt02,FINAL_PASS,309.905,240.0,34.952,34.952,2909,1.0,2146,8.9417,1.0,8.276,117.557,25.0,25.0,0.0,5,0,0,0,14.835,15.992,203.937,69.996,-27.402,239
+trial02_attempt02,FINAL_PASS,311.123,240.0,35.562,35.562,2909,1.0,2146,8.9417,1.0,8.092,117.43,20.833333333333332,20.833333333333332,0.0,6,0,0,0,13.94,15.35,210.47,70.0,-32.607,239
+trial03_attempt01,FINAL_PASS,310.921,240.0,35.46,35.46,2908,1.0,2132,8.8833,1.0,8.115,116.285,20.833333333333332,20.833333333333332,0.0,4,0,0,0,14.2,15.766,215.521,70.0,-31.9,239
+trial04_attempt01,FINAL_PASS,310.66,240.0,35.33,35.33,2903,1.0,2138,8.9083,1.0,8.333,117.575,22.916666666666668,22.916666666666668,0.0,3,0,0,0,14.53,16.25,218.542,70.0,-32.613,238
+trial05_attempt01,FINAL_PASS,311.021,240.0,35.51,35.51,2911,1.0,2135,8.8958,1.0,8.384,118.753,22.5,22.5,0.0,3,0,0,0,14.457,15.931,202.447,70.0,-31.79,238

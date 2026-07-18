@@ -1,0 +1,159 @@
+{
+  "trial": "trial04_attempt01",
+  "orchestrator_script": "/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/06_physical_pipuck/single_device_bringup/tools/run_baseline_v1_trial_v2.sh",
+  "orchestrator_sha256": "dddff1f51a51a871cc86667ec7a213dc38bc6aa49ae22b528b4a86a2193796db",
+  "orchestrator_git_commit": "a7f2a7e",
+  "state_publisher_wrapper_pid": "7261",
+  "state_publisher_actual_pid": "7263",
+  "state_publisher_status": "FRESH",
+  "pi_driver_status": "REUSED (unchanged since batch start, PIDs 813/814 on the Pi, verified via /scan publisher-count proxy this trial)",
+  "pi_expanded_server_status": "REUSED (unchanged since batch start, Pi PID 1168, verified via /epuck_bridge/status connected=true this trial)",
+  "wsl_expanded_bridge_status": "REUSED (unchanged since batch start, WSL PID 2535, verified alive this trial)",
+  "pi_batch_sampler_status": "REUSED across the whole batch, Pi PID 1290, not touched by this script",
+  "recorded_at_unix_s": 1784387040.218804,
+  "window_audit_4source": {
+    "sources": {
+      "bag": {
+        "start_unix_s": 1784386701.463384,
+        "end_unix_s": 1784387012.1234,
+        "span_s": 310.6600160598755
+      },
+      "status_csv": {
+        "start_unix_s": 1784386699.305,
+        "end_unix_s": 1784387013.303,
+        "span_s": 313.9979999065399
+      },
+      "system_csv": {
+        "start_unix_s": 1784386700.032,
+        "end_unix_s": 1784387034.941,
+        "span_s": 334.90899991989136
+      },
+      "pi_batch_csv": {
+        "start_unix_s": 1784382484.714,
+        "end_unix_s": 1784392175.496,
+        "span_s": 9690.78200006485
+      }
+    },
+    "common_overlap_start_unix_s": 1784386701.463384,
+    "common_overlap_end_unix_s": 1784387012.1234,
+    "common_overlap_span_s": 310.6600160598755,
+    "limiting_start_source": "bag",
+    "limiting_end_source": "bag",
+    "required_total_s": 300.0,
+    "main_span_s": 240.0,
+    "min_buffer_s": 30.0,
+    "verdict": "OK",
+    "main_window_start_unix_s": 1784386736.793392,
+    "main_window_end_unix_s": 1784386976.793392,
+    "left_buffer_s": 35.330008029937744,
+    "right_buffer_s": 35.330008029937744
+  },
+  "tier_a_delta": {
+    "computation": "trial-start-vs-trial-end snapshot delta of the bridge's own cumulative counters (never the all-time absolute values)",
+    "start_snapshot": {
+      "state_seq_first": 0,
+      "state_seq_last": 65872,
+      "state_unique_received": 65873,
+      "state_missing": 0,
+      "state_out_of_order": 0,
+      "crc_errors": 0
+    },
+    "end_snapshot": {
+      "state_seq_first": 0,
+      "state_seq_last": 68775,
+      "state_unique_received": 68776,
+      "state_missing": 0,
+      "state_out_of_order": 0,
+      "crc_errors": 0
+    },
+    "trial_seq_last_delta": 2903,
+    "trial_unique_received_delta": 2903,
+    "trial_state_missing_delta": 0,
+    "trial_state_out_of_order_delta": 0,
+    "trial_crc_errors_delta": 0,
+    "trial_expected_count_delta": 2903,
+    "APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO_delta": 1.0,
+    "duplicate_count_SEPARATELY_TRACKED": null,
+    "duplicate_note": "NOT_MEASURABLE -- the bridge's own update_sequence_stats() does not distinguish a true duplicate from a generic out-of-order/backward arrival; both increment the same out_of_order counter. Not fabricated here."
+  },
+  "pi_metrics_slice_provenance": {
+    "source_batch_csv_path": "/home/eamon/epuck_comm_bags/physical_single_device_zero_impairment_baseline_v1_batch/pi_system_metrics_batch_raw.csv",
+    "source_batch_csv_sha256": "92867ec82be0f08eedbac98a1722ac01e71083bff8b6addd59b68ed4a3cabff7",
+    "slice_window_start_unix_s": 1784386736.793392,
+    "slice_window_end_unix_s": 1784386976.793392,
+    "original_row_number_range": [
+      4228,
+      4465
+    ],
+    "sliced_sample_count": 238,
+    "derived_file_path": "/home/eamon/epuck_comm_bags/physical_single_device_zero_impairment_baseline_v1_trial04_attempt01_analysis/pi_system_metrics_window.csv",
+    "derived_file_sha256": "7ffacf654cca785e634109cf3bc9195dd68c5996ba14a13b9ddff4c19d1bedf8",
+    "slicing_method": "real Unix-timestamp inclusion in [window_start, window_end], never row-number alignment, never the full batch file",
+    "tool_version": "slice_pi_metrics.py",
+    "pi_cpu_percent": {
+      "sample_count": 238,
+      "mean": 14.53,
+      "median": 14.48,
+      "p95": 16.249999999999996,
+      "p99": 17.2189,
+      "max": 17.27,
+      "min": 12.03
+    },
+    "pi_mem_used_mb": {
+      "sample_count": 238,
+      "mean": 218.54231092436976,
+      "median": 218.385,
+      "p95": 219.51999999999998,
+      "p99": 219.60629999999998,
+      "max": 219.61,
+      "min": 217.42
+    },
+    "pi_mem_available_mb": {
+      "sample_count": 238,
+      "mean": 145.98894957983194,
+      "median": 146.14499999999998,
+      "p95": 147.0,
+      "p99": 147.05,
+      "max": 147.11,
+      "min": 144.92
+    },
+    "pi_wifi_link_quality": {
+      "sample_count": 238,
+      "mean": 70.0,
+      "median": 70.0,
+      "p95": 70.0,
+      "p99": 70.0,
+      "max": 70.0,
+      "min": 70.0
+    },
+    "pi_wifi_signal_dbm": {
+      "sample_count": 238,
+      "mean": -32.61344537815126,
+      "median": -35.0,
+      "p95": -28.0,
+      "p99": -28.0,
+      "max": -28.0,
+      "min": -38.0
+    },
+    "pi_net_rx_bytes_delta": {
+      "sample_count": 238,
+      "mean": 3053.8025210084033,
+      "median": 2991.5,
+      "p95": 3245.2999999999997,
+      "p99": 3260.26,
+      "max": 3416.0,
+      "min": 2870.0
+    },
+    "pi_net_tx_bytes_delta": {
+      "sample_count": 238,
+      "mean": 38476.315126050424,
+      "median": 37787.0,
+      "p95": 41087.75,
+      "p99": 42375.61,
+      "max": 42814.0,
+      "min": 35847.0
+    }
+  },
+  "final_verdict": "FINAL_PASS",
+  "final_fail_reasons": []
+}
