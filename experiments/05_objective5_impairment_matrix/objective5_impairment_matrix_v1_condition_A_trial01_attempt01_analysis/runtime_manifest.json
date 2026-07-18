@@ -1,0 +1,58 @@
+{
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "A",
+  "trial_index": 1,
+  "attempt": 1,
+  "trial_id": "objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
+  "launch_method": "Manually invoked by the user directly inside an already-INTEROP_OK-registered eamon WSL session, NOT via a fresh single wsl.exe call issued by the assistant this turn -- per the user's own correction, this is the actual launch record of record: bash \"/mnt/c/Users/.../e-puck2-Comm/experiments/05_objective5_impairment_matrix/tools/run_objective5_impairment_matrix_trial.sh\" A 1",
+  "frozen_condition_params": {
+    "delay_s": 0.0,
+    "jitter_s": 0.0,
+    "drop_probability": 0.0,
+    "outage_period_s": 0.0,
+    "outage_duration_s": 0.0,
+    "outage_phase_s": 0.0,
+    "seed_epuck1_to_epuck2": 0,
+    "seed_epuck2_to_epuck1": 0,
+    "seed_note": "Condition A is deterministic; seeds are unused (relay never calls its RNG when delay_s=jitter_s=drop_probability=0)."
+  },
+  "code_identity": {
+    "git_commit": "2837d08609292dbfdab10b93fd68c610da25357f",
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "bag_metadata": {
+    "storage_id": "sqlite3",
+    "bag_size_note": "376.4 KiB",
+    "duration_s": 52.610294509,
+    "start_epoch_s": 1784406150.994060029,
+    "end_epoch_s": 1784406203.604354538,
+    "message_count": 3207,
+    "topics": {
+      "/epuck2/cmd_vel": 715,
+      "/epuck1/cmd_vel": 732,
+      "/epuck2/state_raw": 418,
+      "/epuck1/state_raw": 411,
+      "/epuck1/relay_status": 51,
+      "/epuck1/state": 411,
+      "/epuck2/relay_status": 51,
+      "/epuck2/state": 418
+    },
+    "ros2_bag_info_source": "read directly via `ros2 bag info` against the native WSL bag path this session, not copied from any prior report"
+  },
+  "raw_data_paths": {
+    "native_wsl_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
+    "native_wsl_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_A_trial01_attempt01_diag_logs",
+    "windows_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_A_trial01_attempt01/",
+    "windows_copy_committed_to_git": false
+  },
+  "downstream_artifacts": {
+    "matrix_analysis_json": "matrix_analysis.json (written by the orchestrator during the run)",
+    "trial_verdict_json": "trial_verdict.json (written by the orchestrator during the run)",
+    "frozen_params_json": "frozen_params.json (written by the orchestrator at the start of the run)",
+    "final_verdict_json": "final_verdict.json (this batch's Trial 01 closeout, written after manual observation confirmation)",
+    "sha256sums": "SHA256SUMS (this directory's own tracked files + the raw bag/diag_logs files, for independent verification)"
+  }
+}

@@ -58,9 +58,12 @@ remains diagnostic-only.
 
 ### 05_objective5_impairment_matrix
 Delay, loss, combined-impairment experiments (Conditions A-G). **Design
-frozen, orchestrator built and exclusionary-pilot-verified; formal n=5
-batch (35 trials) not yet started, pending explicit user confirmation
-after reviewing Condition A Trial 01's first run.**
+frozen, orchestrator built and exclusionary-pilot-verified. Condition A
+Trial 01 of the formal n=5 batch has run and PASSed
+(`objective5_impairment_matrix_v1_condition_A_trial01_attempt01`) --
+this is ONE trial, not the completed batch. Trials 02-05 (and every
+other condition) have not started and will not auto-start; each
+remaining trial awaits explicit user confirmation before it runs.**
 - Design: `objective5_impairment_matrix_design_v1.md` (revision 2+),
   `objective5_impairment_matrix_conditions.csv`,
   `objective5_impairment_matrix_analysis_plan.md` (revision 2+).
@@ -93,11 +96,29 @@ after reviewing Condition A Trial 01's first run.**
   result: DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, both directions'
   `current_outage_index=5` and consistent `outage_drop_count` (30/30),
   `independent_drop_count=0/0`).
+- **Formal Trial 01 (Condition A)**:
+  `objective5_impairment_matrix_v1_condition_A_trial01_attempt01` --
+  `FORMAL_SIM`, `DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`,
+  `analyzer_ok=true` under the strict formal-trial latency schema gate
+  (`legacy_replay=false`, `p99_message_age_s` a genuine finite value
+  `0.0` on both directions, `schema_problems=[]`). Both directions:
+  0 drops, `capture_ratio=1.0`, queues drained, realtime factor
+  1.012/0.963. `min_interrobot_distance_m=0.1430942842844398` vs
+  `safety_radius_m=0.14` -- **a small ~3.09mm safety margin, PASS,
+  reported explicitly** (see `final_verdict.json`'s `safety` block).
+  Manual real-time observation confirmed: avoidance completed, no
+  collision, no spinning/oscillation, no desynchronization. Process
+  cleanup confirmed CLEAN after the run; raw bag/diag_logs preserved
+  outside git (native WSL + Windows copy, SHA-256-verified identical),
+  see `experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_A_trial01_attempt01_analysis/`.
+  **Condition A's formal n=5 batch is NOT complete** -- Trials 02-05 not
+  started.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot02`,
-  `objective5_matrix_v1_conditionF_exclusionary_pilot03`.
+  `objective5_matrix_v1_conditionF_exclusionary_pilot03`,
+  `objective5_impairment_matrix_v1_condition_A_trial01_attempt01`.
 
 ### 06_physical_pipuck
 Two physical e-puck2/Pi-puck units, Wi-Fi validation, disconnect/recovery,

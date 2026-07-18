@@ -28,3 +28,12 @@ Thumbs.db
 # derived per-trial slices (pi_system_metrics_window.csv) and
 # batch_summary.csv/md remain version-controlled as normal.
 /experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/pi_system_metrics_batch_raw.csv
+
+# Objective5 impairment matrix: raw formal-trial bags + diag logs (CSVs,
+# .log, per-run JSON), preserved on disk (native WSL source + this
+# Windows copy, SHA-256 verified both directions), never committed --
+# derived evidence (final_verdict.json, summary.md, runtime_manifest.json,
+# README.md, SHA256SUMS, matrix_analysis.json, trial_verdict.json,
+# frozen_params.json) remains version-controlled as normal in the
+# sibling *_analysis/ directory.
+/experiments/05_objective5_impairment_matrix/bags/

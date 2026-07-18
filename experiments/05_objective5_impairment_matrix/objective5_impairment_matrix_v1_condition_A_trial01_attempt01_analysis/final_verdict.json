@@ -1,0 +1,105 @@
+{
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "A",
+  "trial_index": 1,
+  "attempt": 1,
+  "trial_id": "objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
+  "batch_status": "TRIAL_01_PASS_PENDING_BATCH_COMPLETION",
+  "batch_note": "This is the first of a formal n=5 batch for Condition A. It is NOT the whole Condition A batch -- Trials 02-05 have not run. Do not treat this file as batch-level completion evidence.",
+  "data_validity": "VALID",
+  "data_validity_reasons": [],
+  "task_outcome": "SUCCESS",
+  "task_outcome_reason": "complete_count=2 >= expected 2",
+  "analyzer_ok": true,
+  "measurement_validity": "VALID",
+  "legacy_replay": false,
+  "safety": {
+    "min_interrobot_distance_m": 0.1430942842844398,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.0030942842844398,
+    "safety_margin_note": "PASS, but the margin above the safety_radius_m threshold is small (about 3.09mm) -- retained explicitly here and in every downstream batch summary, per instruction. This is not grounds to alter the frozen geometry or controller; it is reported as an observed fact for Condition A Trial 01 specifically."
+  },
+  "manual_observation": {
+    "avoidance_completed": true,
+    "collision_observed": false,
+    "spinning_or_visible_oscillation_observed": false,
+    "recovered_and_auto_stopped": false,
+    "visible_desynchronization_observed": false,
+    "other_notes": "none",
+    "observer": "user, real-time visual observation of the single Webots run"
+  },
+  "process_cleanup_check": {
+    "checked_patterns": [
+      "webots", "webots_ros2_driver", "state_publisher", "cooperative_avoider",
+      "run_matrix_relay_and_counter", "run_comm_baseline_formal_controllers",
+      "run_dual_head_on_clean", "sequence_counter", "ros2 bag record"
+    ],
+    "result": "CLEAN",
+    "checked_after_run_completion": true
+  },
+  "bag_integrity_check": {
+    "ros2_bag_info_succeeded": true,
+    "message_count": 3207,
+    "topic_count": 8,
+    "duration_s": 52.610294509
+  },
+  "raw_data_preservation": {
+    "native_wsl_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
+    "native_wsl_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_A_trial01_attempt01_diag_logs",
+    "windows_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_A_trial01_attempt01/",
+    "windows_copy_committed_to_git": false,
+    "windows_copy_gitignored_by": "/experiments/05_objective5_impairment_matrix/bags/ (see .gitignore)",
+    "sha256_verified_native_vs_windows_copy": true,
+    "sha256_verification_scope": "full file listing + per-file SHA-256, both the bag directory (metadata.yaml + .db3) and the diag_logs directory (all CSV/JSON/log files) -- see SHA256SUMS"
+  },
+  "run_identity": {
+    "git_commit": "2837d08609292dbfdab10b93fd68c610da25357f",
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "communication_metrics": {
+    "epuck1_to_epuck2": {
+      "sample_count": 415,
+      "missing_count": 0,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "capture_ratio": 1.0,
+      "mean_message_age_s": 4.8192771084336324e-05,
+      "median_message_age_s": 0.0,
+      "p95_message_age_s": 0.0,
+      "p99_message_age_s": 0.0,
+      "max_message_age_s": 0.019999999999999574,
+      "latency_measurement_status": "RESOLUTION_LIMITED",
+      "mean_bandwidth_bytes_per_s": 708.1541934007109
+    },
+    "epuck2_to_epuck1": {
+      "sample_count": 434,
+      "missing_count": 0,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "capture_ratio": 1.0,
+      "mean_message_age_s": 0.0001843317972350232,
+      "median_message_age_s": 0.0,
+      "p95_message_age_s": 0.0,
+      "p99_message_age_s": 0.0,
+      "max_message_age_s": 0.08000000000000007,
+      "latency_measurement_status": "RESOLUTION_LIMITED",
+      "mean_bandwidth_bytes_per_s": 708.2498477338337
+    }
+  },
+  "queue_drain": {
+    "drain_duration_s": 0.2302,
+    "queue_drained": true,
+    "pending_queue_depth_epuck1": 0,
+    "pending_queue_depth_epuck2": 0
+  },
+  "realtime_factor": {
+    "preload_realtime_factor": 1.012,
+    "full_load_realtime_factor": 0.963,
+    "realtime_factor_ok": true
+  },
+  "trial_verdict": "PASS",
+  "trial_verdict_reason": "DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, analyzer_ok=true under the strict formal-trial schema gate, process cleanup CLEAN, bag integrity confirmed, manual observation confirms avoidance completed with no collision/spinning/desync -- min_interrobot_distance_m exceeds safety_radius_m by a small margin (~3.09mm), reported explicitly, not grounds to fail this trial."
+}
