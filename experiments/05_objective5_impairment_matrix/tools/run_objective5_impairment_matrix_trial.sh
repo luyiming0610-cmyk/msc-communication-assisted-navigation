@@ -311,14 +311,21 @@ cleanup() {
   stop_pid_group "$CONTROLLER_PID" || true
   stop_pid_group "$RELAY_COUNTER_PID" || true
   stop_pid "$BAG_PID" || true
-  stop_pid "$SIM_PID" || true
+  stop_pid_group "$SIM_PID" || true
 }
 trap cleanup EXIT
 
-(
-  cd "$WORK_DIR"
-  exec python3 run_dual_head_on_clean.py
-) >"$SIM_LOG" 2>&1 &
+# run_dual_head_on_clean.py is ALSO a launch.LaunchService (it wraps the
+# Webots + ros2_control bringup as an IncludeLaunchDescription), exactly
+# the same launch-service-child pattern as the controller and
+# relay+counter launches above -- confirmed the hard way when a
+# plain-stop_pid SIM_PID left two orphaned webots_ros2_driver and two
+# orphaned state_publisher processes after a run whose CONTROLLER_PID
+# cleanup (already fixed to setsid+stop_pid_group) worked correctly.
+# Launched under setsid and stopped via stop_pid_group for the same
+# reason: a single-PID signal is not guaranteed to reach its children.
+setsid bash -c "cd '$WORK_DIR' && exec python3 run_dual_head_on_clean.py" \
+  >"$SIM_LOG" 2>&1 &
 SIM_PID=$!
 
 wait_for_topics 90 /epuck1/odom /epuck2/odom /epuck1/tof /epuck2/tof /epuck1/ps0 /epuck2/ps0
@@ -462,7 +469,7 @@ if [[ ! -s "$NATIVE_BAG_DIR/metadata.yaml" ]]; then
 fi
 echo "[$(date -Iseconds)] rosbag metadata.yaml check done" | tee -a "$EXECUTION_LOG"
 
-stop_pid "$SIM_PID"; SIM_PID=""
+stop_pid_group "$SIM_PID"; SIM_PID=""
 sleep 2
 
 BAG_WARN_LINES="$(grep -icE 'drop|warn|error' "$BAG_RECORD_LOG" 2>/dev/null || echo 0)"
