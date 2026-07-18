@@ -9,9 +9,16 @@ set -eo pipefail
 # failure via the existing analyzer, or a recorder traceback) -- does not
 # retry, does not modify thresholds, does not continue past a failure.
 #
-# Usage: run_baseline_v1_batch_trials.sh
-#   (trial list and starting state_publisher PIDs are hardcoded below,
-#    matching this batch's known state at invocation time)
+# Usage: run_baseline_v1_batch_trials.sh SP_WRAPPER_PID SP_ACTUAL_PID TRIAL [TRIAL ...]
+#   SP_WRAPPER_PID/SP_ACTUAL_PID: the state_publisher currently running
+#   (started for whichever trial most recently completed, or the
+#   precheck state_publisher if this is the very first trial in the
+#   batch) -- stopped and replaced FRESH before the first listed trial.
+
+if (( $# < 3 )); then
+  echo "Usage: $0 SP_WRAPPER_PID SP_ACTUAL_PID TRIAL [TRIAL ...]" >&2
+  exit 2
+fi
 
 TOOLS_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/06_physical_pipuck/single_device_bringup/tools"
 NATIVE_ROOT="/home/eamon/epuck_comm_bags"
@@ -22,12 +29,10 @@ V2_COMMIT="a7f2a7e"
 source /opt/ros/humble/setup.bash
 source ~/epuck_ws/install/setup.bash
 
-# current state_publisher, from trial01_attempt02 (must be replaced fresh
-# before trial02_attempt02 starts)
-CURRENT_SP_WRAPPER_PID=5765
-CURRENT_SP_ACTUAL_PID=5766
-
-TRIALS=(trial02_attempt02 trial03_attempt01 trial04_attempt01 trial05_attempt01)
+CURRENT_SP_WRAPPER_PID="$1"
+CURRENT_SP_ACTUAL_PID="$2"
+shift 2
+TRIALS=("$@")
 
 for TRIAL in "${TRIALS[@]}"; do
   echo "############################################################"
