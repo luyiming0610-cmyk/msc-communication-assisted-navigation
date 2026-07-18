@@ -1,3 +1,28 @@
+# Superseded: `ANALYZER_OK` was a hardcoded placeholder at the time of this run
+
+This pilot originally ran before `matrix_analyzer.py` existed --
+`ANALYZER_OK="true"` was a hardcoded placeholder, never actually
+checked. **Preserved as-is (not deleted), but superseded by the real
+analysis-only replay in `matrix_analysis_v2.json`**, produced by the
+same `analyze_trial()` function the orchestrator itself now calls for
+every trial (commit `f4e8d6c`), reading this run's already-recorded
+relay CSVs and `sequence_counter.py` JSON output -- Webots was NOT
+re-run.
+
+`matrix_analysis_v2.json` result: `measurement_validity="VALID"`
+(genuine `ANALYZER_OK=true`). Both directions:
+`latency_measurement_status="RESOLUTION_LIMITED"` (Condition F's own
+delay_s/jitter_s are both 0.0 outside the outage mechanism, so a
+near-zero observed age is the frozen-correct classification, not a
+clock-domain-mismatch label); `mean_message_age_s≈0.0175s`/`≈0.0169s`
+(epuck1_to_epuck2/epuck2_to_epuck1); `capture_ratio≈0.9536`/`≈0.9541`
+-- both match the outage drop counts exactly (30 missing = 30
+`outage_drop_count`, confirming the sequence/relay cross-check is
+self-consistent); `relay_forwarded_matches_consumer_received=true`
+both directions. **Honest limitation**: `p99_message_age_s` is `null`
+in this replay for the same reason as the Condition A pilot -- the
+original `sequence_counter.py` binary predates the p99 field.
+
 # Condition F bidirectional synchronization: reconstructed per-window evidence
 
 Two independent lines of evidence, kept separate on purpose:
