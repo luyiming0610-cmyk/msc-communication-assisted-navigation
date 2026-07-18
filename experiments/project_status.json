@@ -113,7 +113,7 @@
     },
     {
       "item": "Physical Pi-puck validation (Objective 1/5/6/7)",
-      "blocked_by": "not started; requires two physical e-puck2/Pi-puck units and a verified NTP/chrony clock-sync procedure before any cross-device latency figure can be trusted (see analyze_comm_performance.py's verify_clock_sync() stub, intentionally unimplemented for the sim-only phase)"
+      "blocked_by": "CORRECTED (was wrong: this project has and will only ever have ONE physical e-puck2/Pi-puck unit, #5809 -- the paper must never claim a completed dual-physical-robot experiment; the second node is a virtual/laptop peer). Bridge/driver bringup verified 2026-07-18 (Pi ROS2 Foxy driver + Pi TCP server + WSL TCP client all running, /scan /odom /tof /ps0 all confirmed publishing, robot stationary, no /cmd_vel sent) -- see experiments/06_physical_pipuck/physical_device_registry.md. No pilot or formal physical experiment has run yet under the current protocol. Remaining blockers: (1) physical_single_device_comm_pilot01 (stationary, comm-only, designed not run -- see experiments/06_physical_pipuck/single_device_bringup/), (2) no EpuckState.msg converter exists yet for real-hardware data (see physical_protocol_gap_report.md), (3) cross-device clock-sync still unimplemented (verify_clock_sync() stub) -- though the bridge's own sequence-acknowledgement RTT does not depend on clock sync and is already available."
     }
   ],
   "formal_data_roots": [

@@ -31,12 +31,12 @@ Pi-puck, reality gap).
 
 ## Current overall status
 
-- **Objective 1** (Environment Setup): simulation side done (ROS2 Humble + Webots, not Gazebo — see the deviation note below). Physical Pi-puck side: not started.
+- **Objective 1** (Environment Setup): simulation side done (ROS2 Humble + Webots, not Gazebo — see the deviation note below). Physical Pi-puck side: bringup verified 2026-07-18 (Pi ROS 2 Foxy driver + Pi TCP server + WSL TCP client all confirmed running, `/scan`/`/odom`/`/tof`/`/ps0` all confirmed publishing, robot stationary throughout, no `/cmd_vel` sent) — see `experiments/06_physical_pipuck/physical_device_registry.md`. No pilot or formal physical experiment has been run under the current protocol; `physical_protocol_gap_report.md` documents that the pre-existing physical bridge data (2026-07-15, `real_robot_avoidance_v1/`) uses an old JSON protocol incompatible with the current frozen `EpuckState.msg` and cannot be pooled with current formal statistics.
 - **Objective 2** (Protocol Design): `EpuckState.msg` implemented and **frozen as PROTOCOL_VERSION=1** (commit `b5a0351`).
 - **Objective 3** (Library Implementation): `epuck2_comm` library implemented — `state_publisher`, `cooperative_avoider`, `network_impairment_relay`, analyzers. 126/126 tests passing.
 - **Objective 4** (Task-Specific Validation): controller v1→v4 defect chain resolved; **Phase 4 formal batch SEALED, 5/5 PASS** (commit `e32560e`). Avoidance-scenario scope is now intentionally frozen.
 - **Objective 5** (Performance Analysis): analyzer + impairment relay implemented and unit-tested; **zero-impairment baseline is still diagnostic only** — root cause of an earlier ~40-55% message-loss anomaly has been traced to writing rosbag directly to a `/mnt/c` (Windows-mounted) path from WSL2, confirmed via two independent native-WSL-path diagnostic trials (PDR=1.0 both times), but a full formal baseline (with the actual task controller running) has not yet been completed under that fixed workflow. **No formal PDR/latency figures exist yet.**
-- **Objective 6/7** (physical validation, reality gap): not started.
+- **Objective 6/7** (physical validation, reality gap): bridge/driver bringup verified (see Objective 1 above); no physical validation experiment has actually been run yet under the current protocol. `physical_single_device_comm_pilot01` (stationary, comm-only) is designed but not run — see `experiments/06_physical_pipuck/single_device_bringup/physical_single_device_comm_pilot01_DESIGN.md`.
 
 ## Key paths
 
