@@ -134,6 +134,7 @@ class TopicCounter:
             "mean_message_age_s": (sum(ages_sorted) / len(ages_sorted)) if ages_sorted else None,
             "median_message_age_s": _percentile(ages_sorted, 0.50),
             "p95_message_age_s": _percentile(ages_sorted, 0.95),
+            "p99_message_age_s": _percentile(ages_sorted, 0.99),
             "max_message_age_s": ages_sorted[-1] if ages_sorted else None,
         }
 

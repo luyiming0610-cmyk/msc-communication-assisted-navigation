@@ -310,20 +310,58 @@ def analyze(
             ),
         }
 
+    any_valid_age_samples = any(
+        session.get("valid_age_sample_count", 0) > 0
+        for topic_result in results.values()
+        for session in topic_result.get("sessions", [])
+    )
+    any_anomalous_age_samples = any(
+        session.get("anomalous_age_sample_count", 0) > 0
+        for topic_result in results.values()
+        for session in topic_result.get("sessions", [])
+    )
+    if any_anomalous_age_samples and not any_valid_age_samples:
+        clock_domain_note = (
+            "This run's message_age_s samples were ALL excluded as "
+            "implausible (> _MAX_PLAUSIBLE_AGE_S). This is the expected, "
+            "correct outcome of computing age as "
+            "(rosbag record timestamp) - (message.stamp): the bag "
+            "recorder's own timestamp is wall-clock time by default "
+            "(ros2 bag record without --use-sim-time), a different "
+            "domain from message.stamp (sim time). This age figure is "
+            "NOT a same-clock-domain measurement here -- use "
+            "sequence_counter.py's own live age tracking (both endpoints "
+            "under the node's own use_sim_time) for a trustworthy latency "
+            "figure instead."
+        )
+    elif any_valid_age_samples:
+        clock_domain_note = (
+            "At least one message_age_s sample in this run fell within "
+            "the plausible range, which is consistent with (but does not "
+            "prove) a shared sim-time domain between the bag recorder and "
+            "message.stamp for this particular bag. Do NOT assume this "
+            "holds for every bag -- the bag recorder's timestamp is "
+            "wall-clock time by default (ros2 bag record without "
+            "--use-sim-time); prefer sequence_counter.py's own live age "
+            "tracking, which is always same-domain by construction, over "
+            "this bag-derived figure when both are available. Do NOT "
+            "reuse this age/latency methodology across two "
+            "independently-clocked devices (e.g. sim host vs. physical "
+            "Pi-puck) without first verifying clock sync -- see "
+            "verify_clock_sync() in this module."
+        )
+    else:
+        clock_domain_note = (
+            "No message_age_s samples were available in this run to "
+            "evaluate clock-domain consistency."
+        )
     return {
         "bag_path": str(bag_path),
         "warmup_s": warmup_s,
         "cooldown_s": cooldown_s,
         "peer_timeout_s": peer_timeout_s,
         "topics": results,
-        "clock_domain_note": (
-            "All timestamps in this analysis are ROS/sim time from a single "
-            "shared /clock domain (one Webots session). Valid for latency "
-            "measurement as-is. Do NOT reuse this age/latency methodology "
-            "across two independently-clocked devices (e.g. sim host vs. "
-            "physical Pi-puck) without first verifying clock sync -- see "
-            "verify_clock_sync() in this module."
-        ),
+        "clock_domain_note": clock_domain_note,
     }
 
 

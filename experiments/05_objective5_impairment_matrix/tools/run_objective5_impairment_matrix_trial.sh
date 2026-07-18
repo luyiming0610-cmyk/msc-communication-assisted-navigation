@@ -549,7 +549,75 @@ sys.exit(0 if (0.8 <= factor_preload <= 1.2 and 0.8 <= factor_full <= 1.2) else 
 BAG_METADATA_OK="true"
 [[ ! -s "$NATIVE_BAG_DIR/metadata.yaml" ]] && BAG_METADATA_OK="false"
 
-ANALYZER_OK="true"  # tier-A/B/C analyzer reuse (analyze_expanded_bridge-style) is a follow-up step, not blocking this trial's own DATA_VALIDITY computation this pass
+# --- real analyzer pass (matrix_analyzer.py) -- replaces the earlier
+# hardcoded ANALYZER_OK="true" placeholder. A genuine analysis is run;
+# its exit code, output-file presence/parseability, and required-field
+# schema are all checked here, independently of whatever the analyzer
+# itself already self-reports, matching the belt-and-suspenders
+# discipline already used for the seed/queue-drain/bag-metadata checks
+# above. Any failure here sets DATA_VALIDITY=INVALID (which, via
+# matrix_verdict.py, forces TASK_OUTCOME=NOT_EVALUABLE downstream) --
+# a generated-but-empty or generated-but-wrong file is never treated as
+# analysis success.
+mkdir -p "$FINAL_DIR"
+ANALYZER_OUTPUT_PATH="$FINAL_DIR/matrix_analysis.json"
+QUEUE_DRAIN_JSON="$(python3 -c "
+import json
+print(json.dumps({'drain_duration_s': $DRAIN_DURATION_S, 'queue_drained': '$QUEUE_DRAINED' == 'true'}))
+")"
+REALTIME_FACTOR_JSON="$(python3 -c "
+import json
+print(json.dumps({'preload_realtime_factor': ${PRELOAD_FACTOR:-0}, 'full_load_realtime_factor': ${FULL_LOAD_FACTOR:-0}, 'realtime_factor_ok': '$REALTIME_FACTOR_OK' == 'true'}))
+")"
+TASK_OUTCOME_INPUTS_JSON="$(python3 -c "
+import json
+print(json.dumps({'complete_count': $complete_count, 'expected_complete_count': 2, 'controller_crashed': '$CONTROLLER_CRASHED' == 'true'}))
+")"
+
+set +e
+python3 "$TOOLS_DIR/matrix_analyzer.py" \
+  --native-diag-log-dir "$DIAG_LOG_DIR" \
+  --native-bag-dir "$NATIVE_BAG_DIR" \
+  --frozen-params-json "$DIAG_LOG_DIR/frozen_params.json" \
+  --queue-drain-json "$QUEUE_DRAIN_JSON" \
+  --realtime-factor-json "$REALTIME_FACTOR_JSON" \
+  --task-outcome-inputs-json "$TASK_OUTCOME_INPUTS_JSON" \
+  --output-path "$ANALYZER_OUTPUT_PATH" >>"$EXECUTION_LOG" 2>&1
+ANALYZER_EXIT_CODE=$?
+set -e
+
+ANALYZER_OK="true"
+if [[ $ANALYZER_EXIT_CODE -ne 0 ]]; then
+  ANALYZER_OK="false"
+  INVALID_REASON="${INVALID_REASON}matrix_analyzer.py exited $ANALYZER_EXIT_CODE; "
+elif [[ ! -s "$ANALYZER_OUTPUT_PATH" ]]; then
+  ANALYZER_OK="false"
+  INVALID_REASON="${INVALID_REASON}matrix_analyzer.py produced no/empty output; "
+else
+  ANALYZER_SCHEMA_CHECK="$(python3 -c "
+import json, sys
+sys.path.insert(0, '$TOOLS_DIR')
+from matrix_analyzer import validate_output_schema
+try:
+    with open('$ANALYZER_OUTPUT_PATH', encoding='utf-8') as f:
+        payload = json.load(f)
+except Exception as exc:
+    print(f'JSON_PARSE_ERROR:{exc}')
+    sys.exit(0)
+problems = validate_output_schema(payload)
+if payload.get('measurement_validity') != 'VALID':
+    problems.append(f\"measurement_validity={payload.get('measurement_validity')}\")
+print('OK' if not problems else 'PROBLEMS:' + '; '.join(problems))
+")"
+  if [[ "$ANALYZER_SCHEMA_CHECK" != "OK" ]]; then
+    ANALYZER_OK="false"
+    INVALID_REASON="${INVALID_REASON}matrix_analyzer output check failed: $ANALYZER_SCHEMA_CHECK; "
+  fi
+fi
+if [[ "$ANALYZER_OK" != "true" ]]; then
+  DATA_VALIDITY="INVALID"
+fi
+echo "[$(date -Iseconds)] analyzer_ok=$ANALYZER_OK (exit=$ANALYZER_EXIT_CODE, output=$ANALYZER_OUTPUT_PATH)" | tee -a "$EXECUTION_LOG"
 
 VERDICT_INPUT_JSON="$(python3 -c "
 import json

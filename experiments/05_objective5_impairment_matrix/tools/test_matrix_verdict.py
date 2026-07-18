@@ -39,6 +39,28 @@ def test_data_validity_bag_log_not_clean_alone_is_invalid_and_not_mislabeled_as_
     assert not any("queue-drain" in r for r in reasons)
 
 
+def test_data_validity_analyzer_failure_is_invalid_and_task_outcome_not_evaluable():
+    """The real analyzer (matrix_analyzer.py, replacing the old hardcoded
+    ANALYZER_OK=true placeholder) can genuinely fail -- exit non-zero,
+    write no output, write unparseable output, or write output missing
+    required fields. Any of those must flow through as
+    DATA_VALIDITY=INVALID and, downstream, TASK_OUTCOME=NOT_EVALUABLE --
+    never silently treated as analysis having succeeded."""
+    verdict, reasons = classify_data_validity(
+        DataValidityCheck(True, True, True, False, True)
+    )
+    assert verdict == "INVALID"
+    assert any("analyzer" in r for r in reasons)
+
+    signals = TaskOutcomeSignals(
+        complete_count=2, expected_complete_count=2, min_interrobot_distance_m=0.30,
+        safety_radius_m=0.14, controller_crashed=False,
+    )
+    outcome, reason = classify_task_outcome(verdict, signals)
+    assert outcome == "NOT_EVALUABLE"
+    assert "INVALID" in reason
+
+
 def test_data_validity_bag_log_clean_defaults_true_for_backward_compatibility():
     verdict, reasons = classify_data_validity(DataValidityCheck(True, True, True, True, True))
     assert verdict == "VALID"
