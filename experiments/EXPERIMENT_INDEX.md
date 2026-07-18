@@ -58,12 +58,13 @@ remains diagnostic-only.
 
 ### 05_objective5_impairment_matrix
 Delay, loss, combined-impairment experiments (Conditions A-G). **Design
-frozen, orchestrator built and exclusionary-pilot-verified. Condition A
-Trial 01 of the formal n=5 batch has run and PASSed
-(`objective5_impairment_matrix_v1_condition_A_trial01_attempt01`) --
-this is ONE trial, not the completed batch. Trials 02-05 (and every
-other condition) have not started and will not auto-start; each
-remaining trial awaits explicit user confirmation before it runs.**
+frozen, orchestrator built and exclusionary-pilot-verified. Condition
+A's formal n=5 batch is COMPLETE: 5/5 PASS**
+(`objective5_impairment_matrix_v1_condition_A_trial01..05_attempt01`,
+see `objective5_impairment_matrix_v1_condition_A_formal_batch_summary.md`).
+**Conditions B-G have not started and will not auto-start; each
+remaining condition's Trial 01 awaits explicit user confirmation before
+it runs.**
 - Design: `objective5_impairment_matrix_design_v1.md` (revision 2+),
   `objective5_impairment_matrix_conditions.csv`,
   `objective5_impairment_matrix_analysis_plan.md` (revision 2+).
@@ -96,33 +97,48 @@ remaining trial awaits explicit user confirmation before it runs.**
   result: DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, both directions'
   `current_outage_index=5` and consistent `outage_drop_count` (30/30),
   `independent_drop_count=0/0`).
-- **Formal Trial 01 (Condition A)**:
-  `objective5_impairment_matrix_v1_condition_A_trial01_attempt01` --
-  `FORMAL_SIM`, `DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`,
-  `analyzer_ok=true` under the strict formal-trial latency schema gate
-  (`legacy_replay=false`, `p99_message_age_s` a genuine finite value
-  `0.0` on both directions, `schema_problems=[]`). Both directions:
-  0 drops, `capture_ratio=1.0`, queues drained, realtime factor
-  1.012/0.963. `min_interrobot_distance_m=0.1430942842844398` vs
-  `safety_radius_m=0.14` -- **a small ~3.09mm safety margin, PASS,
-  reported explicitly** (see `final_verdict.json`'s `safety` block).
-  Manual real-time observation confirmed: avoidance completed, both
-  robots recovered and auto-stopped normally, no collision, no
-  spinning/oscillation, no desynchronization (`recovered_and_auto_
-  stopped` was originally recorded as "no", a fill-in error corrected
-  to "yes" -- see `final_verdict.json`'s `manual_observation.
-  correction_note`). Process cleanup confirmed CLEAN after the run; raw
-  bag/diag_logs preserved
-  outside git (native WSL + Windows copy, SHA-256-verified identical),
-  see `experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_A_trial01_attempt01_analysis/`.
-  **Condition A's formal n=5 batch is NOT complete** -- Trials 02-05 not
-  started.
+- **Formal Condition A batch, COMPLETE, 5/5 PASS**:
+  `objective5_impairment_matrix_v1_condition_A_trial01..05_attempt01`.
+  Trial 01 launched manually and individually observed by the user
+  (`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`,
+  `min_interrobot_distance_m=0.1430942842844398`, safety margin
+  ~3.09mm; manual observation confirmed avoidance completed, both
+  robots recovered and auto-stopped normally, no collision/
+  spinning/desync -- `recovered_and_auto_stopped` was originally
+  recorded as "no", a fill-in error corrected to "yes", see
+  `final_verdict.json`'s `manual_observation.correction_note`). Trials
+  02-05 ran automatically under explicit user authorization (frozen
+  Condition A config, no controller/relay/analyzer/geometry/pose/
+  threshold changes, behavioral-code SHA-256 verified identical to
+  Trial 01 before each run, no per-trial manual observation), each
+  independently `PASS`:
+  `DATA_VALIDITY=VALID`/`TASK_OUTCOME=SUCCESS`/`analyzer_ok=true`
+  (strict schema, `legacy_replay=false`, p99 finite both directions)
+  in all 5 trials, `capture_ratio=1.0` and 0 drops both directions in
+  all 5 trials, `min_interrobot_distance_m` in
+  `[0.14178534915907265, 0.15064050840214138]` (all > `safety_radius_m
+  =0.14`; **tightest margin ~1.79mm, Trial 05** -- reported explicitly,
+  not grounds to alter the frozen geometry/controller), process
+  cleanup CLEAN after every run. Full cross-trial mean/stdev/min/max
+  (message counts, capture ratio, latency mean/median/p95/p99/max,
+  throughput, realtime factor, safety margin, task completion time) in
+  `objective5_impairment_matrix_v1_condition_A_formal_batch_summary.md`.
+  **The 0/near-0-second message age in all 5 trials reflects
+  simulation-clock resolution under zero configured impairment, not
+  real physical network delay** -- the correct baseline reference for
+  Conditions B-G. Raw bag/diag_logs for every trial preserved outside
+  git (native WSL + Windows copy, SHA-256-verified identical), see each
+  trial's own `..._analysis/` directory.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot02`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot03`,
-  `objective5_impairment_matrix_v1_condition_A_trial01_attempt01`.
+  `objective5_impairment_matrix_v1_condition_A_trial01_attempt01`,
+  `objective5_impairment_matrix_v1_condition_A_trial02_attempt01`,
+  `objective5_impairment_matrix_v1_condition_A_trial03_attempt01`,
+  `objective5_impairment_matrix_v1_condition_A_trial04_attempt01`,
+  `objective5_impairment_matrix_v1_condition_A_trial05_attempt01`.
 
 ### 06_physical_pipuck
 Two physical e-puck2/Pi-puck units, Wi-Fi validation, disconnect/recovery,

@@ -116,6 +116,27 @@ zero gaps/duplicates/out-of-order):
   five metrics VALID. **Does not replace trial01** — both remain
   separately registered.
 
+A third, distinct formal batch now exists: the **Objective 5 impairment
+matrix's Condition A** (zero impairment, the A-G matrix's first
+condition), a genuine formal n=5 batch, **COMPLETE, 5/5 PASS**:
+`objective5_impairment_matrix_v1_condition_A_trial01..05_attempt01`
+(`evidence_level=FORMAL_SIM`). Real analyzer (`matrix_analyzer.py`,
+strict schema — `legacy_replay=false`, p99 always a finite value, never
+null), `DATA_VALIDITY=VALID`/`TASK_OUTCOME=SUCCESS`/`analyzer_ok=true`
+in all 5 trials, `capture_ratio=1.0` and 0 drops both directions in all
+5, `min_interrobot_distance_m` in `[0.14178534915907265,
+0.15064050840214138]`, all above `safety_radius_m=0.14` but with a
+notably tight margin on Trial 05 (~1.79mm) — reported explicitly, not
+grounds to alter the frozen geometry/controller. Behavioral-code
+SHA-256 (orchestrator, relay, impairment core, `sequence_counter.py`)
+verified identical across all 5 trials. Full cross-trial statistics:
+`experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_A_formal_batch_summary.md`.
+**This does not replace or supersede the two comm-baseline trials
+above** — it is a separate, later, more rigorously-schema-gated formal
+result within the same Objective 5 zero-impairment question, run via
+the impairment-matrix orchestrator rather than the earlier
+comm-baseline script. **Conditions B-G of the matrix have not started.**
+
 The registry's first `evidence_level=FORMAL_PHYSICAL` row (distinct from
 `FORMAL_SIM`) is `physical_single_device_zero_impairment_baseline_v1`
 (5/5 FINAL_PASS, `06_physical_pipuck`) — see the Objective 6/7 status line
@@ -140,17 +161,19 @@ row per experiment/batch — `status`, `evidence_level`,
 
 ## Current single next step
 
-Both formal zero-impairment Objective 5 baselines
-(`objective5_comm_baseline_zero_impairment_formal_trial01` and
-`_formal_trial02_stamp`) have PASSED, and the timestamp/latency
-measurement chain was independently validated
-(`objective5_timestamp_latency_validation_pilot01`, PASS). Next: design
-the delay/loss impairment matrix (A-G conditions, evidence-based tiers
-derived from the measured baseline p95 latency, publish period,
-`peer_timeout_s`'s real callback-receipt-time semantics, CPA horizon,
-and controller decision period — not guessed) and submit it for
-explicit user confirmation before running any of it — do
-not auto-run the matrix after a baseline PASS.
+The Objective 5 impairment matrix (Conditions A-G) is designed, frozen,
+and its orchestrator (`run_objective5_impairment_matrix_trial.sh`) has
+been exclusionary-pilot-verified and used for a completed formal batch.
+**Condition A's formal n=5 batch is COMPLETE (5/5 PASS)** — see the
+`FORMAL_SIM` paragraph above and
+`objective5_impairment_matrix_v1_condition_A_formal_batch_summary.md`.
+**Conditions B-G (30 more trials) have not started.** Per instruction,
+Condition A's completion does NOT auto-start Condition B — each
+remaining condition's Trial 01 requires explicit user confirmation
+before it runs. When that confirmation arrives, the same orchestrator
+and strict analyzer schema gate used for Condition A apply unchanged
+(one unified script, frozen CSV as the only parameter source, no
+hand-typed override).
 
 ## What to read first, in order
 

@@ -1,0 +1,276 @@
+{
+  "condition_id": "A",
+  "batch_label": "FORMAL_SIM",
+  "n_trials": 5,
+  "pass_count": 5,
+  "pass_rate": 1.0,
+  "trial_ids": [
+    "objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
+    "objective5_impairment_matrix_v1_condition_A_trial02_attempt01",
+    "objective5_impairment_matrix_v1_condition_A_trial03_attempt01",
+    "objective5_impairment_matrix_v1_condition_A_trial04_attempt01",
+    "objective5_impairment_matrix_v1_condition_A_trial05_attempt01"
+  ],
+  "code_identity": {
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3",
+    "identical_across_all_5_trials": true,
+    "git_commits_per_trial": [
+      "2837d08609292dbfdab10b93fd68c610da25357f",
+      "48824897885d854e280da40b610a0d5ce67e9162",
+      "48824897885d854e280da40b610a0d5ce67e9162",
+      "48824897885d854e280da40b610a0d5ce67e9162",
+      "48824897885d854e280da40b610a0d5ce67e9162"
+    ]
+  },
+  "frozen_config": {
+    "delay_s": 0.0,
+    "jitter_s": 0.0,
+    "drop_probability": 0.0,
+    "outage_period_s": 0.0,
+    "outage_duration_s": 0.0,
+    "outage_phase_s": 0.0
+  },
+  "per_direction": {
+    "epuck1_to_epuck2": {
+      "message_count_per_trial": [
+        415,
+        443,
+        417,
+        441,
+        428
+      ],
+      "capture_ratio_per_trial": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "capture_ratio_stats": {
+        "mean": 1.0,
+        "stdev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "latency_mean_s_stats": {
+        "mean": 1.866789958932757e-05,
+        "stdev": 2.2883696186501075e-05,
+        "min": 0.0,
+        "max": 4.8192771084336324e-05
+      },
+      "latency_median_s_stats": {
+        "mean": 0.0,
+        "stdev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "latency_p95_s_stats": {
+        "mean": 0.0,
+        "stdev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "latency_p99_s_stats": {
+        "mean": 0.0,
+        "stdev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "latency_max_s_stats": {
+        "mean": 0.00799999999999983,
+        "stdev": 0.009797958971132503,
+        "min": 0.0,
+        "max": 0.019999999999999574
+      },
+      "throughput_bytes_per_s_stats": {
+        "mean": 708.2638511995164,
+        "stdev": 1.618637332456179,
+        "min": 706.1450590793223,
+        "max": 710.1398953909352
+      }
+    },
+    "epuck2_to_epuck1": {
+      "message_count_per_trial": [
+        434,
+        461,
+        442,
+        449,
+        434
+      ],
+      "capture_ratio_per_trial": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "capture_ratio_stats": {
+        "mean": 1.0,
+        "stdev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "latency_mean_s_stats": {
+        "mean": 4.591613320266056e-05,
+        "stdev": 7.139217766140116e-05,
+        "min": 0.0,
+        "max": 0.0001843317972350232
+      },
+      "latency_median_s_stats": {
+        "mean": 0.0,
+        "stdev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "latency_p95_s_stats": {
+        "mean": 0.0,
+        "stdev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "latency_p99_s_stats": {
+        "mean": 0.0,
+        "stdev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "latency_max_s_stats": {
+        "mean": 0.019999999999999928,
+        "stdev": 0.030983866769659363,
+        "min": 0.0,
+        "max": 0.08000000000000007
+      },
+      "throughput_bytes_per_s_stats": {
+        "mean": 708.3847654439534,
+        "stdev": 1.546564630564162,
+        "min": 706.231337060409,
+        "max": 710.251728663264
+      }
+    }
+  },
+  "realtime_factor": {
+    "preload_per_trial": [
+      1.012,
+      0.965,
+      0.952,
+      1.041,
+      0.96
+    ],
+    "full_load_per_trial": [
+      0.963,
+      0.999,
+      0.986,
+      0.945,
+      0.982
+    ],
+    "preload_stats": {
+      "mean": 0.986,
+      "stdev": 0.03456587912956938,
+      "min": 0.952,
+      "max": 1.041
+    },
+    "full_load_stats": {
+      "mean": 0.975,
+      "stdev": 0.01892088792842452,
+      "min": 0.945,
+      "max": 0.999
+    }
+  },
+  "safety": {
+    "safety_radius_m": 0.14,
+    "min_interrobot_distance_m_per_trial": [
+      0.1430942842844398,
+      0.15064050840214138,
+      0.14781142476139542,
+      0.15030077874985828,
+      0.14178534915907265
+    ],
+    "min_interrobot_distance_m_stats": {
+      "mean": 0.1467264690713815,
+      "stdev": 0.003657320186256255,
+      "min": 0.14178534915907265,
+      "max": 0.15064050840214138
+    },
+    "safety_margin_m_per_trial": [
+      0.0030942842844398,
+      0.010640508402141369,
+      0.007811424761395402,
+      0.01030077874985827,
+      0.0017853491590726356
+    ],
+    "safety_margin_m_stats": {
+      "mean": 0.006726469071381495,
+      "stdev": 0.003657320186256251,
+      "min": 0.0017853491590726356,
+      "max": 0.010640508402141369
+    },
+    "tightest_trial": "objective5_impairment_matrix_v1_condition_A_trial05_attempt01",
+    "tightest_margin_m": 0.0017853491590726356
+  },
+  "bag_duration_s_per_trial": [
+    52.610294509,
+    55.111631421,
+    55.511099886,
+    53.644626305,
+    51.717647716
+  ],
+  "bag_duration_s_stats": {
+    "mean": 53.7190599674,
+    "stdev": 1.4416112190969343,
+    "min": 51.717647716,
+    "max": 55.511099886
+  },
+  "complete_count_per_trial": [
+    2,
+    2,
+    2,
+    2,
+    2
+  ],
+  "latency_methodology_note": "Condition A is the zero-impairment simulation baseline (delay_s=jitter_s=drop_probability=0, outage disabled). All five trials' message_age_s samples are 0 or near-0 seconds (RESOLUTION_LIMITED classification, per matrix_analyzer.py's frozen unified latency formula: message_age_s = consumer_callback_ros_time - EpuckState.production_stamp, both endpoints under use_sim_time=true reading the shared /clock topic). This 0/near-0 second figure reflects simulation-clock resolution -- messages are forwarded and consumed within the same or an adjacent simulation tick when no impairment is configured -- and does NOT represent, and must never be cited as, real physical network transport delay. It is the correct zero-impairment reference point against which Conditions B-G's actual configured delay/jitter will be compared.",
+  "individual_trial_verdicts": [
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
+      "trial_verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.1430942842844398,
+      "safety_margin_m": 0.0030942842844398
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial02_attempt01",
+      "trial_verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.15064050840214138,
+      "safety_margin_m": 0.010640508402141369
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial03_attempt01",
+      "trial_verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.14781142476139542,
+      "safety_margin_m": 0.007811424761395402
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial04_attempt01",
+      "trial_verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.15030077874985828,
+      "safety_margin_m": 0.01030077874985827
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_A_trial05_attempt01",
+      "trial_verdict": "PASS",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.14178534915907265,
+      "safety_margin_m": 0.0017853491590726356
+    }
+  ]
+}
