@@ -1,7 +1,10 @@
-# Objective 5 impairment matrix — analysis plan v1
+# Objective 5 impairment matrix — analysis plan v1 (revision 2)
 
 Status: **design only, not executed**. Describes how trials WILL be
-analyzed once run; contains no experiment data.
+analyzed once run; contains no experiment data. Revision 2: Condition A
+is now a full fresh n=5 (not partially reused, see design doc section
+1); the queue-drain check below is now a REAL, implemented, tested
+mechanism (`relay_drain.py`, commit `4e79b5a`), not a proposed rule.
 
 ## 1. Per-trial verdict: two independent dimensions
 
@@ -10,14 +13,24 @@ rationale. Every trial gets both labels, computed independently:
 
 **DATA_VALIDITY** = `VALID` | `INVALID` — infrastructure/measurement
 question, checked via:
-- relay parameters and seed actually deployed match the condition's
-  frozen config (cross-check the relay's own startup log line,
-  `network_impairment_relay.py` lines 80-84, against the intended
-  config)
+- relay parameters and BOTH directions' seeds actually deployed match
+  the condition's frozen config (cross-check `frozen_params.json`,
+  written by the orchestrator before anything starts, against
+  `objective5_impairment_matrix_conditions.csv`; also cross-check the
+  relay's own startup log line, `network_impairment_relay.py`, against
+  the intended config)
 - `realtime_factor_ok` (existing field in `objective5_formal_baseline_verdict.json`)
 - bag `metadata.yaml` present and non-empty
 - sequence/PDR statistics computed successfully (analyzer did not error)
 - analyzer completed without exception; no orchestration-script abort
+- **both robots' relay queues confirmed drained** (`pending_queue_depth
+  == 0` on `relay_status`, polled via `relay_drain.poll_until_drained`)
+  before the relay/bag were stopped -- an undrained queue at shutdown
+  must never be counted as network-impairment loss (design doc section
+  5); a `DrainTimeoutError` or the orchestrator's own recorded
+  `data_validity: "INVALID"` in `preliminary_runtime_manifest.json`
+  means this trial's delay/jitter/loss numbers cannot be trusted and it
+  must be treated as `INVALID`, not silently included
 - **Only `INVALID` halts the batch for diagnosis.**
 
 **TASK_OUTCOME** = `SUCCESS` | `SAFE_DEGRADATION` | `COLLISION` |

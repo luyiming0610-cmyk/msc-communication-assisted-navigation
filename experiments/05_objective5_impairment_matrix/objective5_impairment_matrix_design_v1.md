@@ -1,9 +1,25 @@
-# Objective 5 communication impairment matrix — design v1
+# Objective 5 communication impairment matrix — design v1 (revision 2)
 
-Status: **design only, not executed**. No simulation trial has been run
-from this document. Condition A's Trial 01 is a REUSE of an already-
-existing, already-sealed formal trial (no new run); Condition A Trials
-02-05 and all of Conditions B-G are **not started**.
+Status: **design only, not executed**. No A-G simulation trial has been
+run from this document. This is revision 2 of this design (revision 1
+sealed as commit `a2ee878`) after user review rejected reusing
+`objective5_comm_baseline_zero_impairment_formal_trial02_stamp` as
+Condition A Trial 01 -- see section 1 below for why, and what changed.
+
+**Unified tooling freeze**: every condition A-G in this matrix's
+eventual n=35 run must use the SAME frozen relay/controller/analyzer/
+orchestrator commit, because Condition F requires the burst/outage relay
+extension (v1.1), which necessarily post-dates every commit this design
+doc previously cited for Condition A's compatibility check. That
+extension is now implemented and tested (commit `f0857f9`,
+`network_impairment.py`/`network_impairment_relay.py`), and the unified
+parameterized orchestrator all seven conditions will use is built and
+tested (commit `4e79b5a`,
+`experiments/05_objective5_impairment_matrix/tools/`). **Neither commit
+has run a single A-G trial yet.** Once the user confirms this revised
+design, Condition A's n=5 will be recorded FRESH under this same frozen
+commit pair -- not reused from any earlier trial, including
+trial02_stamp.
 
 This design supersedes the retracted claim (see
 `experiments/controller_v4_full_sensor_bypass_20260717/README.md` lines
@@ -16,60 +32,52 @@ matter how large it is, as long as it is applied uniformly per message
 (no per-message accumulation, no queue backlog). This document does not
 repeat that error.
 
-## 1. Condition A disposition
+## 1. Condition A disposition (revised)
 
-### 1.1 Reused as Condition A Trial 01 (no rerun)
+### 1.1 `objective5_comm_baseline_zero_impairment_formal_trial02_stamp` — kept as PRE_MATRIX_FORMAL_VALIDATION, NOT reused
 
-`objective5_comm_baseline_zero_impairment_formal_trial02_stamp`, commit
-`59588e9`, verdict PASS, `fail_reasons: []`
-(`experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_comm_baseline_zero_impairment_formal_trial02_stamp/analysis/objective5_formal_baseline_verdict.json`).
+Commit `59588e9`, verdict PASS, `fail_reasons: []`. Design v1 proposed
+reusing this trial as Condition A Trial 01 -- rejected on review because
+Condition F's relay extension (necessary to complete the matrix, section
+3) changes the relay's own commit, and every condition in this matrix
+must share ONE frozen relay/controller/analyzer/orchestrator commit
+(section "Unified tooling freeze" above). trial02_stamp ran under a
+relay commit (`03ce36c`) that predates the v1.1 burst/outage extension
+(`f0857f9`) by definition -- it cannot be the same frozen commit every
+other condition uses, so it cannot be part of this matrix's own n=5,
+regardless of how compatible its OTHER dimensions are (protocol,
+timestamp semantics, controller, scenario, topics, bag convention,
+analyzer -- all still genuinely compatible, and still useful as
+independent pre-matrix validation evidence that the underlying
+zero-impairment path works).
 
-Compatibility, checked field by field against the current live code
-(confirmed via `git log --oneline -- <file>` that none of the files
-below have a commit after `d21f950`, which is itself the commit that
-added this trial's registry row and closed out `protocol_v1.1_stamp_semantics`
-— i.e. the code this trial ran is byte-identical to the code on disk
-today):
+**Disposition**: relabeled `PRE_MATRIX_FORMAL_VALIDATION` in this
+document and in the registry (a follow-up registry update, not part of
+this design-doc commit) -- kept exactly as-is, not deleted, not
+demoted, cited as independent corroborating evidence, but explicitly
+**not** one of Condition A's 5 trials.
 
-| check | trial02_stamp | current code | compatible |
-|---|---|---|---|
-| `EpuckState.msg` SHA-256 | `a7ec4184dec52b157a87beea20b44fb2dff5c6dee199d0c76b7c347c26abe15b`, frozen commit `06dae306` (`src/epuck2_comm_interfaces/PROTOCOL_FREEZE_20260717.md`) | same file, no commit since | YES |
-| PROTOCOL_VERSION | 1 (`protocol_v1.1_stamp_semantics` = stamp-gating behavior only, wire format untouched) | 1 | YES |
-| timestamp semantics | `state_publisher.py`'s `WAITING_FOR_CLOCK` gate + real `stamp` population (line ~275) | identical, unchanged since | YES |
-| controller version | `controller_v4_timebase_fix_20260717`, commits `980e7d0`/`06e0f0f`/`f1830c5` | `cooperative_avoider.py`/`local_obstacle_logic.py` unchanged since `d21f950` | YES |
-| relay version/params | `network_impairment_relay.py`, `delay_s=0.0 jitter_s=0.0 drop_probability=0.0 immediate_passthrough=true` | unchanged since `03ce36c` (predates both trials) | YES |
-| scenario/initial pose | `run_dual_head_on_clean.py`, epuck1 origin `(-0.35, 0.0, 0.0)`, epuck2 origin `(0.35, 0.0, π)` (`run_comm_baseline_formal_controllers.py`) | same script, same config dir, unchanged | YES |
-| trial duration | task-completion-driven, not fixed; bag `duration.nanoseconds: 94215112581` (~94.2s); `max_runtime_s=60.0` ceiling | same orchestrator/config | YES (duration is an outcome, not a frozen input — see 1.2) |
-| topic list | `/epuck1/state_raw /epuck2/state_raw /epuck1/state /epuck2/state /epuck1/cmd_vel /epuck2/cmd_vel` (`run_objective5_comm_baseline_formal_trial.sh` line 258-261) | same script | YES |
-| WSL native bag recording | native WSL ext4 first (`/home/eamon/epuck_comm_bags`), copied into git tree only after clean stop + non-empty `metadata.yaml` | same script | YES |
-| analyzer version | `analyze_comm_performance.py` (`--warmup-s 2.0 --cooldown-s 2.0 --peer-timeout-s 0.5`) + `analyze_objective5_formal_baseline.py` | same scripts, unchanged since `d21f950` | YES |
-| trial count n | **1** | matrix requires n=5 | **NO — see 1.2** |
-| realtime factor | preload 0.996 / full_load 1.003 | N/A (per-run measurement) | n/a |
-| PDR/latency field completeness | `metric_coverage: PDR=VALID sequence_integrity=VALID throughput=VALID task_behavior=VALID latency=VALID` (registry row, `experiment_registry.csv` line 38) | n/a | YES (complete, unlike trial01) |
-| formal (not diagnostic/pilot) | `formal_or_diagnostic=formal`, `evidence_level=FORMAL_SIM` | n/a | YES |
-
-**Every dimension is compatible except sample size.** Condition A is
-therefore **sealed as Trial 01 by reuse**, not rerun, and needs 4 more
-trials (Trials 02-05, identical configuration) before it has n=5.
-
-### 1.2 Old `objective5_comm_baseline_zero_impairment_formal_trial01` — LEGACY/EXCLUDED
+### 1.2 Old `objective5_comm_baseline_zero_impairment_formal_trial01` — LEGACY/EXCLUDED (unchanged from v1)
 
 Commit `9f4d7b2`. `metric_coverage: ... latency=NOT_MEASURED` (registry
-row, `experiment_registry.csv` line 36) — permanent, not backfilled
-(root cause: `analyze_comm_performance.py` at that commit mixed
-rosbag2's wall-clock recording timestamp with `message.stamp` sim time;
-fixed by the live-sequence-counter approach `trial02_stamp` uses, not by
-correcting the old bag-based path). Per instruction: **kept as
-LEGACY/EXCLUDED, not deleted, not recomputed under the current protocol,
-not counted toward Condition A's n=5.**
+row, `experiment_registry.csv` line 36) — permanent, not backfilled.
+Kept as LEGACY/EXCLUDED, not deleted, not recomputed, not counted
+toward Condition A's n=5. (Same disposition as v1; restated for
+completeness now that trial02_stamp has moved to the same "not counted"
+bucket for a different reason.)
 
-### 1.3 Condition A execution status
+### 1.3 Condition A execution status (revised)
 
-- Trial 01: **sealed by reuse**, see 1.1.
-- Trials 02-05: **not started**, pending this document's confirmation.
-  Once confirmed, same orchestrator (`run_objective5_comm_baseline_formal_trial.sh`),
-  same config, run 4 times with unique trial names
-  (`objective5_impairment_matrix_v1_condition_A_trial{02,03,04,05}`).
+**All 5 Condition A trials are new**, run under the unified frozen
+commit pair (`f0857f9` relay extension, `4e79b5a` orchestrator), using
+the same zero-impairment parameters trial02_stamp and trial01 both
+already validated (`delay_s=0.0 jitter_s=0.0 drop_probability=0.0`,
+`outage_period_s=0.0` -- disabled, confirmed byte-equivalent to the
+pre-extension relay by `test_default_outage_relay_forwards_identically_to_pre_extension_relay`).
+Not started; pending this revised document's confirmation. Command,
+once authorized:
+`run_objective5_impairment_matrix_trial.sh A 1` through
+`run_objective5_impairment_matrix_trial.sh A 5`.
 
 ## 2. Real data extracted (cited, not invented)
 
@@ -110,14 +118,14 @@ not counted toward Condition A's n=5.**
 ### 2.5 Relay implementation — exact mechanics (`network_impairment_relay.py` + `network_impairment.py`)
 
 - **Delay**: `ImpairmentDecider.decide()` (`network_impairment.py` lines 40-47): `release_delay = max(0.0, self.config.delay_s + jitter)`. Applied per-message via a min-heap keyed on `release_time_s = now + release_delay_s` (`network_impairment_relay.py` lines 110-115), flushed by a `0.01s` (10ms) timer (`_flush_queue`, line 87). The heap flushes in ascending `release_time_s` order, not receipt order — see reordering note below.
-- **Jitter**: symmetric uniform, `self._rng.uniform(-jitter_s/2, +jitter_s/2)` (`network_impairment.py` line 45) — **not** Gaussian, **not** one-sided.
+- **Jitter, exact formula (verified by test, not just read)**: `jitter_s` is the FULL peak-to-peak spread, not a half-amplitude. Each decision draws `jitter ~ Uniform(-jitter_s/2, +jitter_s/2)` (`network_impairment.py`), then `release_delay = max(0.0, delay_s + jitter)` — the floor applies to the SUM, never to `delay_s` or `jitter_s` individually. — **not** Gaussian, **not** one-sided. If `delay_s >= jitter_s/2`, the floor never actually clips anything (empirically confirmed, 20000 samples each): Condition D (`delay_s=0.15, jitter_s=0.30`, exactly at the boundary) has realized range `[0.0, 0.30]`, observed minimum `<0.002` (matches the true 0.0 floor closely, not clamped away from it), mean `0.15±0.01`, variance matching the theoretical `Uniform(0,0.30)` value `0.0075`; Condition G (`delay_s=0.20, jitter_s=0.20`) has realized range `[0.10, 0.30]`, observed minimum `>=0.10-1e-9` and `<0.105` (confirms no clamping, the range genuinely starts at 0.10 not artificially bounded away from it), mean `0.20±0.01`, variance matching `Uniform(0.10,0.30)`'s theoretical `0.003333`. Both cases: **no probability-mass spike at 0.0** (that only happens when `delay_s < jitter_s/2`, which neither D nor G's frozen parameters trigger). Reordering (D, G) confirmed possible via a dedicated empirical test: at a jitter spread of `0.30s` against the measured `0.1151s` publish period, two consecutively-generated release-delay draws produce a release-order crossover in a nonzero fraction of 2000 repeated trials.
 - **Reordering**: possible and NOT prevented by the relay — because the queue flushes in `release_time_s` order, if message N's `jitter_N` is large-negative and message N+1's `jitter_{N+1}` is large-positive, `release_time_N` can exceed `release_time_{N+1}`, and the relay will deliver N+1 to the controller before N (a genuine out-of-order delivery, correctly countable via `EpuckState.sequence`). This requires `jitter_s` to be a non-trivial fraction of the publish period (≈0.1151s, section 2.1) to have meaningful probability.
 - **Drop**: `network_impairment.py` line 41: `if self.config.drop_probability > 0.0 and self._rng.random() < self.config.drop_probability`. **Independent per-message Bernoulli only** — there is no consecutive/burst/periodic dropout logic anywhere in this file or `network_impairment.py`. Confirmed by reading both files in full; no other drop-shaping code exists in the repo (`Grep "burst|consecutive.*drop|outage"` across `src/epuck2_comm/` returns nothing beyond this design doc itself).
 - **RNG/seed**: one `random.Random(config.seed)` instance per relay NODE instance (one node per robot). The existing precedent script `run_relay_counter_configurable.py` (lines 60-63) assigns `epuck1` seed `S`, `epuck2` seed `S+1` — this matrix reuses that convention (section 5).
 - **RNG call order matters for seed-matching**: `decide()` draws `self._rng.random()` FIRST only if `drop_probability > 0.0` (short-circuit `and`), THEN `self._rng.uniform(...)` only if `jitter_s > 0.0` and the message wasn't dropped. This means the exact sequence of draws consumed from a given seed's stream differs between conditions with different `(drop_probability>0, jitter_s>0)` combinations, even at the identical seed value. Section 5 documents this honestly: "matched seed" here means *same seed value*, not *identical RNG event sequence* across conditions with different impairment types.
 - **Relay clock**: `_now_s()` = `self.get_clock().now().nanoseconds / 1e9` — the ROS node clock. Every relay launch site found (`run_comm_baseline_formal_controllers.py`, `run_relay_counter_configurable.py`, `run_diagnostic_relay_and_counter.py`, `run_comm_baseline_pilot.sh`, `run_comm_baseline_native_diagnostic.sh`) passes `"use_sim_time": True` / `-p use_sim_time:=true` to the relay. **The relay runs on Webots simulation time, not wall-clock.**
 - **Queue length**: `self._queue` (line 58) is a plain Python list used as a heap via `heapq` — **no explicit maximum size, no bound, no backpressure.** In practice bounded only by `(max release_delay) / (publish_period)` messages in flight.
-- **Flush on shutdown**: `destroy_node()` (lines 143-147) only closes the log file (`self._log_file.close()`). **It does not drain/flush the pending delayed-message queue.** Any message still sitting in `self._queue` when the node is destroyed is silently never published. This is a real, evidence-based mechanism (not hypothetical) by which a trial's tail end could show a message gap even under otherwise-stable delay — relevant to Condition C's boundary behavior and noted as an explicit thing to check in the analysis plan, not something to "fix" before running (the matrix's job is to characterize behavior of the real, current tooling).
+- **Flush on shutdown**: `destroy_node()` still (v1.1, unchanged from v1.0) only closes the log file. **It does not drain/flush the pending delayed-message queue.** This is not "fixed" in the relay itself -- per instruction, the correct fix lives in the ORCHESTRATOR, not the relay: `run_objective5_impairment_matrix_trial.sh` (commit `4e79b5a`) now holds the relay/clock/counter/bag running (with the controller already stopped and both robots' commanded velocity at zero) for `max_configured_delivery_delay + 2 publish periods` (`relay_drain.py`'s `compute_drain_duration_s`) after task completion, then polls each robot's new `relay_status` topic (1Hz, `{received_count, forwarded_count, dropped_bernoulli_count, dropped_outage_count, pending_queue_depth}`) until `pending_queue_depth == 0` before stopping the relay and bag. If the queue is still nonzero after the drain window, the trial's `DATA_VALIDITY` is set to `INVALID` (never silently treated as a real network-impairment result, per section 6's two-dimensional verdict). `max_configured_delivery_delay` itself is `delay_s + jitter_s/2` (`ImpairmentDecider.max_release_delay_s()`, mirrored independently in `relay_drain.max_configured_delivery_delay_s()` so the orchestrator-side calculation doesn't need to import the ROS package) -- outage-dropped messages never enter the queue at all (they're rejected at `release_delay_s=0.0`), so outage parameters do not extend the drain wait.
 - **Immediate-passthrough short-circuit**: `is_zero_impairment()` (`network_impairment.py` lines 49-54) is true only when `delay_s<=0 and jitter_s<=0 and drop_probability<=0` — exactly Condition A's configuration; ANY nonzero value on ANY of the three parameters disables the fast path and switches to the 10ms-timer-driven queue, which is the mechanism whose shutdown-flush gap (previous bullet) applies.
 
 ## 3. A–G condition table (frozen candidates, pending confirmation)
@@ -155,13 +163,16 @@ See `objective5_impairment_matrix_conditions.csv` for the machine-readable versi
 - Expected effect: PDR ≈ 0.85, `missing`/gap counts > 0, low-probability but nonzero chance of an isolated `SAFE_STOP_STALE` tick; task success expected likely but not guaranteed.
 - Contrast: vs A (loss-only) and vs G (loss component within combined impairment); matched seeds with G (section 5) isolate the effect of adding delay+jitter on top of the identical drop-event sequence.
 
-### F — Burst loss / dropout (stale/peer-timeout safety test) — **NOT EXECUTABLE with the current relay**
-- **The current relay (`network_impairment.py`, section 2.5) implements ONLY independent per-message Bernoulli drop. There is no burst, consecutive-outage, or periodic-dropout mechanism anywhere in the codebase.** Per instruction, this condition is reported as a minimal versioned extension design, not implemented, and not approximated with an extreme independent `drop_probability` (which would not reliably produce a genuine ≥`peer_timeout_s`-length outage — an extreme independent `p` mostly still produces short runs, per the geometric-distribution tail, and would conflate "very lossy" with "briefly fully down," which are scientifically different failure modes this condition specifically wants to separate).
-- **Minimal versioned extension proposal (design only, `network_impairment.py` v1.1, NOT implemented this pass)**:
-  - New `ImpairmentConfig` fields: `outage_period_s: float = 0.0` (time between the START of successive scheduled outages), `outage_duration_s: float = 0.0` (how long each outage drops every message).
-  - `ImpairmentDecider.decide()` gains a deterministic, seed-independent-position check: given elapsed sim time `t` since the relay's own start, if `outage_period_s > 0` and `t mod outage_period_s < outage_duration_s`, forward=False unconditionally (no RNG draw needed for the outage decision itself — the outage schedule is deterministic once seeded/started, only its literal start offset could optionally be seed-jittered in a v1.2 if desired later).
-  - Suggested first Condition F parameters (to revisit once implemented, NOT frozen now): `outage_duration_s=0.7` (> `peer_timeout_s=0.5`, guaranteeing at least one `SAFE_STOP_STALE`/`PEER_TIMEOUT_STOP` per outage by construction) at `outage_period_s=15.0` (≈4-5 outages within `max_runtime_s=60.0`), `delay_s=jitter_s=0` outside the outage windows, `drop_probability=0` (all loss comes from the deterministic outage, not independent Bernoulli, keeping the mechanism single-factor and interpretable).
-  - Required before Condition F can run: (1) implement the two new fields + the modulo check, (2) unit tests for `ImpairmentDecider` covering the outage boundary (message at `t = outage_start`, `outage_start + outage_duration - epsilon`, `outage_start + outage_duration`), (3) a CSV log field distinguishing `dropped_outage` from `dropped_bernoulli` (currently the log's `action` column only has `dropped`/`forwarded`, section 2.5's log-header quote) so post-hoc analysis can tell the two loss mechanisms apart even if both are ever enabled together, (4) a syntax/unit-test pass and a **separate commit** for the extension itself before any Condition F trial is authorized to run.
+### F — Burst loss / dropout (stale/peer-timeout safety test) — **extension implemented (commit `f0857f9`), frozen parameters below, not yet run**
+- **v1.1 extension, as actually built** (`network_impairment.py`, `ImpairmentConfig.outage_period_s`/`outage_duration_s`/`outage_phase_s`, all default `0.0` = disabled): `ImpairmentDecider.decide(elapsed_s)` checks
+  `(elapsed_s - outage_phase_s) % outage_period_s < outage_duration_s` BEFORE the Bernoulli drop check -- a pure, stateless function of `elapsed_s` (no RNG draw, correct even under a backward sim-time jump, per `test_outage_is_a_pure_function_correct_under_backward_time_jump`). `drop_reason` distinguishes `"outage"` from `"bernoulli"` in both the relay's return value and its CSV log (new `drop_reason` column, appended not inserted).
+- **Frozen parameters** (derived, not guessed, shown below): `outage_duration_s=0.7`, `outage_period_s=15.0`, `outage_phase_s=10.0`, `delay_s=jitter_s=drop_probability=0.0` outside/independent of outage windows (all loss is the deterministic outage mechanism, never independent Bernoulli, keeping F single-factor and interpretable).
+- **Derivation, from the same measured quantities as every other condition**:
+  - `outage_duration_s`: must exceed `peer_timeout_s=0.5` with margin for at least one full publish period (`~0.1151s`, section 2.1) and one control period (`0.05s`, section 2.1), so the controller's own freshness check is guaranteed to actually observe the gap, not just barely miss it: `0.5 + 0.1151 + 0.05 = 0.6651s`, rounded up to **0.7s** (margin over `peer_timeout_s`: `0.2s`, exceeding the required `0.1651s`).
+  - `outage_period_s`: chosen so multiple outages occur within `max_runtime_s=60.0` with ample normal-operation recovery time between them, without the trial being "mostly down": **15.0s** gives `floor((60-10)/15)+1 = 4` outages (at elapsed `10, 25, 40, 55`), each separated by `15.0/0.5 = 30` `peer_timeout_s` windows of normal operation -- duty cycle `4*0.7/60 ≈ 4.7%`.
+  - `outage_phase_s`: the first outage must not land before the encounter dynamic has had time to develop -- `startup_hold_s=5.0` (section 2.4) plus a buffer, so **10.0s**.
+  - Expected outcome (not required, not assumed): 4 outage windows per trial, each individually designed to force at least one `STALE_STATE_STOP`/`PEER_TIMEOUT_STOP` by construction; whether the controller cleanly recovers after each, or degrades cumulatively across outages, is exactly what this condition tests.
+- **Tests** (13 new in `test_network_impairment.py`, 4 new in `test_network_impairment_relay.py`, commit `f0857f9`): outage window boundary closed/open semantics, recurrence across multiple periods, correctness before the first phase offset, correctness under backward time jump, combined-with-Bernoulli precedence (outage checked first, short-circuits the RNG draw), zero-period/zero-duration disables outage, `is_zero_impairment()` correctly false when outage is configured, plus node-level drop_reason CSV logging and default-outage node-level equivalence to the pre-extension relay.
 
 ### G — Combined impairment
 - `delay_s=0.20, jitter_s=0.20, drop_probability=0.10`. Randomized (seed, section 5).
@@ -188,14 +199,15 @@ See `objective5_impairment_matrix_conditions.csv` for the machine-readable versi
 | Success/collision/safe-stop criteria | see `objective5_impairment_matrix_analysis_plan.md` section on TASK_OUTCOME classification | new for this matrix |
 | Simulator | Webots (current, validated) — **no migration to Gazebo**; "Webots-vs-Gazebo equivalence requires supervisor confirmation" limitation remains in force, unchanged | per instruction |
 
-## 5. Repetition and randomness
+## 5. Repetition and randomness (finalized, concrete seeds)
 
-- Condition A: deterministic, no seed applies (n=5: Trial01=reused trial02_stamp, Trials02-05=new, same zero-impairment config).
-- Conditions B, C: deterministic (no RNG draws occur — `jitter_s=0` and `drop_probability=0` in both, so `ImpairmentDecider.decide()` never calls `self._rng` at all). n=5 trials each are still required (task-completion timing, controller-internal state-machine timing, and Webots physics have their own trial-to-trial variance even with a deterministic relay) but do not need distinct seeds.
-- Conditions D, E, G: randomized. **5 base seeds, reusing the project's existing precedent value** (`objective5_timestamp_latency_validation_pilot01` used `seed=4001`, registry row confirmed): `{4001, 4002, 4003, 4004, 4005}` — trial `NN` (`02`..`05`, `01` for the first new trial in each condition) uses base seed `4000+NN`. Per-robot assignment follows the existing convention in `run_relay_counter_configurable.py` (lines 60-63): epuck1 gets the base seed, epuck2 gets `base+1`.
-- **Matched-seed pairing**: Conditions E and G use the **identical 5 base seeds** — same trial index, same seed value — so the underlying PRNG stream starts identically for both. Section 2.5 documents the caveat honestly: because `decide()`'s RNG consumption pattern differs between E (drop-only, always draws exactly one `random()` call per message) and G (drop_probability>0 AND jitter_s>0, draws `random()` then conditionally `uniform()`), the two conditions do **not** receive the exact same sequence of drop/no-drop outcomes message-for-message despite the shared seed — "matched" here means matched starting seed value (a considered, documented choice), not a guaranteed identical event trace. Condition D's own 5 seeds also reuse `{4001..4005}` for consistency, with the same caveat noted.
-- Conditions F: seed scheme deferred to whenever the outage-based extension (section 3, Condition F) is actually implemented — no seed is frozen for an unbuilt mechanism.
-- Every trial gets a unique directory name (`condition_X_trialNN`); no bag directory is ever reused or overwritten; a failed/interrupted attempt is preserved under an `_attemptNN` suffix, matching this session's established convention for the physical baseline batch.
+- Condition A: deterministic, no seed applies. n=5, all new (section 1.3).
+- Conditions B, C: deterministic (`jitter_s=0`, `drop_probability=0`, `outage_period_s=0` — `ImpairmentDecider.decide()` never calls `self._rng` at all). n=5 trials each still required (task-completion timing, controller-internal state-machine timing, and Webots physics have their own trial-to-trial variance even with a deterministic relay) but no seed needed.
+- **Conditions D, E, F, G: randomized. Exactly 5 decimal base seeds, frozen: `4001, 4002, 4003, 4004, 4005`** (trial index 1-5 maps to base seed `4000 + trial_index`), reusing the project's existing precedent value (`objective5_timestamp_latency_validation_pilot01` used `seed=4001`).
+- **Two-direction seed mapping, explicit** (each condition has TWO relay instances, one per robot's outgoing state stream -- see section 2.5's "one relay instance per robot" note): the **epuck1-to-epuck2 direction** (the relay in the `epuck1` namespace, relaying epuck1's own state to epuck2's controller) uses the base seed directly; the **epuck2-to-epuck1 direction** (the relay in the `epuck2` namespace) uses `base_seed + 1`. Concretely: trial 1 -> epuck1_to_epuck2 seed `4001`, epuck2_to_epuck1 seed `4002`; trial 5 -> `4005`/`4006`. This is the SAME convention already established in `run_relay_counter_configurable.py` (lines 60-63), reused here rather than invented. **The two directions never share an identical seed value** -- `test_two_direction_seeds_base_and_base_plus_one_produce_different_sequences` confirms `base` and `base+1` produce genuinely different decision sequences, so this is not an unintended full correlation; it is the deliberate, minimal, precedented choice, not independently-drawn seeds, and that is stated here explicitly rather than left implicit.
+- **Matched-seed pairing (E vs G)**: same 5 base seeds, same trial-index-to-seed mapping, for both conditions. Caveat, stated honestly: `decide()`'s RNG consumption differs between E (drop-only, always exactly one `random()` call per message) and G (`drop_probability>0` AND `jitter_s>0`, draws `random()` then conditionally `uniform()`), so E and G do **not** receive byte-identical drop/no-drop event sequences despite the shared seed -- "matched" means matched starting seed value (a considered, documented choice, verified reproducible via `test_same_seed_reproduces_the_identical_decision_sequence`), not a guaranteed identical event trace. Condition D's own seeds reuse the same `{4001..4005}` values for consistency across the whole randomized set, with the same caveat.
+- Condition F: same seed scheme (`seed` parameter still set per relay instance, for consistency and CSV-log provenance), but the outage schedule itself is deterministic and does NOT depend on the seed at all (section 3's `_in_outage` check draws no random number) -- only the (currently zero, per F's frozen params) Bernoulli component would ever consume it.
+- Every trial gets a unique directory name (`objective5_impairment_matrix_v1_condition_<ID>_trial<NN>_attempt<NN>`, `unique_trial_dir.py`); `require_unique_trial_dir()` refuses to overwrite an existing directory; a failed/interrupted attempt is preserved under an incremented `_attemptNN`, matching the convention established for the physical baseline batch.
 
 ## 6. Two-dimensional verdict (DATA_VALIDITY × TASK_OUTCOME)
 
@@ -249,26 +261,38 @@ collision rate, or avoidance/recovery completion** — the physical batch
 never launched a controller, never had a second robot, and never
 attempted the cooperative-avoidance task at all.
 
-## 8. Execution plan (not run; awaiting confirmation)
+## 8. Execution plan (revised: all 7 conditions now tooled, 35 new trials total, none run)
 
-1. Condition A Trials 02-05 (4 trials, existing formal orchestrator, no
-   new tooling needed) — can start immediately once confirmed.
-2. Conditions B, C, D, E, G (25 trials) — require a NEW orchestrator
-   variant accepting `--delay-s/--jitter-s/--drop-probability/--seed`
-   CLI args, built by combining `run_objective5_comm_baseline_formal_trial.sh`'s
-   full pipeline (controllers + bag + analyzer + native-WSL recording)
-   with `run_relay_counter_configurable.py`'s parameterized relay launch
-   pattern — this new script does not exist yet and must be written,
-   syntax-checked, and (for its parameter-passing logic) unit-tested
-   before Trial 01 of Condition B can run.
-3. Condition F (5 trials) — blocked on the relay extension (section 3)
-   being implemented, tested, and committed separately; not part of the
-   immediately-executable 29.
-4. **Total immediately-executable new trials: 4 (A) + 5×4 (B,C,D,E,G) = 24... 
-   recount: A=4, B=5, C=5, D=5, E=5, G=5 → 29 new trials executable now.
-   F=5 more once its extension lands (34 total once F is included, matching
-   the "34 new trials" figure from the instruction — but only 29 of those
-   34 can start under the current, unmodified relay).**
+Per the unified-tooling-freeze requirement (top of this document),
+Condition A is no longer partially-reused -- **every condition is now a
+fresh n=5 under the same frozen commit pair** (`f0857f9` relay
+extension, `4e79b5a` orchestrator):
+
+| condition | new trials | tooling status |
+|---|---|---|
+| A | 5 | ready (unified orchestrator, zero-impairment params) |
+| B | 5 | ready |
+| C | 5 | ready |
+| D | 5 | ready (randomized, seeds frozen section 5) |
+| E | 5 | ready (randomized) |
+| F | 5 | ready (relay extension implemented+tested; frozen outage params section 3) |
+| G | 5 | ready (randomized, matched seeds with E) |
+| **total** | **35** | all seven conditions executable under the same frozen commit once confirmed |
+
+All 35 trials use `run_objective5_impairment_matrix_trial.sh CONDITION_ID TRIAL_INDEX`
+(`experiments/05_objective5_impairment_matrix/tools/`, commit `4e79b5a`)
+-- the single unified orchestrator for every condition, parameters
+resolved exclusively from the frozen
+`objective5_impairment_matrix_conditions.csv` via
+`load_condition_config.py` (no hand-typed override path exists). This
+script has NOT been run end-to-end (building/syntax-checking/unit-
+testing its parameter-resolution and drain-duration logic is not the
+same as an actual Webots-integrated run, and no such run has happened,
+per instruction). The first real run of ANY condition is therefore
+still an open risk surface for issues this design/build pass could not
+catch (e.g. an actual Webots launch timing edge case) -- Condition A
+Trial 01 is deliberately the first one run, manually observed, exactly
+as the physical baseline's own first-trial discipline required.
 
 See `objective5_impairment_matrix_analysis_plan.md` for the full
 per-trial/per-condition metrics and statistics plan.
