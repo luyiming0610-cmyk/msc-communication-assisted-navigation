@@ -24,6 +24,21 @@ set -eo pipefail
 # not managed here.
 #
 # Usage: run_baseline_v1_trial.sh TRIAL_NAME   (e.g. trial01)
+#
+# DEPRECATED (kept only as an audit record -- do not remove, do not run).
+# This orchestrator has a confirmed systematic window defect: it started
+# rosbag a fixed 1s after the status recorder with no readiness
+# confirmation, and stopped the three recording processes sequentially
+# (recorder -> sampler -> bag) instead of together. Both real 300s+ runs
+# made with this script (trial01_attempt01, trial02_attempt01) measured a
+# true bag/status_csv/system_csv overlap of only ~294-295s, short of the
+# 300.000s a centered 240s main window with >=30.000s buffer on both sides
+# requires -- both were excluded from the formal n=5 batch as SHORT_WINDOW.
+# Fixed in run_baseline_v1_trial_v2.sh (commit a7f2a7e). This script must
+# never start any process or create a bag; it exits immediately below.
+echo "DEPRECATED_SHORT_WINDOW_ORCHESTRATOR: run_baseline_v1_trial.sh is disabled." >&2
+echo "Use run_baseline_v1_trial_v2.sh instead (fixed in commit a7f2a7e)." >&2
+exit 3
 
 if (( $# != 1 )); then
   echo "Usage: $0 TRIAL_NAME" >&2

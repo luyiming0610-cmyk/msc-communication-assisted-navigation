@@ -162,6 +162,24 @@ shortcut:**
   begins, matching the standing "do not auto-run the next experiment"
   instruction, unless you explicitly authorize a run-all-5 sequence.
 
+## Execution attempts (append-only, never overwritten/reused)
+
+| attempt | trial slot | orchestrator | status | formal_eligible | reason |
+|---|---|---|---|---|---|
+| `trial01_attempt01_short_window` | trial01 | `run_baseline_v1_trial.sh` (v1, now DEPRECATED) | `EXCLUDED_SHORT_WINDOW` | `false` | true 3-source (bag/status_csv/system_csv) overlap 295.432s < required 300.000s (shortfall 4.568s). See `window_audit_status_final.json` in the attempt's diag directory. |
+| `trial02_attempt01_short_window` | trial02 | `run_baseline_v1_trial.sh` (v1, now DEPRECATED) | `EXCLUDED_SHORT_WINDOW` | `false` | same systematic defect, confirmed independently: overlap 294.345s < required 300.000s (shortfall 5.655s). See `window_audit_status_final.json` in the attempt's diag directory. |
+
+Both attempts' data (rosbag, CSVs, logs) is preserved in full under
+`/home/eamon/epuck_comm_bags/`, never deleted or overwritten, and is
+explicitly `formal_eligible: false` / not counted toward the formal n=5
+batch. Directory names carry the `_short_window` marker so no later
+summarization step can mistake them for eligible trials. Root cause and
+fix: see commit `a7f2a7e` (`run_baseline_v1_trial_v2.sh` + `window_calc.py`
++ `wait_for_ready.py`). `run_baseline_v1_trial.sh` is hard-disabled (exits
+immediately with `DEPRECATED_SHORT_WINDOW_ORCHESTRATOR`, code 3) and must
+never be used again; only `run_baseline_v1_trial_v2.sh` is used for any
+subsequent attempt, starting with `trial01_attempt02`.
+
 ## Safety teardown available on request
 
 If you need to step away or pause for more than ~10 minutes at any
