@@ -1,7 +1,7 @@
 # PROJECT_HANDOFF.md — start here
 
 Single entry point for any AI (Claude, Codex, or otherwise) or human
-picking up this project. Last updated: 2026-07-18. This document was
+picking up this project. Last updated: 2026-07-19. This document was
 current as of index-files commit `026223b` (source state at scan time:
 `2558216`) — **do not trust a hardcoded commit hash in any document,
 including this one, as "the current commit."** Always run
@@ -31,11 +31,11 @@ Pi-puck, reality gap).
 
 ## Current overall status
 
-- **Objective 1** (Environment Setup): simulation side done (ROS2 Humble + Webots, not Gazebo — see the deviation note below). Physical Pi-puck side: bringup verified 2026-07-18 (Pi ROS 2 Foxy driver + Pi TCP server + WSL TCP client all confirmed running, `/scan`/`/odom`/`/tof`/`/ps0` all confirmed publishing, robot stationary throughout, no `/cmd_vel` sent) — see `experiments/06_physical_pipuck/physical_device_registry.md`. No pilot or formal physical experiment has been run under the current protocol; `physical_protocol_gap_report.md` documents that the pre-existing physical bridge data (2026-07-15, `real_robot_avoidance_v1/`) uses an old JSON protocol incompatible with the current frozen `EpuckState.msg` and cannot be pooled with current formal statistics.
+- **Objective 1** (Environment Setup): simulation side done (ROS2 Humble + Webots, not Gazebo — see the deviation note below). Physical Pi-puck bringup and the current `EpuckState.msg` adapter path are verified; the stationary single-device zero-impairment physical baseline is complete at 5/5 FINAL_PASS. Ground-motion/controller-driven physical validation has not started. Pre-existing 2026-07-15 JSON-format physical data remain legacy-only and are never pooled with the current protocol.
 - **Objective 2** (Protocol Design): `EpuckState.msg` implemented and **frozen as PROTOCOL_VERSION=1** (commit `b5a0351`).
-- **Objective 3** (Library Implementation): `epuck2_comm` library implemented — `state_publisher`, `cooperative_avoider`, `network_impairment_relay`, analyzers. 126/126 tests passing.
+- **Objective 3** (Library Implementation): `epuck2_comm` library implemented — `state_publisher`, `cooperative_avoider`, `network_impairment_relay`, analyzers. 165/165 package tests passing at the Condition D closeout.
 - **Objective 4** (Task-Specific Validation): controller v1→v4 defect chain resolved; **Phase 4 formal batch SEALED, 5/5 PASS** (commit `e32560e`). Avoidance-scenario scope is now intentionally frozen.
-- **Objective 5** (Performance Analysis): analyzer + impairment relay implemented and unit-tested; **zero-impairment baseline is still diagnostic only** — root cause of an earlier ~40-55% message-loss anomaly has been traced to writing rosbag directly to a `/mnt/c` (Windows-mounted) path from WSL2, confirmed via two independent native-WSL-path diagnostic trials (PDR=1.0 both times), but a full formal baseline (with the actual task controller running) has not yet been completed under that fixed workflow. **No formal PDR/latency figures exist yet.**
+- **Objective 5** (Performance Analysis): impairment matrix Conditions A-D are complete. A and B are 5/5 successful; C is a valid completed condition with 4/5 SUCCESS plus one retained unsafe failure; D is complete with 5/5 included trials (D01/D02/D03/D05/D06) and D04 transparently retained as an excluded rosbag-only measurement-chain attempt. Conditions E-G remain. See `experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_{A,B,C,D}_formal_batch_summary.md`.
 - **Objective 6/7** (physical validation, reality gap): bridge/driver bringup verified (see Objective 1 above). **First formal physical result now exists**: `physical_single_device_zero_impairment_baseline_v1` (stationary, no ground motion, no controller, single e-puck2 #5809, expanded Pi-TCP-WSL bridge + `EpuckState.msg`) is **FINAL_BATCH_PASS (5/5 FINAL_PASS)** — see `experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/batch_summary.md` and the per-trial `physical_single_device_zero_impairment_baseline_v1_trial0N_attemptNN_analysis/` directories. All 5 trials are one continuous driver/Pi-expanded-server/WSL-bridge session (not 5 independent cold starts). Tier A delivery ratio 1.0/5 trials (application-level, not IP/TCP loss; `duplicate_count` NOT_MEASURABLE, never 0); Tier B bag-capture ratio 1.0 at ~8.88-8.94 Hz actual; Tier C raw sensors ~9.2 Hz, no PDR claimed; RTT tail ~20-25% >50/100ms, 0% >200ms recurring across all 5 windows with **no root-cause attribution**; one-way Pi-to-WSL latency **NOT reported/measured** (no clock-sync verified); `trial01/02_attempt01_short_window` are excluded diagnostic evidence (window-timing defect, since fixed), not part of this n=5. This is a stationary, comm-layer-only result — no ground-motion or controller-driven physical trial has run yet, and reality-gap comparison (Objective 7) has not started.
 
 ## Key paths
@@ -89,7 +89,7 @@ python3 -m pytest test/ -q
 
 ## Experiment categories (full detail: `experiments/EXPERIMENT_INDEX.md`)
 
-01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline (currently diagnostic only) · 05 Objective 5 impairment matrix (not started) · 06 physical Pi-puck (not started) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason).
+01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-D complete; E-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason).
 
 ## Formal vs. diagnostic — the distinction that matters most
 
@@ -137,6 +137,15 @@ result within the same Objective 5 zero-impairment question, run via
 the impairment-matrix orchestrator rather than the earlier
 comm-baseline script. **Conditions B and C are now complete. Condition B: 5/5 PASS. Condition C: COMPLETE_FAILED_SAFETY_GATE (4/5 SUCCESS + 1/5 UNSAFE_FAILURE).** C05 reached 0.1389086m, about 1.091mm below the frozen 0.14m safety radius; the valid failure was retained and not rerun. All five C trials reproduced exactly 9 steering-direction reversals per robot inside one continuous AVOID_PASS, with PREDICTED_CPA and no LOCAL_* takeover.
 
+**Condition D is also complete:** D01/D02/D03/D05/D06 are the five included
+formal trials; D04 is retained but excluded as
+`EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT` because one relay-forwarded message was
+received by the online counter but absent from rosbag. D06 is the sole
+authorized replacement for D04. All five included trials completed safely,
+although D03's +0.170mm margin is a razor-thin threshold pass, not robust
+safety. The authoritative summary is
+`experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_D_formal_batch_summary.{json,md}`.
+
 The registry's first `evidence_level=FORMAL_PHYSICAL` row (distinct from
 `FORMAL_SIM`) is `physical_single_device_zero_impairment_baseline_v1`
 (5/5 FINAL_PASS, `06_physical_pipuck`) — see the Objective 6/7 status line
@@ -161,36 +170,18 @@ row per experiment/batch — `status`, `evidence_level`,
 
 ## Current single next step
 
-Conditions A and B are complete at 5/5 PASS. Condition C is also complete,
-but its correct result is `4/5 SUCCESS + 1/5 UNSAFE_FAILURE`; do not rerun
-C05 or relabel the batch as a pass. **Condition D is IN PROGRESS.** Verdicts
-use a five-axis schema (corrected 2026-07-19): `DATA_ARTIFACT_INTEGRITY`,
-`MANIPULATION_VALIDITY` (relay-level: 0 drops + reordering genuinely
-induced, cross-checked against the independent online `sequence_counter`
-subscriber — deliberately NOT gated on bag capture), `TASK_OUTCOME`,
-`FORMAL_MEASUREMENT_VALIDITY` (bag-recording-chain completeness
-specifically), `FORMAL_BATCH_INCLUSION`. **D01, D02, D03, D05 all score
-`VALID/VALID/SUCCESS/VALID` → `INCLUDED`** — margins +4.472mm, +11.62mm, a
-razor-thin **+0.17mm** for D03 (a threshold pass, explicitly not robust
-safety, preserved as genuine unadjusted data), and +9.19mm for D05 (4 of 5
-valid trials so far). **D04 scores
-`FORMAL_MEASUREMENT_VALIDITY=INVALID` → `EXCLUDED`**: sequence 17
-(`epuck2_to_epuck1`) was genuinely forwarded by the relay and received live
-by the independent online counter (`epuck2_counter.json`:
-`received_count=unique_sequence_count=450`, matching the relay's full
-forwarded count) but never captured by the bag — a **rosbag-only
-single-message capture gap**, NOT a relay-to-downstream loss, NOT a
-manipulation failure, NOT a task failure. D04 is classified
-`EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT`: preserved in full, not rerun, not
-counted toward the formal n=5. See
-`objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis/STOP_CONDITION_REPORT.md`
-(correction section). D05 has passed all five axes, satisfying the
-precondition for D06 as D04's sole replacement, but **D06 is BLOCKED**:
-running it requires extending the frozen CSV's Condition D seed lists to
-`trial_index=6` (the loader hard-errors past index 5), which requires
-explicit user authorization before any code/CSV change is made. No
-Condition D n=5 batch summary exists yet (4/5 valid trials); when built, it
-must list D04's exclusion explicitly.
+Conditions A-D are complete. A and B are 5/5 successful. C is complete with
+the scientifically valid result `4/5 SUCCESS + 1/5 UNSAFE_FAILURE`; C05 is
+retained and must never be rerun or relabelled as a pass. D is complete with
+five included trials (D01/D02/D03/D05/D06). D06 is the sole authorized
+replacement for D04; D04 remains fully preserved and explicitly excluded as
+`EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT` because rosbag alone missed one message
+that the relay forwarded and the online counter received. D03's +0.170mm
+margin is a razor-thin threshold pass, not robust safety. The next executable
+matrix condition is E (moderate independent loss); do not auto-start it
+without explicit authorization. Condition F still requires the mandatory
+outage-window/startup-offset audit before any formal run. Conditions E-G and
+physical ground-motion/reality-gap validation remain unfinished.
 
 Running D01 surfaced a **sequence-accounting bug**: `sequence_counter.py`'s
 adjacent-delta missing/expected accounting is wrong under reordering (it

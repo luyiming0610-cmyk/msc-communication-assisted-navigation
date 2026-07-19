@@ -1,0 +1,104 @@
+{
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "D",
+  "trial_index": 6,
+  "attempt": 1,
+  "trial_id": "objective5_impairment_matrix_v1_condition_D_trial06_attempt01",
+  "batch_status": "TRIAL_INCLUDED_BATCH_COMPLETE",
+  "batch_note": "D06 is the fifth included trial and sole preregistered replacement for excluded D04. The authoritative batch result is objective5_impairment_matrix_v1_condition_D_formal_batch_summary.{json,md}; D01/D02/D03/D05/D06 are included and D04 is retained as EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT.",
+  "data_validity": "VALID",
+  "data_validity_reasons": [],
+  "task_outcome": "SUCCESS",
+  "task_outcome_reason": "complete_count=2 >= expected 2",
+  "analyzer_ok": true,
+  "measurement_validity": "VALID",
+  "legacy_replay": false,
+  "safety": {
+    "min_interrobot_distance_m": 0.14431858718680218,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.00431858718680217
+  },
+  "manual_observation": {
+    "status": "NOT_OBSERVED",
+    "reason": "user did not directly observe this trial"
+  },
+  "process_cleanup_check": {
+    "result": "CLEAN",
+    "checked_after_run_completion": true
+  },
+  "bag_integrity_check": {
+    "ros2_bag_info_succeeded": true,
+    "message_count": 3204,
+    "topic_count": 7,
+    "duration_s": 52.305706294
+  },
+  "raw_data_preservation": {
+    "native_wsl_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_D_trial06_attempt01",
+    "native_wsl_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_D_trial06_attempt01_diag_logs",
+    "windows_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_D_trial06_attempt01/",
+    "windows_copy_committed_to_git": false,
+    "sha256_verified_native_vs_windows_copy": true
+  },
+  "run_identity": {
+    "git_commit": "fa4718260421706fac668c88a3d5a706f5a014da",
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "queue_drain": {
+    "drain_duration_s": 0.5302,
+    "queue_drained": true
+  },
+  "realtime_factor": {
+    "preload_realtime_factor": 0.955,
+    "full_load_realtime_factor": 0.975,
+    "realtime_factor_ok": true
+  },
+  "trial_verdict": "FAIL",
+  "trial_verdict_reason": "One or more strict automated criteria FAILED -- see fields above for detail.",
+  "trial_verdict_clarification_note": "This automated strict-criteria gate (missing_count==0, out_of_order_count==0, etc.) was built for Conditions A/B/C, where zero reordering is the PASS condition. Condition D's frozen design (jitter_s=0.30 with delay_s=0.15) is EXPECTED and INTENDED to produce genuine out-of-order delivery -- the manipulation-check success criterion for this condition is out_of_order_count > 0 in both directions, which is what was observed. The missing_count/capture_ratio fields above are also METHOD_INVALID under reordering (sequence_counter.py adjacent-delta accounting bug, see project_status.json and reordering_delivery_audit.json for the reorder-safe, set-based replacement). This FAIL label should NOT be read as a real defect or safety failure. The condition-appropriate verdict is determined separately in three_axis_verdict.json.",
+  "LEGACY_METHOD_INVALID_UNDER_REORDERING": {
+    "warning": "These per-direction missing_count/capture_ratio fields come from the live sequence_counter.py's adjacent-delta accounting, which is WRONG under reordering (Condition D). They MUST NOT be used to judge D-condition missing/capture. See reordering_delivery_audit.json / three_axis_verdict.json's axis_2/axis_4 for the reorder-safe, set-based replacement (actual_missing_count, aligned_window_forwarded_to_bag_capture_ratio). Values below are the ORIGINAL, UNMODIFIED numbers -- preserved for transparency, not deleted.",
+    "communication_metrics": {
+      "epuck1_to_epuck2": {
+        "sample_count": 429,
+        "missing_count": 204,
+        "duplicate_count": 0,
+        "out_of_order_count": 96,
+        "capture_ratio": 1.0023364485981308,
+        "mean_message_age_s": 0.1632634032564088,
+        "median_message_age_s": 0.1599999999999966,
+        "p95_message_age_s": 0.29999999999999716,
+        "p99_message_age_s": 0.2999999999999997,
+        "max_message_age_s": 0.3000000000000007,
+        "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
+        "mean_bandwidth_bytes_per_s": 712.7352226436997,
+        "schema_problems": [],
+        "relay_forwarded_matches_consumer_received": true,
+        "independent_drop_count": 0,
+        "outage_drop_count": 0
+      },
+      "epuck2_to_epuck1": {
+        "sample_count": 436,
+        "missing_count": 203,
+        "duplicate_count": 0,
+        "out_of_order_count": 94,
+        "capture_ratio": 1.0,
+        "mean_message_age_s": 0.15972477063761362,
+        "median_message_age_s": 0.1599999999999966,
+        "p95_message_age_s": 0.29999999999999716,
+        "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007,
+        "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
+        "mean_bandwidth_bytes_per_s": 711.832818313749,
+        "schema_problems": [],
+        "relay_forwarded_matches_consumer_received": true,
+        "independent_drop_count": 0,
+        "outage_drop_count": 0
+      }
+    }
+  },
+  "trial_verdict_superseded_by": "three_axis_verdict.json",
+  "trial_verdict_authoritative_note": "The bare 'trial_verdict' above (and any bare FAIL shown in summary.md/README.md) is an OBSOLETE single-axis label from the strict A/B/C-style gate, which is invalid for a reordering condition. The authoritative result for this trial is the five-axis verdict in 'three_axis_verdict.json' (DATA_ARTIFACT_INTEGRITY / MANIPULATION_VALIDITY / TASK_OUTCOME / FORMAL_MEASUREMENT_VALIDITY / FORMAL_BATCH_INCLUSION)."
+}

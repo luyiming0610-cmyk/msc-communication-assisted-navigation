@@ -1,0 +1,90 @@
+{
+  "condition_id": "D",
+  "condition_name": "Jitter / reordering",
+  "batch_label": "FORMAL_SIM",
+  "n_trials": 5,
+  "batch_status": "COMPLETE",
+  "verdict_schema": "FIVE_AXIS (DATA_ARTIFACT_INTEGRITY / MANIPULATION_VALIDITY / TASK_OUTCOME / FORMAL_MEASUREMENT_VALIDITY / FORMAL_BATCH_INCLUSION), corrected 2026-07-19",
+  "frozen_params": {
+    "delay_s": 0.15,
+    "jitter_s": 0.30,
+    "drop_probability": 0.0,
+    "outage_period_s": 0.0,
+    "outage_duration_s": 0.0,
+    "outage_phase_s": 0.0
+  },
+  "included_trials": [
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial01_attempt01",
+      "seed_epuck1_to_epuck2": 4001, "seed_epuck2_to_epuck1": 14001,
+      "DATA_ARTIFACT_INTEGRITY": "VALID", "MANIPULATION_VALIDITY": "VALID",
+      "TASK_OUTCOME": "SUCCESS", "FORMAL_MEASUREMENT_VALIDITY": "VALID",
+      "FORMAL_BATCH_INCLUSION": "INCLUDED",
+      "min_interrobot_distance_m": 0.1444723957613864,
+      "safety_margin_m": 0.0044723957613863885
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial02_attempt01",
+      "seed_epuck1_to_epuck2": 4002, "seed_epuck2_to_epuck1": 14002,
+      "DATA_ARTIFACT_INTEGRITY": "VALID", "MANIPULATION_VALIDITY": "VALID",
+      "TASK_OUTCOME": "SUCCESS", "FORMAL_MEASUREMENT_VALIDITY": "VALID",
+      "FORMAL_BATCH_INCLUSION": "INCLUDED",
+      "min_interrobot_distance_m": 0.1516223239385512,
+      "safety_margin_m": 0.011622323938551199
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial03_attempt01",
+      "seed_epuck1_to_epuck2": 4003, "seed_epuck2_to_epuck1": 14003,
+      "DATA_ARTIFACT_INTEGRITY": "VALID", "MANIPULATION_VALIDITY": "VALID",
+      "TASK_OUTCOME": "SUCCESS", "FORMAL_MEASUREMENT_VALIDITY": "VALID",
+      "FORMAL_BATCH_INCLUSION": "INCLUDED",
+      "min_interrobot_distance_m": 0.14016992055075728,
+      "safety_margin_m": 0.0001699205507572632,
+      "razor_thin_margin_warning": "TRUE -- margin ~0.170mm, a threshold pass, NOT robust safety. Genuine, unadjusted data."
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial05_attempt01",
+      "seed_epuck1_to_epuck2": 4005, "seed_epuck2_to_epuck1": 14005,
+      "DATA_ARTIFACT_INTEGRITY": "VALID", "MANIPULATION_VALIDITY": "VALID",
+      "TASK_OUTCOME": "SUCCESS", "FORMAL_MEASUREMENT_VALIDITY": "VALID",
+      "FORMAL_BATCH_INCLUSION": "INCLUDED",
+      "min_interrobot_distance_m": 0.14919158786608294,
+      "safety_margin_m": 0.009191587866082929
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial06_attempt01",
+      "seed_epuck1_to_epuck2": 4006, "seed_epuck2_to_epuck1": 14006,
+      "DATA_ARTIFACT_INTEGRITY": "VALID", "MANIPULATION_VALIDITY": "VALID",
+      "TASK_OUTCOME": "SUCCESS", "FORMAL_MEASUREMENT_VALIDITY": "VALID",
+      "FORMAL_BATCH_INCLUSION": "INCLUDED",
+      "min_interrobot_distance_m": 0.14431858718680218,
+      "safety_margin_m": 0.00431858718680217,
+      "replacement_for": "D04",
+      "replacement_authorized_commit": "fa4718260421706fac668c88a3d5a706f5a014da"
+    }
+  ],
+  "excluded_trials": [
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial04_attempt01",
+      "seed_epuck1_to_epuck2": 4004, "seed_epuck2_to_epuck1": 14004,
+      "DATA_ARTIFACT_INTEGRITY": "VALID", "MANIPULATION_VALIDITY": "VALID",
+      "TASK_OUTCOME": "SUCCESS", "FORMAL_MEASUREMENT_VALIDITY": "INVALID",
+      "FORMAL_BATCH_INCLUSION": "EXCLUDED",
+      "classification": "EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT",
+      "min_interrobot_distance_m": 0.14309905640064896,
+      "safety_margin_m": 0.0030990564006489474,
+      "exclusion_reason": "ROSbag-only single-message capture gap: sequence 17 (epuck2_to_epuck1) was forwarded and received by the online counter but absent from the bag. This violates the preregistered aligned-window bag capture ratio=1.0 requirement. Task itself SUCCEEDED and communication manipulation was genuinely and correctly applied; only the bag-recording chain failed to capture one message.",
+      "not_rerun": true,
+      "not_counted_toward_formal_n5": true
+    }
+  ],
+  "code_identity": {
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3",
+    "conditions_csv_sha256_before_d06_seed_extension": "7d0f31106c2cbcbe2355f158ad554f5769c1033ac8b505f8e3a65920dd1ad01f",
+    "conditions_csv_sha256_after_d06_seed_extension": "f98a47b667aa4f23c09f562084eff4e555770d10da089173468ffa0a72c4d2d2"
+  },
+  "next_condition": "Conditions E, F, G not started. Condition F additionally blocked by the mandatory outage-window/startup-offset audit."
+}

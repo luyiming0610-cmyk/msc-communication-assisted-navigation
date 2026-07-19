@@ -1,0 +1,44 @@
+{
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "D",
+  "trial_index": 6,
+  "attempt": 1,
+  "trial_id": "objective5_impairment_matrix_v1_condition_D_trial06_attempt01",
+  "launch_method": "Automated run authorized by the user as the sole preregistered replacement for excluded D04 (rosbag-only single-message capture gap). manual_observation.status=NOT_OBSERVED per explicit user instruction. Uses trial_index=6, seeds resolved from the extended objective5_impairment_matrix_conditions.csv (4006/14006), not hand-typed.",
+  "launch_wrapper_script": "experiments/05_objective5_impairment_matrix/tools/run_objective5_matrix_from_windows.sh",
+  "launch_wrapper_sha256": "70cae1ba04e2b78cae3f15cc72f94c7832939d524b6f3578ba5a03a2f11bfd5c",
+  "frozen_condition_params": {
+    "delay_s": 0.15,
+    "jitter_s": 0.3,
+    "drop_probability": 0.0,
+    "outage_period_s": 0.0,
+    "outage_duration_s": 0.0,
+    "outage_phase_s": 0.0,
+    "seed_epuck1_to_epuck2": 4006,
+    "seed_epuck2_to_epuck1": 14006
+  },
+  "code_identity": {
+    "git_commit": "fa4718260421706fac668c88a3d5a706f5a014da",
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3",
+    "conditions_csv_path": "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_conditions.csv",
+    "conditions_csv_sha256_before_d06_seed_extension": "7d0f31106c2cbcbe2355f158ad554f5769c1033ac8b505f8e3a65920dd1ad01f",
+    "conditions_csv_sha256_at_this_run": "f98a47b667aa4f23c09f562084eff4e555770d10da089173468ffa0a72c4d2d2"
+  },
+  "replacement_for": "D04",
+  "replacement_reason": "D04 (objective5_impairment_matrix_v1_condition_D_trial04_attempt01) was retained as valid data but EXCLUDED from the formal n=5 due to FORMAL_MEASUREMENT_VALIDITY=INVALID (a rosbag-only single-message capture gap, sequence 17 epuck2_to_epuck1 -- forwarded by the relay and received live by the independent online sequence_counter subscriber, but never captured by the bag). D06 is the sole preregistered replacement trial, using a seed pair (4006/14006) added to the frozen Condition D CSV row for exactly this purpose (commit fa47182, see objective5_impairment_matrix_design_v1.md section 5). n_trials for Condition D remains 5.",
+  "bag_metadata": {
+    "duration_s": 52.305706294,
+    "message_count": 3204,
+    "topic_count": 7
+  },
+  "raw_data_paths": {
+    "native_wsl_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_D_trial06_attempt01",
+    "native_wsl_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_D_trial06_attempt01_diag_logs",
+    "windows_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_D_trial06_attempt01/",
+    "windows_copy_committed_to_git": false,
+    "sha256_verified_native_vs_windows_copy": true
+  }
+}

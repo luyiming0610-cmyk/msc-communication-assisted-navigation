@@ -1,0 +1,148 @@
+{
+  "analyzer": "reorder_safe_delivery_analyzer.py v1",
+  "audit_type": "OFFLINE_REORDER_SAFE_DELIVERY_AUDIT",
+  "webots_run_for_this_audit": false,
+  "trial_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_D_trial06_attempt01",
+  "directions": {
+    "epuck1_to_epuck2": {
+      "relay_csv": "epuck1_relay.csv",
+      "delivered_topic": "/epuck1/state",
+      "source_topic": "/epuck1/state_raw",
+      "relay_forwarded_set_size": 429,
+      "relay_dropped_set_size": 0,
+      "bag_received_set_size": 410,
+      "bag_delivered_stream": {
+        "measurable": true,
+        "total_arrivals": 410,
+        "unique_count": 410,
+        "duplicate_count": 0,
+        "min_sequence": 19,
+        "max_sequence": 428,
+        "first_arrival_sequence": 20,
+        "first_arrival_is_min": false,
+        "expected_count": 410,
+        "actual_missing_count": 0,
+        "actual_missing_set": [],
+        "out_of_order_adjacent_inversions": 92,
+        "out_of_order_displaced_count": 95,
+        "reordering_present": true,
+        "within_window_capture_ratio": 1.0
+      },
+      "relay_forwarded_stream": {
+        "measurable": true,
+        "total_arrivals": 429,
+        "unique_count": 429,
+        "duplicate_count": 0,
+        "min_sequence": 0,
+        "max_sequence": 428,
+        "first_arrival_sequence": 0,
+        "first_arrival_is_min": true,
+        "expected_count": 429,
+        "actual_missing_count": 0,
+        "actual_missing_set": [],
+        "out_of_order_adjacent_inversions": 96,
+        "out_of_order_displaced_count": 99,
+        "reordering_present": true,
+        "within_window_capture_ratio": 1.0
+      },
+      "aligned_window_forwarded_to_bag": {
+        "measurable": true,
+        "aligned_window_min": 19,
+        "aligned_window_max": 428,
+        "relay_total_forwarded_window_min": 0,
+        "relay_total_forwarded_window_max": 428,
+        "relay_total_forwarded_count": 429,
+        "forwarded_in_aligned_window_count": 410,
+        "bag_captured_in_aligned_window_count": 410,
+        "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+        "forwarded_but_not_in_bag_count": 0,
+        "bag_sequences_not_in_forwarded_set": [],
+        "bag_window_covers_full_relay_lifetime": false,
+        "note": "This ratio is computed over the ALIGNED window shared by the relay's forwarded stream and the bag's own coverage; it proves only that no capture loss occurred WITHIN that common window. It is NOT the bag's capture rate over the relay's full lifetime -- relay_total_forwarded_count vs forwarded_in_aligned_window_count differing is expected when the bag recorder started after the relay began forwarding (a start-boundary effect, not loss)."
+      },
+      "relay_received_to_forwarded": {
+        "measurable": true,
+        "relay_received_count": 429,
+        "forwarded_count": 429,
+        "dropped_count": 0,
+        "relay_received_to_forwarded_ratio": 1.0,
+        "note": "Denominator is the relay's OWN received-message count from its CSV log, not the full source/state_raw publication lifecycle. Not a complete source-to-relay PDR unless the source and relay sequence sets are separately aligned."
+      },
+      "data_validity": {
+        "data_validity": "VALID",
+        "reason": "reorder-safe set-based accounting self-consistent",
+        "reordering_present_but_not_a_validity_failure": true
+      }
+    },
+    "epuck2_to_epuck1": {
+      "relay_csv": "epuck2_relay.csv",
+      "delivered_topic": "/epuck2/state",
+      "source_topic": "/epuck2/state_raw",
+      "relay_forwarded_set_size": 436,
+      "relay_dropped_set_size": 0,
+      "bag_received_set_size": 417,
+      "bag_delivered_stream": {
+        "measurable": true,
+        "total_arrivals": 417,
+        "unique_count": 417,
+        "duplicate_count": 0,
+        "min_sequence": 19,
+        "max_sequence": 435,
+        "first_arrival_sequence": 19,
+        "first_arrival_is_min": true,
+        "expected_count": 417,
+        "actual_missing_count": 0,
+        "actual_missing_set": [],
+        "out_of_order_adjacent_inversions": 91,
+        "out_of_order_displaced_count": 97,
+        "reordering_present": true,
+        "within_window_capture_ratio": 1.0
+      },
+      "relay_forwarded_stream": {
+        "measurable": true,
+        "total_arrivals": 436,
+        "unique_count": 436,
+        "duplicate_count": 0,
+        "min_sequence": 0,
+        "max_sequence": 435,
+        "first_arrival_sequence": 0,
+        "first_arrival_is_min": true,
+        "expected_count": 436,
+        "actual_missing_count": 0,
+        "actual_missing_set": [],
+        "out_of_order_adjacent_inversions": 94,
+        "out_of_order_displaced_count": 100,
+        "reordering_present": true,
+        "within_window_capture_ratio": 1.0
+      },
+      "aligned_window_forwarded_to_bag": {
+        "measurable": true,
+        "aligned_window_min": 19,
+        "aligned_window_max": 435,
+        "relay_total_forwarded_window_min": 0,
+        "relay_total_forwarded_window_max": 435,
+        "relay_total_forwarded_count": 436,
+        "forwarded_in_aligned_window_count": 417,
+        "bag_captured_in_aligned_window_count": 417,
+        "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+        "forwarded_but_not_in_bag_count": 0,
+        "bag_sequences_not_in_forwarded_set": [],
+        "bag_window_covers_full_relay_lifetime": false,
+        "note": "This ratio is computed over the ALIGNED window shared by the relay's forwarded stream and the bag's own coverage; it proves only that no capture loss occurred WITHIN that common window. It is NOT the bag's capture rate over the relay's full lifetime -- relay_total_forwarded_count vs forwarded_in_aligned_window_count differing is expected when the bag recorder started after the relay began forwarding (a start-boundary effect, not loss)."
+      },
+      "relay_received_to_forwarded": {
+        "measurable": true,
+        "relay_received_count": 436,
+        "forwarded_count": 436,
+        "dropped_count": 0,
+        "relay_received_to_forwarded_ratio": 1.0,
+        "note": "Denominator is the relay's OWN received-message count from its CSV log, not the full source/state_raw publication lifecycle. Not a complete source-to-relay PDR unless the source and relay sequence sets are separately aligned."
+      },
+      "data_validity": {
+        "data_validity": "VALID",
+        "reason": "reorder-safe set-based accounting self-consistent",
+        "reordering_present_but_not_a_validity_failure": true
+      }
+    }
+  }
+}
