@@ -174,30 +174,42 @@ it runs.**
   reversals (about five S-lobes) within one continuous `AVOID_PASS`, not
   repeated CPA encounters or IR/ToF fallback. Full evidence:
   `objective5_impairment_matrix_v1_condition_C_formal_batch_summary.{json,md}`.
-- **Condition D Trial 01 (jitter/reordering), RUN + sequence-accounting
-  CORRECTED, awaiting user acceptance before D02-05**:
-  `objective5_impairment_matrix_v1_condition_D_trial01_attempt01` (frozen
-  `delay_s=0.15`, `jitter_s=0.30` peak-to-peak → per-message release delay
-  `[0,0.30]s`, `drop_probability=0.0`, outage disabled, seeds `4001/14001`;
-  same frozen controller/world/thresholds/behavioral-code SHA-256 as A/B/C).
-  Three-axis verdict: `DATA_VALIDITY=VALID`, `MANIPULATION_VALIDITY=VALID`,
-  `TASK_OUTCOME=SUCCESS` (no collision; `min_interrobot_distance_m=0.1444723957613864`,
-  margin +4.472mm; `PREDICTED_CPA`; `LOCAL_*` all zero; one edge-based
-  AVOID_TURN→AVOID_PASS→RECOVER cycle per robot). `manual_observation.status=
-  NOT_OBSERVED` (user did not directly observe). **Sequence-accounting bug
-  found and corrected offline** (no rerun, no param change): the live
-  `sequence_counter.py` mis-derives missing/expected under reordering, giving
-  bogus `missing_count=189/192` and an impossible `capture_ratio=1.00233`.
-  Replaced by a new versioned set-based analyzer,
-  `tools/reorder_safe_delivery_analyzer.py` (v1, 12 unit tests, all pass):
-  both directions **actual_missing=0**, **forwarded_to_bag_capture_ratio=1.0**,
-  relay drop=0, duplicate=0, out_of_order genuinely >0 (89/92 = reordering
-  applied, not loss). The disputed `matrix_analysis.json` fields are annotated
-  METHOD_INVALID (preserved). Evidence:
-  `objective5_impairment_matrix_v1_condition_D_trial01_attempt01_analysis/`
-  (`reordering_delivery_audit.{json,md}`,
-  `condition_D_trial01_corrected_verdict.json`,
-  `condition_D_trial01_corrected_summary.md`). D02-05 not started.
+- **Condition D (jitter/reordering), IN PROGRESS, HALTED AT TRIAL 04**:
+  frozen `delay_s=0.15`, `jitter_s=0.30` peak-to-peak → per-message release
+  delay `[0,0.30]s`, `drop_probability=0.0`, outage disabled, seeds
+  `400N/1400N` per trial N; same frozen controller/world/thresholds/
+  behavioral-code SHA-256 as A/B/C. All trials use the three-axis verdict
+  (`DATA_VALIDITY` / `MANIPULATION_VALIDITY` / `TASK_OUTCOME`), computed via
+  a new versioned set-based analyzer `tools/reorder_safe_delivery_analyzer.py`
+  (v1, 13 unit tests) that replaces the live `sequence_counter.py`'s
+  adjacent-delta accounting -- that accounting is wrong under reordering
+  (bogus missing counts, impossible ratios >1) and its disputed
+  `matrix_analysis.json` fields are annotated METHOD_INVALID in every D
+  trial's analysis dir (preserved, not deleted). Analyzer output fields are
+  named `aligned_window_forwarded_to_bag_capture_ratio` and
+  `relay_received_to_forwarded_ratio` (renamed 2026-07-19 for accuracy, no
+  value change). Every trial: `manual_observation.status=NOT_OBSERVED`.
+  - **D01**: three-axis `VALID/VALID/SUCCESS`, margin +4.472mm. Corrected
+    from an initial mis-derived `missing=189/192`/`capture_ratio=1.00233`
+    (root cause: `sequence_counter.py` using first-ARRIVED sequence as
+    minimum). `PREDICTED_CPA`, `LOCAL_*` all zero.
+  - **D02**: three-axis `VALID/VALID/SUCCESS`, margin +11.62mm.
+  - **D03**: three-axis `VALID/VALID/SUCCESS`, margin **+0.17mm** (extremely
+    tight, genuine, preserved as-is, not rerun/adjusted).
+  - **D04**: `DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS` (margin +3.099mm),
+    but **`MANIPULATION_VALIDITY=INVALID`**: `epuck2_to_epuck1` direction has
+    `actual_missing_count=1` (sequence 17) and
+    `aligned_window_forwarded_to_bag_capture_ratio=0.9976958525345622`.
+    Verified directly against the raw `epuck2_relay.csv`: sequence 17 was
+    genuinely forwarded by the relay (no `drop_reason`) but never appears in
+    the bag's `/epuck2/state` -- a genuine, isolated single-message
+    relay-to-bag capture gap, distinct from the sequence-accounting bug
+    above. This triggered an explicit pre-declared stop condition; the batch
+    HALTED here, D04 was NOT rerun, D05 was NOT started. See
+    `objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis/STOP_CONDITION_REPORT.md`.
+  - No Condition D n=5 batch summary exists (requires D02-05 all pass).
+    Evidence per trial:
+    `objective5_impairment_matrix_v1_condition_D_trial0{1..4}_attempt01_analysis/`.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,

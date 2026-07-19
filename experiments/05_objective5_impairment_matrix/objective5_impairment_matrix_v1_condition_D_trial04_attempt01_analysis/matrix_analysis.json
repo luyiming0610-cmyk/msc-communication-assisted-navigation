@@ -1,0 +1,112 @@
+{
+  "_method_validity_annotation": {
+    "added": "post-run correction, does not modify any measured value below",
+    "scope": "This file is PRESERVED verbatim. The following per-direction sequence fields are METHOD_INVALID under a reordering condition (Condition D) and MUST NOT be used as Condition D's formal loss metrics: sequence.missing_count, sequence.capture_ratio, and (as their upstream source) sequence.expected_count when expected_count was derived from the last/first ARRIVED sequence rather than the true max/min sequence.",
+    "reason": "These fields are copied from sequence_counter.py, which computes sequence_gap_count by accumulating adjacent forward-jumps (seq > prev+1) without reconciling them when the skipped sequence later arrives out of order, and computes expected_count = last_arrived - first_arrived + 1 using the first ARRIVAL as the minimum. Under jitter-induced reordering both are wrong.",
+    "corrected_source_of_truth": "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis/reordering_delivery_audit.json (reorder_safe_delivery_analyzer.py v1, set-based).",
+    "fields_still_valid_in_this_file": "latency (mean/median/p95/p99/max message_age_s, VALID_AT_SIM_CLOCK_RESOLUTION), throughput, relay.received_count/forwarded_count/dropped_count, queue_drain, realtime_factor, task_outcome_inputs -- none of these depend on the broken adjacent-delta missing/expected accounting."
+  },
+  "condition_id": "D",
+  "trial_index": 4,
+  "measurement_validity": "VALID",
+  "legacy_replay": false,
+  "directions": [
+    {
+      "direction": "epuck1_to_epuck2",
+      "relay": {
+        "received_count": 444,
+        "forwarded_count": 444,
+        "dropped_count": 0,
+        "independent_drop_count": 0,
+        "outage_drop_count": 0
+      },
+      "sequence": {
+        "received_count": 444,
+        "unique_sequence_count": 444,
+        "expected_count": 443,
+        "missing_count": 215,
+        "duplicate_count": 0,
+        "out_of_order_count": 97,
+        "capture_ratio": 1.002257336343115
+      },
+      "latency": {
+        "sample_count": 444,
+        "mean_message_age_s": 0.15986486485810697,
+        "median_message_age_s": 0.1599999999999966,
+        "p95_message_age_s": 0.29999999999999716,
+        "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007,
+        "negative_age_sample_count": 0,
+        "anomalous_age_sample_count": 0,
+        "configured_delay_s": 0.15,
+        "configured_jitter_s": 0.3,
+        "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
+        "clock_domain_evidence": "state_publisher, network_impairment_relay, and sequence_counter are all launched with use_sim_time=true and read the same /clock topic; message_age_s = consumer_callback_ros_time (sequence_counter's own get_clock().now() at message receipt) - EpuckState.stamp (state_publisher's get_clock().now() at publish time). Never the rosbag recorder's wall-clock time.",
+        "schema_problems": []
+      },
+      "relay_forwarded_matches_consumer_received": true,
+      "throughput": {
+        "mean_bandwidth_bytes_per_s": 709.2091123430952,
+        "total_bytes": 31040,
+        "duration_s": 43.76706314086914,
+        "actual_rate_hz": 8.842265672576605
+      }
+    },
+    {
+      "direction": "epuck2_to_epuck1",
+      "relay": {
+        "received_count": 450,
+        "forwarded_count": 450,
+        "dropped_count": 0,
+        "independent_drop_count": 0,
+        "outage_drop_count": 0
+      },
+      "sequence": {
+        "received_count": 450,
+        "unique_sequence_count": 450,
+        "expected_count": 450,
+        "missing_count": 185,
+        "duplicate_count": 0,
+        "out_of_order_count": 84,
+        "capture_ratio": 1.0
+      },
+      "latency": {
+        "sample_count": 450,
+        "mean_message_age_s": 0.1629333333244432,
+        "median_message_age_s": 0.16000000000000014,
+        "p95_message_age_s": 0.29999999999999716,
+        "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007,
+        "negative_age_sample_count": 0,
+        "anomalous_age_sample_count": 0,
+        "configured_delay_s": 0.15,
+        "configured_jitter_s": 0.3,
+        "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
+        "clock_domain_evidence": "state_publisher, network_impairment_relay, and sequence_counter are all launched with use_sim_time=true and read the same /clock topic; message_age_s = consumer_callback_ros_time (sequence_counter's own get_clock().now() at message receipt) - EpuckState.stamp (state_publisher's get_clock().now() at publish time). Never the rosbag recorder's wall-clock time.",
+        "schema_problems": []
+      },
+      "relay_forwarded_matches_consumer_received": true,
+      "throughput": {
+        "mean_bandwidth_bytes_per_s": 710.6527989175124,
+        "total_bytes": 31680,
+        "duration_s": 44.578731060028076,
+        "actual_rate_hz": 8.860727764280853
+      }
+    }
+  ],
+  "queue_drain": {
+    "drain_duration_s": 0.5302,
+    "queue_drained": true
+  },
+  "realtime_factor": {
+    "preload_realtime_factor": 0.958,
+    "full_load_realtime_factor": 0.948,
+    "realtime_factor_ok": true
+  },
+  "task_outcome_inputs": {
+    "complete_count": 2,
+    "expected_complete_count": 2,
+    "controller_crashed": false
+  },
+  "errors": []
+}

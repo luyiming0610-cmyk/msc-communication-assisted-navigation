@@ -163,25 +163,36 @@ row per experiment/batch — `status`, `evidence_level`,
 
 Conditions A and B are complete at 5/5 PASS. Condition C is also complete,
 but its correct result is `4/5 SUCCESS + 1/5 UNSAFE_FAILURE`; do not rerun
-C05 or relabel the batch as a pass. **Condition D Trial 01 (jitter/reordering)
-has been run and offline-corrected** — three-axis verdict
-`DATA_VALIDITY=VALID / MANIPULATION_VALIDITY=VALID / TASK_OUTCOME=SUCCESS`,
-`manual_observation.status=NOT_OBSERVED`. Running D01 surfaced a
-**sequence-accounting bug**: `sequence_counter.py`'s adjacent-delta
-missing/expected accounting is wrong under reordering (it reported bogus
-`missing=189/192` and an impossible `capture_ratio=1.00233`). It is corrected
-by a new offline, versioned, set-based analyzer
+C05 or relabel the batch as a pass. **Condition D is IN PROGRESS and HALTED
+at Trial 04.** D01 (offline-corrected for a sequence-accounting bug, see
+below) and D02-D03 all independently passed the three-axis verdict
+(`DATA_VALIDITY / MANIPULATION_VALIDITY / TASK_OUTCOME` all
+`VALID/VALID/SUCCESS`); D03's margin is extremely tight (+0.17mm, preserved
+as genuine data). **D04 triggered an explicit stop condition**:
+`MANIPULATION_VALIDITY=INVALID` because the `epuck2_to_epuck1` direction has
+`actual_missing_count=1` (sequence 17) — verified directly against the raw
+relay CSV to be a genuine single-message gap between the relay's forward and
+the bag's capture, NOT the sequence-accounting bug below. D04 was **not**
+rerun and D05 was **not** started; see
+`objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis/STOP_CONDITION_REPORT.md`.
+No Condition D n=5 batch summary exists yet.
+
+Running D01 surfaced a **sequence-accounting bug**: `sequence_counter.py`'s
+adjacent-delta missing/expected accounting is wrong under reordering (it
+reported bogus `missing=189/192` and an impossible `capture_ratio=1.00233`
+for D01). It is corrected by a new offline, versioned, set-based analyzer
 `experiments/05_objective5_impairment_matrix/tools/reorder_safe_delivery_analyzer.py`
-(12 unit tests; both directions true missing=0, capture=1.0). For Conditions D
-and the jitter component of G, use `reordering_delivery_audit.json`, NOT
-`matrix_analysis.json`'s `sequence.missing_count/capture_ratio` (annotated
-METHOD_INVALID). The frozen `sequence_counter.py` itself was NOT modified (it
-stays correct for the in-order streams of A/B/C/E). **D02-05 are not started
-and require explicit user acceptance of the corrected D01 first.** Conditions
-E-G have not started; Condition F additionally remains blocked by the
-mandatory outage-window/startup-offset audit in
-`experiments/project_status.json`. Use the same frozen orchestrator; the CSV
-remains the only parameter source.
+(13 unit tests). Its output fields are named
+`aligned_window_forwarded_to_bag_capture_ratio` and
+`relay_received_to_forwarded_ratio` (renamed 2026-07-19 for accuracy, no
+value change). For Conditions D and the jitter component of G, use
+`reordering_delivery_audit.json`, NOT `matrix_analysis.json`'s
+`sequence.missing_count/capture_ratio` (annotated METHOD_INVALID). The frozen
+`sequence_counter.py` itself was NOT modified (it stays correct for the
+in-order streams of A/B/C/E). Conditions E-G have not started; Condition F
+additionally remains blocked by the mandatory outage-window/startup-offset
+audit in `experiments/project_status.json`. Use the same frozen orchestrator;
+the CSV remains the only parameter source.
 ## What to read first, in order
 
 1. **This file.**

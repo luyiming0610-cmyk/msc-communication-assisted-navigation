@@ -1,0 +1,121 @@
+{
+  "label": "condition_D_trial03",
+  "robots": {
+    "1": {
+      "mode_entry_counts": {
+        "SAFE_STOP_STALE": 1,
+        "STARTUP_HOLD": 1,
+        "CRUISE": 2,
+        "AVOID_TURN": 1,
+        "AVOID_PASS": 1,
+        "RECOVER": 1,
+        "COMPLETE": 1
+      },
+      "cpa_avoid_turn_entries": 1,
+      "cpa_avoid_pass_entries": 1,
+      "cpa_recover_entries": 1,
+      "local_transition_counts": {},
+      "avoid_pass": {
+        "present": true,
+        "start_wall_time": 1784449758.338,
+        "end_wall_time": 1784449779.515,
+        "duration_s": 21.177000045776367,
+        "command": {
+          "sample_count": 404,
+          "duration_s": 21.067939519882202,
+          "angular_sign_runs_threshold_0_05": [
+            -1,
+            1
+          ],
+          "angular_sign_run_details": [
+            {
+              "sign": -1,
+              "start_offset_s": 0.0,
+              "angular_rps_at_start": -0.24999999999999434
+            },
+            {
+              "sign": 1,
+              "start_offset_s": 0.152724027633667,
+              "angular_rps_at_start": 0.06924974799157096
+            }
+          ],
+          "angular_direction_reversals": 1,
+          "absolute_angular_command_integral_rad": 0.15164769391470143,
+          "signed_angular_command_integral_rad": 0.0766729582982801,
+          "max_abs_angular_command_rps": 0.24999999999999434,
+          "mean_linear_command_mps": 0.01199752475247518
+        },
+        "trajectory": {
+          "sample_count": 189,
+          "path_length_m": 0.24127742522543252,
+          "displacement_m": 0.2412562506272394,
+          "path_efficiency": 0.9999122396213681,
+          "lateral_span_m": 0.1054448647191748,
+          "yaw_min_rad": -0.5448401570320129,
+          "yaw_max_rad": -0.44337198138237,
+          "yaw_range_rad": 0.10146817564964294,
+          "yaw_total_variation_rad": 0.2558763921260834,
+          "yaw_net_change_rad": 0.0485282838344574
+        }
+      }
+    },
+    "2": {
+      "mode_entry_counts": {
+        "SAFE_STOP_STALE": 1,
+        "STARTUP_HOLD": 1,
+        "CRUISE": 2,
+        "AVOID_TURN": 1,
+        "AVOID_PASS": 1,
+        "RECOVER": 1,
+        "COMPLETE": 1
+      },
+      "cpa_avoid_turn_entries": 1,
+      "cpa_avoid_pass_entries": 1,
+      "cpa_recover_entries": 1,
+      "local_transition_counts": {},
+      "avoid_pass": {
+        "present": true,
+        "start_wall_time": 1784449758.496,
+        "end_wall_time": 1784449779.514,
+        "duration_s": 21.01799988746643,
+        "command": {
+          "sample_count": 402,
+          "duration_s": 20.964624166488647,
+          "angular_sign_runs_threshold_0_05": [
+            -1,
+            1
+          ],
+          "angular_sign_run_details": [
+            {
+              "sign": -1,
+              "start_offset_s": 0.0,
+              "angular_rps_at_start": -0.49000000000000343
+            },
+            {
+              "sign": 1,
+              "start_offset_s": 0.16474032402038574,
+              "angular_rps_at_start": 0.14999999999998292
+            }
+          ],
+          "angular_direction_reversals": 1,
+          "absolute_angular_command_integral_rad": 0.26221515732782885,
+          "signed_angular_command_integral_rad": 0.16297538435413128,
+          "max_abs_angular_command_rps": 0.49000000000000343,
+          "mean_linear_command_mps": 0.01198756218905466
+        },
+        "trajectory": {
+          "sample_count": 187,
+          "path_length_m": 0.2391421215887036,
+          "displacement_m": 0.23907700607512533,
+          "path_efficiency": 0.9997277120686825,
+          "lateral_span_m": 0.10479470284190029,
+          "yaw_min_rad": 2.5107250213623047,
+          "yaw_max_rad": 2.70924973487854,
+          "yaw_range_rad": 0.19852471351623535,
+          "yaw_total_variation_rad": 0.2911701202392578,
+          "yaw_net_change_rad": 0.16764307022094727
+        }
+      }
+    }
+  }
+}

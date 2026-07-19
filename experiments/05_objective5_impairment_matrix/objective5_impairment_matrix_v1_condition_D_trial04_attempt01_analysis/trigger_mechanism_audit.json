@@ -1,0 +1,47 @@
+{
+  "audit_type": "OFFLINE_MECHANISM_AUDIT",
+  "webots_run_for_this_audit": false,
+  "trial_id": "objective5_impairment_matrix_v1_condition_D_trial04_attempt01",
+  "event_counts": {
+    "AVOID_TURN": 7,
+    "AVOID_PASS": 85,
+    "RECOVER": 11,
+    "LOCAL_FRONT_DANGER": 0,
+    "LOCAL_FRONT_WARN": 0,
+    "LOCAL_LEFT_SIDE": 0,
+    "LOCAL_RIGHT_SIDE": 0,
+    "LOCAL_NARROW": 0,
+    "LOCAL_RECOVER": 0,
+    "LOCAL_RECOVERY_READY": 0,
+    "LOCAL_SENSOR_INVALID": 0,
+    "SAFE_STOP_STALE": 4,
+    "SAFE_STOP_INVALID_ODOM": 0,
+    "SAFE_STOP_LOCAL_SENSORS": 0,
+    "LOCAL_SIDE_TRACK": 0,
+    "LOCAL_SIDE_TRACK_HOLD": 0,
+    "LOCAL_SIDE_TRACK_CREEP": 0,
+    "LOCAL_CLEAR": 0
+  },
+  "not_applicable_in_code": [
+    "LOCAL_CLEARANCE",
+    "LOCAL_BYPASS"
+  ],
+  "first_occurrence_controller_log_line": {
+    "AVOID_TURN": 78,
+    "AVOID_PASS": 82,
+    "RECOVER": 166,
+    "SAFE_STOP_STALE": 20
+  },
+  "first_trigger_reason": "PREDICTED_CPA",
+  "first_trigger_evidence": {
+    "trigger_time_s": 22.067027255,
+    "trigger_distance_m": 0.34480319917201996,
+    "tcpa_at_trigger_s": 4.0,
+    "dcpa_at_trigger_m": 0.13379520177841264,
+    "closing_speed_at_trigger_mps": 0.05275199934840192,
+    "minimum_center_separation_m": 0.14309905640064896
+  },
+  "local_layer_engaged": false,
+  "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE",
+  "event_counts_caveat": "AVOID_TURN/AVOID_PASS/RECOVER counts above are raw regex line-match counts over the whole controller.log, NOT true mode-entry counts -- they also match periodic per-tick diagnostic lines (e.g. 'ARMED mode=AVOID_TURN ...') logged while a robot REMAINS in a mode, not just the TRANSITION line that enters it. The independent TRANSITION-specific, robot-tagged regex in analyze_objective5_trajectory.py confirms the TRUE structure is exactly ONE CRUISE->AVOID_TURN, ONE AVOID_TURN->AVOID_PASS, and ONE ->RECOVER transition per robot. local_layer_engaged=false is unaffected by this caveat (LOCAL_* keys had zero matches under either counting method)."
+}

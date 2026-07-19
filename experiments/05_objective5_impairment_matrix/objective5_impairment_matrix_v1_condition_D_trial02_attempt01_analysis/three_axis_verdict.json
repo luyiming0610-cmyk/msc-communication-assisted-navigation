@@ -1,0 +1,121 @@
+{
+  "trial_id": "objective5_impairment_matrix_v1_condition_D_trial02_attempt01",
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "D",
+  "verdict_kind": "THREE_AXIS_VERDICT",
+  "manual_observation": {
+    "status": "NOT_OBSERVED",
+    "reason": "user did not directly observe this trial"
+  },
+  "frozen_params": {
+    "condition_id": "D",
+    "trial_index": 2,
+    "attempt": 1,
+    "delay_s": 0.15,
+    "jitter_s": 0.3,
+    "drop_probability": 0.0,
+    "outage_period_s": 0.0,
+    "outage_duration_s": 0.0,
+    "outage_phase_s": 0.0,
+    "seed_epuck1_to_epuck2": 4002,
+    "seed_epuck2_to_epuck1": 14002,
+    "git_commit": "c12b22a6f11983385e4a93a9e604bb6f7d3ef92a",
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "axis_1_DATA_VALIDITY": {
+    "value": "VALID",
+    "measurement_validity": "VALID",
+    "legacy_replay": false,
+    "p99_finite_both_directions": true,
+    "queue_drained": true,
+    "realtime_factor": {
+      "preload_realtime_factor": 0.959,
+      "full_load_realtime_factor": 0.962,
+      "realtime_factor_ok": true
+    },
+    "bag_no_drop_warn_error": true
+  },
+  "axis_2_MANIPULATION_VALIDITY": {
+    "value": "VALID",
+    "epuck1_to_epuck2": {
+      "out_of_order_adjacent_inversions": 86,
+      "out_of_order_displaced_count": 95,
+      "actual_missing_count": 0,
+      "duplicate_count": 0,
+      "relay_received_to_forwarded_ratio": 1.0,
+      "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+      "message_age_mean_s": 0.1620930232441849,
+      "message_age_median_s": 0.1599999999999966,
+      "message_age_p95_s": 0.29999999999999716,
+      "message_age_p99_s": 0.3000000000000007,
+      "message_age_max_s": 0.3000000000000007
+    },
+    "epuck2_to_epuck1": {
+      "out_of_order_adjacent_inversions": 83,
+      "out_of_order_displaced_count": 89,
+      "actual_missing_count": 0,
+      "duplicate_count": 0,
+      "relay_received_to_forwarded_ratio": 1.0,
+      "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+      "message_age_mean_s": 0.1578997613341276,
+      "message_age_median_s": 0.1599999999999966,
+      "message_age_p95_s": 0.29999999999999716,
+      "message_age_p99_s": 0.30000000000000004,
+      "message_age_max_s": 0.3000000000000007
+    },
+    "configured_range_s": [
+      0.0,
+      0.3
+    ]
+  },
+  "axis_3_TASK_OUTCOME": {
+    "value": "SUCCESS",
+    "collision": false,
+    "min_interrobot_distance_m": 0.1516223239385512,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.011622323938551199,
+    "complete_count": 2,
+    "controller_crashed": false,
+    "first_trigger_reason": "PREDICTED_CPA",
+    "local_layer_engaged": false,
+    "edge_based_mode_entries_per_robot": {
+      "1": {
+        "AVOID_TURN": 1,
+        "AVOID_PASS": 1,
+        "RECOVER": 1,
+        "angular_direction_reversals": 2,
+        "yaw_total_variation_rad": 0.40366706252098083,
+        "path_efficiency": 0.9994871217424915,
+        "avoid_pass_duration_s": 21.69000005722046
+      },
+      "2": {
+        "AVOID_TURN": 1,
+        "AVOID_PASS": 1,
+        "RECOVER": 1,
+        "angular_direction_reversals": 1,
+        "yaw_total_variation_rad": 0.277935266494751,
+        "path_efficiency": 0.9998156174116041,
+        "avoid_pass_duration_s": 21.896999835968018
+      }
+    },
+    "startup_deltas_epuck1_minus_epuck2_s": {
+      "motion_start_delta_s": -0.0400000000000027,
+      "cmd_vel_start_delta_s": -0.010426044464111328,
+      "cruise_entry_delta_s": 0.0,
+      "avoid_turn_delta_s": 0.0,
+      "recover_delta_s": 0.0,
+      "timebase_init_delta_s": -0.03999999999999915,
+      "startup_hold_start_delta_s": 0.0,
+      "startup_hold_end_delta_s": 0.0
+    }
+  },
+  "overall": {
+    "data_validity": "VALID",
+    "manipulation_validity": "VALID",
+    "task_outcome": "SUCCESS",
+    "condition_D_specific_pass": true
+  }
+}
