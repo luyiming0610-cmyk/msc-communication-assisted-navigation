@@ -7,6 +7,22 @@ raw bag/logs or of the frozen controller/relay/world/thresholds/seeds. The
 original `matrix_analysis.json` and `final_verdict.json` are preserved; the
 disputed sequence fields are annotated METHOD_INVALID, not deleted.
 
+## Naming correction (2026-07-19, statistics-naming-only, no value change)
+
+- `forwarded_to_bag_capture_ratio` → **`aligned_window_forwarded_to_bag_capture_ratio`**:
+  epuck1→epuck2 aligned window 20–433 = 414/414 = 1.0; epuck2→epuck1 aligned
+  window 18–440 = 423/423 = 1.0. The relay's full-lifetime forwarded counts
+  (434/430) differ from the bag counts (414/423) because the bag recorder
+  started a few messages *after* the relay began forwarding — a recording
+  start boundary, not loss. This ratio proves no capture loss *within the
+  aligned window*; it does not characterize the bag's capture rate over the
+  relay's entire lifetime.
+- `source_to_forwarded_delivery_ratio` → **`relay_received_to_forwarded_ratio`**:
+  the denominator is the relay's own CSV-received count, not the full
+  `/epuckN/state_raw` source-side publication lifecycle. It is not a
+  complete source-to-relay PDR unless the source and relay-input sequence
+  sets are separately aligned (not attempted here).
+
 ## manual_observation
 
 `status = NOT_OBSERVED`, `reason = user did not directly observe this trial`.

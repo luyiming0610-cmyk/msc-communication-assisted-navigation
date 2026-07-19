@@ -6,6 +6,7 @@
   "verdict_kind": "CORRECTED_THREE_AXIS_VERDICT",
   "supersedes": "final_verdict.json's single reused-strict-gate 'FAIL' label (which applied A/B/C's out_of_order==0 criterion, invalid for a reordering condition)",
   "correction_basis": "reordering_delivery_audit.json (reorder_safe_delivery_analyzer.py v1, set-based) + analyze_objective5_trajectory.py (edge/transition-based mode counting)",
+  "naming_correction_2026_07_19": "statistics-naming-only, no value change: forwarded_to_bag_capture_ratio -> aligned_window_forwarded_to_bag_capture_ratio (explicit aligned windows: epuck1_to_epuck2 20-433 = 414/414 = 1.0, epuck2_to_epuck1 18-440 = 423/423 = 1.0; relay's full-lifetime forwarded counts 434/430 differ from bag counts 414/423 purely due to bag recording start boundary, not loss); source_to_forwarded_delivery_ratio -> relay_received_to_forwarded_ratio (denominator is the relay's own CSV-received count, not the full state_raw source lifecycle, so this is not a complete source-to-relay PDR without separate source/relay-input alignment).",
   "raw_evidence_unmodified": true,
   "webots_run_for_this_correction": false,
 
@@ -35,8 +36,8 @@
       "out_of_order_displaced_forwarded": {"epuck1_to_epuck2": 92, "epuck2_to_epuck1": 97},
       "actual_missing_count": {"epuck1_to_epuck2": 0, "epuck2_to_epuck1": 0},
       "relay_total_drop_count": {"epuck1_to_epuck2": 0, "epuck2_to_epuck1": 0},
-      "forwarded_to_bag_capture_ratio": {"epuck1_to_epuck2": 1.0, "epuck2_to_epuck1": 1.0},
-      "source_to_forwarded_delivery_ratio": {"epuck1_to_epuck2": 1.0, "epuck2_to_epuck1": 1.0},
+      "aligned_window_forwarded_to_bag_capture_ratio": {"epuck1_to_epuck2": "414/414 = 1.0 (window 20-433)", "epuck2_to_epuck1": "423/423 = 1.0 (window 18-440)"},
+      "relay_received_to_forwarded_ratio": {"epuck1_to_epuck2": 1.0, "epuck2_to_epuck1": 1.0},
       "duplicate_count": {"epuck1_to_epuck2": 0, "epuck2_to_epuck1": 0},
       "message_age_mean_s": {"epuck1_to_epuck2": 0.16350230413824737, "epuck2_to_epuck1": 0.15855813953255696},
       "message_age_median_s": {"epuck1_to_epuck2": 0.16, "epuck2_to_epuck1": 0.16},
@@ -48,7 +49,7 @@
       "out_of_order_event_count_gt_0": "PASS (89/92 forwarded reversals)",
       "actual_missing_count_eq_0_as_configured": "PASS (0/0)",
       "relay_total_drop_count_eq_0": "PASS (0/0)",
-      "forwarded_to_bag_capture_ratio_eq_1": "PASS (1.0/1.0)",
+      "aligned_window_forwarded_to_bag_capture_ratio_eq_1": "PASS (1.0/1.0)",
       "queue_drained": "PASS (true)"
     },
     "note": "The planned jitter perturbation (delay_s=0.15 + jitter spread 0.30s, i.e. a per-message release delay in [0,0.30]s, ~2.6x the 0.1151s publish period) genuinely produced reordering while introducing zero unplanned loss. The observed message-age distribution (median 0.16s, max 0.30s) is measurably wider than A (~0), B (fixed 0.20s), and C (fixed 1.00s), consistent with the configured jitter range."

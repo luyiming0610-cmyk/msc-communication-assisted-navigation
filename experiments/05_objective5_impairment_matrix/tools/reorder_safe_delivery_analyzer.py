@@ -149,13 +149,25 @@ def analyze_received_stream(received_seqs_arrival_order: list[int]) -> dict:
     }
 
 
-def delivery_ratio_forwarded_to_bag(
+def aligned_window_capture_ratio(
     forwarded_seqs: list[int], bag_received_seqs: list[int]
 ) -> dict:
     """Fraction of the relay's FORWARDED messages that were actually captured
-    in the bag, computed over the common sequence window so that a bag whose
-    recording started/stopped inside the forwarded range is not mistaken for
+    in the bag, computed over the ALIGNED COMMON sequence window -- i.e. the
+    bag's own [min, max] coverage -- so that a bag whose recording
+    started/stopped partway through the forwarded range is not mistaken for
     loss.
+
+    NAMING (corrected 2026-07-19, statistics-naming-only, no value change):
+    the emitted key is ``aligned_window_forwarded_to_bag_capture_ratio``, not
+    a bare ``forwarded_to_bag_capture_ratio``, and ``relay_total_forwarded_count``
+    is reported alongside it. This ratio proves ONLY that there was no
+    capture loss inside the aligned window shared by the relay's forwarded
+    stream and the bag; it explicitly does NOT characterize the bag's
+    capture rate over the relay's FULL lifetime -- ``relay_total_forwarded_count``
+    can differ from the in-window bag count purely because rosbag started
+    recording a few messages after the relay began forwarding (a recording
+    START BOUNDARY, not a loss). See ``bag_window_covers_full_relay_lifetime``.
 
     Alignment: restrict the forwarded set to [min(bag), max(bag)] (the bag's
     own coverage window). Every message the bag captured must be one the relay
@@ -176,6 +188,7 @@ def delivery_ratio_forwarded_to_bag(
         }
 
     bag_min, bag_max = min(bag_set), max(bag_set)
+    relay_min, relay_max = min(forwarded_set), max(forwarded_set)
     forwarded_in_window = {s for s in forwarded_set if bag_min <= s <= bag_max}
     captured = bag_set & forwarded_in_window
     # A bag sequence not present in the forwarded set would be impossible
@@ -185,27 +198,53 @@ def delivery_ratio_forwarded_to_bag(
 
     ratio = _clamp_checked(
         len(captured) / len(forwarded_in_window),
-        "forwarded_to_bag_capture_ratio",
+        "aligned_window_forwarded_to_bag_capture_ratio",
     )
     return {
         "measurable": True,
-        "bag_window_min": bag_min,
-        "bag_window_max": bag_max,
-        "forwarded_in_bag_window_count": len(forwarded_in_window),
-        "bag_captured_in_window_count": len(captured),
-        "forwarded_to_bag_capture_ratio": ratio,
+        "aligned_window_min": bag_min,
+        "aligned_window_max": bag_max,
+        "relay_total_forwarded_window_min": relay_min,
+        "relay_total_forwarded_window_max": relay_max,
+        "relay_total_forwarded_count": len(forwarded_set),
+        "forwarded_in_aligned_window_count": len(forwarded_in_window),
+        "bag_captured_in_aligned_window_count": len(captured),
+        "aligned_window_forwarded_to_bag_capture_ratio": ratio,
         "forwarded_but_not_in_bag_count": len(forwarded_in_window - bag_set),
         "bag_sequences_not_in_forwarded_set": bag_not_in_forwarded,
+        "bag_window_covers_full_relay_lifetime": (bag_min == relay_min and bag_max == relay_max),
+        "note": (
+            "This ratio is computed over the ALIGNED window shared by the "
+            "relay's forwarded stream and the bag's own coverage; it proves "
+            "only that no capture loss occurred WITHIN that common window. "
+            "It is NOT the bag's capture rate over the relay's full "
+            "lifetime -- relay_total_forwarded_count vs "
+            "forwarded_in_aligned_window_count differing is expected when "
+            "the bag recorder started after the relay began forwarding "
+            "(a start-boundary effect, not loss)."
+        ),
     }
 
 
-def source_to_forwarded_delivery(
+def relay_received_to_forwarded_ratio(
     relay_input_seqs: list[int], forwarded_seqs: list[int], dropped_seqs: list[int]
 ) -> dict:
-    """Delivery ratio at the relay itself: forwarded / (forwarded + dropped),
-    i.e. the fraction of messages the relay RECEIVED that it forwarded rather
-    than dropped. This is the true, planned-vs-actual loss point for loss
-    conditions (E/F/G); for a jitter-only condition (D) it must be 1.0."""
+    """Delivery ratio AT THE RELAY ITSELF: forwarded / (forwarded + dropped),
+    i.e. the fraction of messages the relay RECEIVED (per its own CSV log)
+    that it forwarded rather than dropped. This is the true, planned-vs-
+    actual loss point for loss conditions (E/F/G); for a jitter-only
+    condition (D) it must be 1.0.
+
+    NAMING (corrected 2026-07-19, statistics-naming-only, no value change):
+    the emitted key is ``relay_received_to_forwarded_ratio``, not a bare
+    ``source_to_forwarded_delivery_ratio`` -- the denominator here is the
+    RELAY'S OWN RECEIVED-MESSAGE COUNT from its CSV log, not the full
+    ``/epuckN/state_raw`` SOURCE-side publication lifecycle. Without a
+    separate alignment between the source publisher's own sequence set and
+    the relay's input sequence set (not attempted by this function), this
+    ratio must NOT be described as a complete source-to-relay PDR/end-to-end
+    delivery ratio -- only as a relay-received-to-relay-forwarded ratio.
+    """
     forwarded_set = set(forwarded_seqs)
     dropped_set = set(dropped_seqs)
     input_set = set(relay_input_seqs) if relay_input_seqs else (forwarded_set | dropped_set)
@@ -217,14 +256,20 @@ def source_to_forwarded_delivery(
         }
     ratio = _clamp_checked(
         len(forwarded_set) / total_input,
-        "source_to_forwarded_delivery_ratio",
+        "relay_received_to_forwarded_ratio",
     )
     return {
         "measurable": True,
-        "relay_input_count": len(input_set),
+        "relay_received_count": len(input_set),
         "forwarded_count": len(forwarded_set),
         "dropped_count": len(dropped_set),
-        "source_to_forwarded_delivery_ratio": ratio,
+        "relay_received_to_forwarded_ratio": ratio,
+        "note": (
+            "Denominator is the relay's OWN received-message count from its "
+            "CSV log, not the full source/state_raw publication lifecycle. "
+            "Not a complete source-to-relay PDR unless the source and relay "
+            "sequence sets are separately aligned."
+        ),
     }
 
 
@@ -322,8 +367,8 @@ def analyze_trial(trial_dir: Path) -> dict:
 
         stream = analyze_received_stream(bag_received)
         forwarded_stream = analyze_received_stream(forwarded)
-        delivery = delivery_ratio_forwarded_to_bag(forwarded, bag_received)
-        relay_delivery = source_to_forwarded_delivery(relay_input, forwarded, dropped)
+        delivery = aligned_window_capture_ratio(forwarded, bag_received)
+        relay_delivery = relay_received_to_forwarded_ratio(relay_input, forwarded, dropped)
         validity = classify_data_validity_for_reordering(stream)
 
         out["directions"][direction] = {
@@ -335,8 +380,8 @@ def analyze_trial(trial_dir: Path) -> dict:
             "bag_received_set_size": len(set(bag_received)),
             "bag_delivered_stream": stream,
             "relay_forwarded_stream": forwarded_stream,
-            "forwarded_to_bag": delivery,
-            "relay_source_to_forwarded": relay_delivery,
+            "aligned_window_forwarded_to_bag": delivery,
+            "relay_received_to_forwarded": relay_delivery,
             "data_validity": validity,
         }
     return out

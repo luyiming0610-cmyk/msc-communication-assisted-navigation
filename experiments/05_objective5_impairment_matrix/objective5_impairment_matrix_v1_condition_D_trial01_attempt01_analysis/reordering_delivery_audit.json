@@ -45,22 +45,28 @@
         "reordering_present": true,
         "within_window_capture_ratio": 1.0
       },
-      "forwarded_to_bag": {
+      "aligned_window_forwarded_to_bag": {
         "measurable": true,
-        "bag_window_min": 20,
-        "bag_window_max": 433,
-        "forwarded_in_bag_window_count": 414,
-        "bag_captured_in_window_count": 414,
-        "forwarded_to_bag_capture_ratio": 1.0,
+        "aligned_window_min": 20,
+        "aligned_window_max": 433,
+        "relay_total_forwarded_window_min": 0,
+        "relay_total_forwarded_window_max": 433,
+        "relay_total_forwarded_count": 434,
+        "forwarded_in_aligned_window_count": 414,
+        "bag_captured_in_aligned_window_count": 414,
+        "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
         "forwarded_but_not_in_bag_count": 0,
-        "bag_sequences_not_in_forwarded_set": []
+        "bag_sequences_not_in_forwarded_set": [],
+        "bag_window_covers_full_relay_lifetime": false,
+        "note": "This ratio is computed over the ALIGNED window shared by the relay's forwarded stream and the bag's own coverage; it proves only that no capture loss occurred WITHIN that common window. It is NOT the bag's capture rate over the relay's full lifetime -- relay_total_forwarded_count vs forwarded_in_aligned_window_count differing is expected when the bag recorder started after the relay began forwarding (a start-boundary effect, not loss)."
       },
-      "relay_source_to_forwarded": {
+      "relay_received_to_forwarded": {
         "measurable": true,
-        "relay_input_count": 434,
+        "relay_received_count": 434,
         "forwarded_count": 434,
         "dropped_count": 0,
-        "source_to_forwarded_delivery_ratio": 1.0
+        "relay_received_to_forwarded_ratio": 1.0,
+        "note": "Denominator is the relay's OWN received-message count from its CSV log, not the full source/state_raw publication lifecycle. Not a complete source-to-relay PDR unless the source and relay sequence sets are separately aligned."
       },
       "data_validity": {
         "data_validity": "VALID",
@@ -109,22 +115,28 @@
         "reordering_present": true,
         "within_window_capture_ratio": 1.0
       },
-      "forwarded_to_bag": {
+      "aligned_window_forwarded_to_bag": {
         "measurable": true,
-        "bag_window_min": 18,
-        "bag_window_max": 440,
-        "forwarded_in_bag_window_count": 423,
-        "bag_captured_in_window_count": 423,
-        "forwarded_to_bag_capture_ratio": 1.0,
+        "aligned_window_min": 18,
+        "aligned_window_max": 440,
+        "relay_total_forwarded_window_min": 11,
+        "relay_total_forwarded_window_max": 440,
+        "relay_total_forwarded_count": 430,
+        "forwarded_in_aligned_window_count": 423,
+        "bag_captured_in_aligned_window_count": 423,
+        "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
         "forwarded_but_not_in_bag_count": 0,
-        "bag_sequences_not_in_forwarded_set": []
+        "bag_sequences_not_in_forwarded_set": [],
+        "bag_window_covers_full_relay_lifetime": false,
+        "note": "This ratio is computed over the ALIGNED window shared by the relay's forwarded stream and the bag's own coverage; it proves only that no capture loss occurred WITHIN that common window. It is NOT the bag's capture rate over the relay's full lifetime -- relay_total_forwarded_count vs forwarded_in_aligned_window_count differing is expected when the bag recorder started after the relay began forwarding (a start-boundary effect, not loss)."
       },
-      "relay_source_to_forwarded": {
+      "relay_received_to_forwarded": {
         "measurable": true,
-        "relay_input_count": 430,
+        "relay_received_count": 430,
         "forwarded_count": 430,
         "dropped_count": 0,
-        "source_to_forwarded_delivery_ratio": 1.0
+        "relay_received_to_forwarded_ratio": 1.0,
+        "note": "Denominator is the relay's OWN received-message count from its CSV log, not the full source/state_raw publication lifecycle. Not a complete source-to-relay PDR unless the source and relay sequence sets are separately aligned."
       },
       "data_validity": {
         "data_validity": "VALID",

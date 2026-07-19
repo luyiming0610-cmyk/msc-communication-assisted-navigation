@@ -14,10 +14,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from reorder_safe_delivery_analyzer import (  # noqa: E402
     RatioOutOfRangeError,
+    aligned_window_capture_ratio,
     analyze_received_stream,
     classify_data_validity_for_reordering,
-    delivery_ratio_forwarded_to_bag,
-    source_to_forwarded_delivery,
+    relay_received_to_forwarded_ratio,
 )
 
 
@@ -91,24 +91,39 @@ def test_ratio_never_exceeds_one():
 
 # (8) relay forwarded set exactly equals bag received set -> ratio 1.0.
 def test_forwarded_equals_bag():
-    d = delivery_ratio_forwarded_to_bag(
+    d = aligned_window_capture_ratio(
         forwarded_seqs=[0, 1, 2, 3, 4],
         bag_received_seqs=[0, 1, 2, 3, 4],
     )
-    assert d["forwarded_to_bag_capture_ratio"] == 1.0
+    assert d["aligned_window_forwarded_to_bag_capture_ratio"] == 1.0
     assert d["forwarded_but_not_in_bag_count"] == 0
     assert d["bag_sequences_not_in_forwarded_set"] == []
+    assert d["bag_window_covers_full_relay_lifetime"] is True
 
 
 # (9) relay forwarded some messages that never reached the bag -> ratio < 1
-#     over the bag window (real capture loss between relay and bag).
+#     over the aligned bag window (real capture loss between relay and bag).
 def test_forwarded_not_all_in_bag():
-    d = delivery_ratio_forwarded_to_bag(
+    d = aligned_window_capture_ratio(
         forwarded_seqs=[0, 1, 2, 3, 4, 5],
         bag_received_seqs=[0, 1, 3, 4, 5],  # bag missing seq 2 within [0,5]
     )
-    assert d["forwarded_to_bag_capture_ratio"] == pytest.approx(5 / 6)
+    assert d["aligned_window_forwarded_to_bag_capture_ratio"] == pytest.approx(5 / 6)
     assert d["forwarded_but_not_in_bag_count"] == 1
+
+
+# (9b) bag window narrower than the relay's full forwarded lifetime (a start-
+#      boundary effect) must be flagged, not silently treated as full-lifetime
+#      capture -- this is the exact D01 scenario (relay fwd 0..433, bag 20..433).
+def test_bag_window_narrower_than_relay_lifetime_is_flagged():
+    d = aligned_window_capture_ratio(
+        forwarded_seqs=list(range(0, 100)),
+        bag_received_seqs=list(range(20, 100)),  # bag started recording late
+    )
+    assert d["aligned_window_forwarded_to_bag_capture_ratio"] == 1.0
+    assert d["relay_total_forwarded_count"] == 100
+    assert d["forwarded_in_aligned_window_count"] == 80
+    assert d["bag_window_covers_full_relay_lifetime"] is False
 
 
 # (10) Condition-D expected reordering must NOT be a DATA_VALIDITY failure.
@@ -119,17 +134,19 @@ def test_reordering_is_valid_data():
     assert v["reordering_present_but_not_a_validity_failure"] is True
 
 
-# Extra: the relay-level delivery ratio (loss point) for a lossless jitter
-# stream is exactly 1.0, and drops reduce it below 1.
-def test_source_to_forwarded_delivery():
-    lossless = source_to_forwarded_delivery(
+# Extra: the relay-received-to-forwarded ratio (loss point) for a lossless
+# jitter stream is exactly 1.0, and drops reduce it below 1. This is a
+# relay-internal ratio (received-by-relay vs forwarded-by-relay), NOT a
+# full source-to-relay PDR.
+def test_relay_received_to_forwarded_ratio():
+    lossless = relay_received_to_forwarded_ratio(
         relay_input_seqs=[0, 1, 2, 3], forwarded_seqs=[0, 1, 2, 3], dropped_seqs=[]
     )
-    assert lossless["source_to_forwarded_delivery_ratio"] == 1.0
-    lossy = source_to_forwarded_delivery(
+    assert lossless["relay_received_to_forwarded_ratio"] == 1.0
+    lossy = relay_received_to_forwarded_ratio(
         relay_input_seqs=[0, 1, 2, 3], forwarded_seqs=[0, 1, 3], dropped_seqs=[2]
     )
-    assert lossy["source_to_forwarded_delivery_ratio"] == pytest.approx(3 / 4)
+    assert lossy["relay_received_to_forwarded_ratio"] == pytest.approx(3 / 4)
 
 
 # Extra: empty stream -> NOT_MEASURABLE, never guessed as 0.

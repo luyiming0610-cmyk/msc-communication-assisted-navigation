@@ -1,5 +1,13 @@
 # Condition D Trial 01 — reorder-safe delivery/sequence audit
 
+**Naming correction (2026-07-19, statistics-naming-only, no value change)**:
+what this document originally called `forwarded_to_bag_capture_ratio` is
+renamed `aligned_window_forwarded_to_bag_capture_ratio`, and
+`source_to_forwarded_delivery_ratio` is renamed
+`relay_received_to_forwarded_ratio`. See "Corrected metrics" below for the
+exact aligned windows and the reason for the rename. No numeric value
+changed.
+
 Offline, read-only correction of the sequence accounting for
 `objective5_impairment_matrix_v1_condition_D_trial01_attempt01`. No Webots
 run, no parameter change, no modification of the raw bag/logs or of the
@@ -51,17 +59,33 @@ forwarded∩bag window.
 
 | metric | epuck1→epuck2 | epuck2→epuck1 |
 |---|---:|---:|
-| relay forwarded (unique) | 434 | 430 |
+| relay forwarded (unique, full relay lifetime) | 434 (seq 0–433) | 430 (seq 11–440) |
 | relay dropped | 0 | 0 |
-| `source_to_forwarded_delivery_ratio` | 1.0 | 1.0 |
-| bag delivered (unique) | 414 | 423 |
+| **`relay_received_to_forwarded_ratio`** | **1.0** | **1.0** |
+| bag delivered (unique) | 414 (seq 20–433) | 423 (seq 18–440) |
 | **actual_missing_count** | **0** | **0** |
 | duplicate_count | 0 | 0 |
 | out_of_order (adjacent inversions) | 89 (fwd) / 87 (bag) | 92 (fwd) / 90 (bag) |
 | out_of_order (displaced) | 92 (fwd) / 90 (bag) | 97 (fwd) / 95 (bag) |
-| **`forwarded_to_bag_capture_ratio`** | **1.0** | **1.0** |
+| **aligned window** | **20–433** | **18–440** |
+| **`aligned_window_forwarded_to_bag_capture_ratio`** | **414/414 = 1.0** | **423/423 = 1.0** |
 | ratio in [0,1]? | yes | yes |
 | data_validity (accounting) | VALID | VALID |
+
+**Aligned-window semantics (explicit)**: the relay forwarded 434 / 430
+messages over its full lifetime, but the bag only holds 414 / 423 — this
+difference is the bag recorder starting a few messages **after** the relay
+began forwarding (a recording **start boundary**), never message loss. The
+`aligned_window_forwarded_to_bag_capture_ratio` is computed only over the
+common window the bag actually covers (20–433 and 18–440 respectively), where
+it is exactly 1.0/1.0 both directions — proving no capture loss occurred
+*within that shared window*. It does **not** characterize capture over the
+relay's full lifetime; `relay_received_to_forwarded_ratio` (the earlier
+`source_to_forwarded_delivery_ratio`) is a separate, relay-internal ratio
+(forwarded / (forwarded+dropped) at the relay itself, per its own CSV) and is
+**not** a full source-to-relay PDR unless the source (`state_raw`) and relay
+input sequence sets are independently aligned, which this audit does not
+attempt.
 
 `out_of_order` uses two independent flavours (adjacent inversion; displaced
 below running-max) — both are strictly reordering measures and are never
