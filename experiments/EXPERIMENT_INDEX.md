@@ -174,8 +174,9 @@ it runs.**
   reversals (about five S-lobes) within one continuous `AVOID_PASS`, not
   repeated CPA encounters or IR/ToF fallback. Full evidence:
   `objective5_impairment_matrix_v1_condition_C_formal_batch_summary.{json,md}`.
-- **Condition D (jitter/reordering), IN PROGRESS -- D01/D02/D03 valid, D04
-  EXCLUDED (measurement-chain artifact, corrected 2026-07-19)**:
+- **Condition D (jitter/reordering), IN PROGRESS -- D01/D02/D03/D05 valid
+  (4/5), D04 EXCLUDED (measurement-chain artifact, corrected 2026-07-19), D06
+  BLOCKED pending CSV-extension authorization**:
   frozen `delay_s=0.15`, `jitter_s=0.30` peak-to-peak → per-message release
   delay `[0,0.30]s`, `drop_probability=0.0`, outage disabled, seeds
   `400N/1400N` per trial N; same frozen controller/world/thresholds/
@@ -220,17 +221,23 @@ it runs.**
     counted toward the formal n=5. See
     `objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis/STOP_CONDITION_REPORT.md`
     (correction section) and `three_axis_verdict.json`.
-  - **Pre-declared replacement rule**: if D05 passes all five axes, D06
-    becomes the SOLE replacement trial for D04 (pending explicit user
-    authorization to extend the frozen CSV's Condition D seed lists to
-    `trial_index=6`, following the existing base+index pattern
-    `4006`/`14006` -- the loader currently errors past index 5). If D06 also
-    shows a measurement-chain anomaly, D07 is NOT authorized; the
-    bag-recording chain must be re-audited first.
-  - No Condition D n=5 batch summary exists yet (requires 5 valid INCLUDED
-    trials; D04's exclusion must be listed explicitly, not hidden, once
-    built). Evidence per trial:
-    `objective5_impairment_matrix_v1_condition_D_trial0{1..4}_attempt01_analysis/`.
+  - **D05**: `VALID/VALID/SUCCESS/VALID` → **INCLUDED**, margin +9.19mm.
+    Fourth currently valid formal trial (with D01/D02/D03).
+  - **Pre-declared replacement rule**: D05 passed all five axes, satisfying
+    the precondition for D06 as D04's SOLE replacement -- but D06 is
+    **BLOCKED**: `load_condition_config.py`'s `resolve_trial_params()` hard-errors
+    (`TrialIndexError`) for `trial_index` beyond the CSV's current 5-entry
+    seed lists, so D06 cannot run until the user explicitly authorizes
+    extending `objective5_impairment_matrix_conditions.csv`'s Condition D
+    `seed_epuck1_to_epuck2`/`seed_epuck2_to_epuck1` fields with a 6th
+    deterministic entry (`4006`/`14006`, following the existing base+index
+    pattern -- no hand-picked value). If D06 (once run) also shows a
+    measurement-chain anomaly, D07 is NOT authorized; the bag-recording
+    chain must be re-audited first.
+  - No Condition D n=5 batch summary exists yet (4/5 valid trials so far;
+    D04's exclusion must be listed explicitly, not hidden, once built).
+    Evidence per trial:
+    `objective5_impairment_matrix_v1_condition_D_trial0{1..5}_attempt01_analysis/`.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,

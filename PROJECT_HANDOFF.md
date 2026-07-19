@@ -169,10 +169,11 @@ use a five-axis schema (corrected 2026-07-19): `DATA_ARTIFACT_INTEGRITY`,
 induced, cross-checked against the independent online `sequence_counter`
 subscriber — deliberately NOT gated on bag capture), `TASK_OUTCOME`,
 `FORMAL_MEASUREMENT_VALIDITY` (bag-recording-chain completeness
-specifically), `FORMAL_BATCH_INCLUSION`. **D01, D02, D03 all score
-`VALID/VALID/SUCCESS/VALID` → `INCLUDED`** — margins +4.472mm, +11.62mm, and
-a razor-thin **+0.17mm** for D03 (a threshold pass, explicitly not robust
-safety, preserved as genuine unadjusted data). **D04 scores
+specifically), `FORMAL_BATCH_INCLUSION`. **D01, D02, D03, D05 all score
+`VALID/VALID/SUCCESS/VALID` → `INCLUDED`** — margins +4.472mm, +11.62mm, a
+razor-thin **+0.17mm** for D03 (a threshold pass, explicitly not robust
+safety, preserved as genuine unadjusted data), and +9.19mm for D05 (4 of 5
+valid trials so far). **D04 scores
 `FORMAL_MEASUREMENT_VALIDITY=INVALID` → `EXCLUDED`**: sequence 17
 (`epuck2_to_epuck1`) was genuinely forwarded by the relay and received live
 by the independent online counter (`epuck2_counter.json`:
@@ -183,12 +184,13 @@ manipulation failure, NOT a task failure. D04 is classified
 `EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT`: preserved in full, not rerun, not
 counted toward the formal n=5. See
 `objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis/STOP_CONDITION_REPORT.md`
-(correction section). Pre-declared replacement rule: if D05 passes all five
-axes, D06 becomes the sole replacement for D04 (requires extending the
-frozen CSV's Condition D seed lists to `trial_index=6`, pending explicit
-user authorization — the loader currently errors past index 5). No
-Condition D n=5 batch summary exists yet; when built, it must list D04's
-exclusion explicitly.
+(correction section). D05 has passed all five axes, satisfying the
+precondition for D06 as D04's sole replacement, but **D06 is BLOCKED**:
+running it requires extending the frozen CSV's Condition D seed lists to
+`trial_index=6` (the loader hard-errors past index 5), which requires
+explicit user authorization before any code/CSV change is made. No
+Condition D n=5 batch summary exists yet (4/5 valid trials); when built, it
+must list D04's exclusion explicitly.
 
 Running D01 surfaced a **sequence-accounting bug**: `sequence_counter.py`'s
 adjacent-delta missing/expected accounting is wrong under reordering (it
