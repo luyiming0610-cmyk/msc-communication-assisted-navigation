@@ -2,7 +2,8 @@
   "trial_id": "objective5_impairment_matrix_v1_condition_D_trial03_attempt01",
   "trial_label": "FORMAL_SIM",
   "condition_id": "D",
-  "verdict_kind": "THREE_AXIS_VERDICT",
+  "verdict_kind": "FIVE_AXIS_VERDICT",
+  "verdict_schema_note": "Corrected 2026-07-19 per user instruction: separates relay-level MANIPULATION_VALIDITY from bag-recording-chain FORMAL_MEASUREMENT_VALIDITY. A bag-only single-message capture gap (confirmed via an independent online sequence_counter subscriber that DID receive the message) is a recording-chain artifact, not a manipulation or task failure.",
   "manual_observation": {
     "status": "NOT_OBSERVED",
     "reason": "user did not directly observe this trial"
@@ -25,7 +26,7 @@
     "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
     "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
   },
-  "axis_1_DATA_VALIDITY": {
+  "axis_1_DATA_ARTIFACT_INTEGRITY": {
     "value": "VALID",
     "measurement_validity": "VALID",
     "legacy_replay": false,
@@ -41,12 +42,11 @@
   "axis_2_MANIPULATION_VALIDITY": {
     "value": "VALID",
     "epuck1_to_epuck2": {
-      "out_of_order_adjacent_inversions": 76,
-      "out_of_order_displaced_count": 81,
-      "actual_missing_count": 0,
-      "duplicate_count": 0,
+      "out_of_order_adjacent_inversions": 80,
+      "out_of_order_displaced_count": 85,
+      "relay_forwarded_stream_actual_missing_count": 0,
       "relay_received_to_forwarded_ratio": 1.0,
-      "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+      "online_counter_cross_check_complete": true,
       "message_age_mean_s": 0.16577367204849763,
       "message_age_median_s": 0.17999999999999972,
       "message_age_p95_s": 0.29999999999999716,
@@ -54,12 +54,11 @@
       "message_age_max_s": 0.3000000000000007
     },
     "epuck2_to_epuck1": {
-      "out_of_order_adjacent_inversions": 74,
-      "out_of_order_displaced_count": 83,
-      "actual_missing_count": 0,
-      "duplicate_count": 0,
+      "out_of_order_adjacent_inversions": 78,
+      "out_of_order_displaced_count": 87,
+      "relay_forwarded_stream_actual_missing_count": 0,
       "relay_received_to_forwarded_ratio": 1.0,
-      "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+      "online_counter_cross_check_complete": true,
       "message_age_mean_s": 0.16468181816818056,
       "message_age_median_s": 0.1599999999999966,
       "message_age_p95_s": 0.29999999999999716,
@@ -77,6 +76,7 @@
     "min_interrobot_distance_m": 0.14016992055075728,
     "safety_radius_m": 0.14,
     "safety_margin_m": 0.0001699205507572632,
+    "razor_thin_margin_warning": "TRUE -- margin < 1mm. This is a THRESHOLD PASS, not evidence of robust safety. Preserved as genuine data, not rerun or adjusted.",
     "complete_count": 2,
     "controller_crashed": false,
     "first_trigger_reason": "PREDICTED_CPA",
@@ -112,10 +112,29 @@
       "startup_hold_end_delta_s": 0.0
     }
   },
+  "axis_4_FORMAL_MEASUREMENT_VALIDITY": {
+    "value": "VALID",
+    "epuck1_to_epuck2": {
+      "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+      "bag_delivered_stream_actual_missing_count": 0,
+      "bag_delivered_stream_actual_missing_set": []
+    },
+    "epuck2_to_epuck1": {
+      "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+      "bag_delivered_stream_actual_missing_count": 0,
+      "bag_delivered_stream_actual_missing_set": []
+    }
+  },
+  "axis_5_FORMAL_BATCH_INCLUSION": {
+    "value": "INCLUDED",
+    "exclusion_reason": null
+  },
   "overall": {
-    "data_validity": "VALID",
+    "data_artifact_integrity": "VALID",
     "manipulation_validity": "VALID",
     "task_outcome": "SUCCESS",
+    "formal_measurement_validity": "VALID",
+    "formal_batch_inclusion": "INCLUDED",
     "condition_D_specific_pass": true
   }
 }

@@ -3,9 +3,20 @@
 `objective5_impairment_matrix_v1_condition_D_trial03_attempt01` -- part of a formal n=5 batch for Condition D.
 Automated sequential batch run (D Trials 02-05), authorized by the user, single wsl.exe invocation per trial (interop register+verify, then eamon-session orchestrator invocation). manual_observation.status=NOT_OBSERVED throughout this batch per explicit user instruction.
 
-## Verdict
+## Verdict (corrected five-axis, see `three_axis_verdict.json`)
 
-`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, `FAIL`.
+`DATA_ARTIFACT_INTEGRITY=VALID`, `MANIPULATION_VALIDITY=VALID`,
+`TASK_OUTCOME=SUCCESS`, `FORMAL_MEASUREMENT_VALIDITY=VALID`,
+`FORMAL_BATCH_INCLUSION=INCLUDED`. (The bare `FAIL` below is an obsolete
+automated strict-gate label reusing A/B/C's zero-reordering criterion --
+see `trial_verdict_clarification_note` in `final_verdict.json`.)
+
+**RAZOR-THIN SAFETY MARGIN**: `min_interrobot_distance_m=0.14016992055075728`
+vs `safety_radius_m=0.14` -- margin is only **+0.170mm**. This is a
+THRESHOLD PASS, not evidence of robust safety. Genuine, unadjusted data;
+not rerun, not modified.
+
+`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, `FAIL` (obsolete label, see above).
 
 ## Run identity
 

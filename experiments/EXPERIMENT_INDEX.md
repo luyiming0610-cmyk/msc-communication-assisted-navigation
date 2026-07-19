@@ -174,7 +174,8 @@ it runs.**
   reversals (about five S-lobes) within one continuous `AVOID_PASS`, not
   repeated CPA encounters or IR/ToF fallback. Full evidence:
   `objective5_impairment_matrix_v1_condition_C_formal_batch_summary.{json,md}`.
-- **Condition D (jitter/reordering), IN PROGRESS, HALTED AT TRIAL 04**:
+- **Condition D (jitter/reordering), IN PROGRESS -- D01/D02/D03 valid, D04
+  EXCLUDED (measurement-chain artifact, corrected 2026-07-19)**:
   frozen `delay_s=0.15`, `jitter_s=0.30` peak-to-peak → per-message release
   delay `[0,0.30]s`, `drop_probability=0.0`, outage disabled, seeds
   `400N/1400N` per trial N; same frozen controller/world/thresholds/
@@ -189,26 +190,46 @@ it runs.**
   named `aligned_window_forwarded_to_bag_capture_ratio` and
   `relay_received_to_forwarded_ratio` (renamed 2026-07-19 for accuracy, no
   value change). Every trial: `manual_observation.status=NOT_OBSERVED`.
-  - **D01**: three-axis `VALID/VALID/SUCCESS`, margin +4.472mm. Corrected
-    from an initial mis-derived `missing=189/192`/`capture_ratio=1.00233`
-    (root cause: `sequence_counter.py` using first-ARRIVED sequence as
-    minimum). `PREDICTED_CPA`, `LOCAL_*` all zero.
-  - **D02**: three-axis `VALID/VALID/SUCCESS`, margin +11.62mm.
-  - **D03**: three-axis `VALID/VALID/SUCCESS`, margin **+0.17mm** (extremely
-    tight, genuine, preserved as-is, not rerun/adjusted).
-  - **D04**: `DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS` (margin +3.099mm),
-    but **`MANIPULATION_VALIDITY=INVALID`**: `epuck2_to_epuck1` direction has
-    `actual_missing_count=1` (sequence 17) and
-    `aligned_window_forwarded_to_bag_capture_ratio=0.9976958525345622`.
-    Verified directly against the raw `epuck2_relay.csv`: sequence 17 was
-    genuinely forwarded by the relay (no `drop_reason`) but never appears in
-    the bag's `/epuck2/state` -- a genuine, isolated single-message
-    relay-to-bag capture gap, distinct from the sequence-accounting bug
-    above. This triggered an explicit pre-declared stop condition; the batch
-    HALTED here, D04 was NOT rerun, D05 was NOT started. See
-    `objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis/STOP_CONDITION_REPORT.md`.
-  - No Condition D n=5 batch summary exists (requires D02-05 all pass).
-    Evidence per trial:
+  Verdict schema corrected 2026-07-19 to FIVE axes:
+  `DATA_ARTIFACT_INTEGRITY` (schema/bag-mechanics), `MANIPULATION_VALIDITY`
+  (relay-level: 0 drops + reordering genuinely induced, cross-checked
+  against the independent online `sequence_counter` subscriber -- NOT gated
+  on bag capture), `TASK_OUTCOME`, `FORMAL_MEASUREMENT_VALIDITY`
+  (bag-recording-chain completeness specifically), `FORMAL_BATCH_INCLUSION`.
+  - **D01**: `VALID/VALID/SUCCESS/VALID` → **INCLUDED**, margin +4.472mm.
+    Corrected from an initial mis-derived `missing=189/192`/
+    `capture_ratio=1.00233` (root cause: `sequence_counter.py` using
+    first-ARRIVED sequence as minimum). `PREDICTED_CPA`, `LOCAL_*` all zero.
+  - **D02**: `VALID/VALID/SUCCESS/VALID` → **INCLUDED**, margin +11.62mm.
+  - **D03**: `VALID/VALID/SUCCESS/VALID` → **INCLUDED**, margin **+0.17mm**
+    -- RAZOR-THIN, a threshold pass, explicitly NOT robust safety; genuine,
+    preserved as-is, not rerun/adjusted.
+  - **D04**: `DATA_ARTIFACT_INTEGRITY=VALID`, `MANIPULATION_VALIDITY=VALID`
+    (relay: 0 drops, reordering genuinely induced, independently confirmed
+    complete by `epuck2_counter.json`'s online subscriber:
+    `received_count=unique_sequence_count=450`, matching the relay's full
+    forwarded count), `TASK_OUTCOME=SUCCESS` (margin +3.099mm), but
+    **`FORMAL_MEASUREMENT_VALIDITY=INVALID`**
+    (`aligned_window_forwarded_to_bag_capture_ratio=0.9976958525345622`,
+    sequence 17 epuck2→epuck1) → **`FORMAL_BATCH_INCLUSION=EXCLUDED`**.
+    Precise wording: a **rosbag-only single-message capture gap** -- the
+    message was forwarded by the relay and received live by the online
+    counter, so this is NOT a relay-to-downstream loss, NOT a
+    communication-manipulation failure, and NOT a task failure. Classified
+    `EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT`: preserved in full, NOT rerun, NOT
+    counted toward the formal n=5. See
+    `objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis/STOP_CONDITION_REPORT.md`
+    (correction section) and `three_axis_verdict.json`.
+  - **Pre-declared replacement rule**: if D05 passes all five axes, D06
+    becomes the SOLE replacement trial for D04 (pending explicit user
+    authorization to extend the frozen CSV's Condition D seed lists to
+    `trial_index=6`, following the existing base+index pattern
+    `4006`/`14006` -- the loader currently errors past index 5). If D06 also
+    shows a measurement-chain anomaly, D07 is NOT authorized; the
+    bag-recording chain must be re-audited first.
+  - No Condition D n=5 batch summary exists yet (requires 5 valid INCLUDED
+    trials; D04's exclusion must be listed explicitly, not hidden, once
+    built). Evidence per trial:
     `objective5_impairment_matrix_v1_condition_D_trial0{1..4}_attempt01_analysis/`.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,

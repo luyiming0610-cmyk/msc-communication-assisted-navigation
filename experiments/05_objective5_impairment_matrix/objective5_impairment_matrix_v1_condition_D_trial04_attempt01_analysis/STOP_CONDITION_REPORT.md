@@ -1,4 +1,47 @@
-# Condition D Trial 04 — batch STOP condition triggered
+# Condition D Trial 04 — batch STOP condition triggered (RECLASSIFIED)
+
+**CORRECTION (2026-07-19, user-directed, offline-only)**: this trial's
+verdict axes are corrected below. The original framing in this document
+("a genuine, isolated single-message anomaly between the relay's ROS
+publish and the rosbag recorder's capture") incorrectly implied the
+message may not have reached any downstream consumer. It has since been
+proven, via the independent online `sequence_counter` subscriber (a
+SEPARATE ROS2 node subscribing to the same `/epuck2/state` topic as the
+bag recorder), that sequence 17 **was received live**:
+`epuck2_counter.json`'s `state` section shows `received_count=450`,
+`unique_sequence_count=450` (the relay's full forwarded range), with zero
+internal duplicates. The message left the relay AND was received by a live
+subscriber. Only the **rosbag recording chain specifically** failed to
+capture it. The correct, precise wording is: **"rosbag-only single-message
+capture gap"** -- not "relay-to-downstream loss". This is NOT a
+communication-impairment operational failure and NOT a task failure.
+
+**Corrected verdict** (see `three_axis_verdict.json`, five-axis schema):
+
+| axis | value |
+|---|---|
+| `DATA_ARTIFACT_INTEGRITY` | VALID |
+| `MANIPULATION_VALIDITY` | **VALID** (relay: 0 drops, reordering genuinely induced, forwarded stream self-consistent, independently confirmed complete by the online counter) |
+| `TASK_OUTCOME` | SUCCESS (no collision, margin +3.099mm) |
+| `FORMAL_MEASUREMENT_VALIDITY` | **INVALID** (bag-capture-chain-only gap, sequence 17 epuck2→epuck1) |
+| `FORMAL_BATCH_INCLUSION` | **EXCLUDED** |
+
+**Exclusion reason** (verbatim): "ROSbag-only single-message capture gap:
+sequence 17 was forwarded and received by the online counter but absent
+from the bag. This violates the preregistered aligned-window bag capture
+ratio=1.0 requirement."
+
+This trial is now classified `EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT` -- kept
+in full (not deleted, not rerun, attempt01 not overwritten), excluded from
+the formal n=5 count, and explicitly listed (not hidden) in any future
+Condition D batch summary. D01, D02, D03 remain the currently valid formal
+trials; D05 (and, contingent on D05 passing all axes, D06 as the sole
+replacement for D04) continue the batch under the pre-declared replacement
+rule.
+
+---
+
+## Original report text (preserved below, superseded by the correction above)
 
 `objective5_impairment_matrix_v1_condition_D_trial04_attempt01` triggered an
 explicit, pre-declared stop condition. Per instruction, the batch is halted

@@ -95,5 +95,17 @@
   },
   "trial_verdict": "FAIL",
   "trial_verdict_reason": "One or more strict automated criteria FAILED -- see fields above for detail.",
-  "trial_verdict_clarification_note": "This automated strict-criteria gate (missing_count==0, out_of_order_count==0, etc.) was built for Conditions A/B/C, where zero reordering is the PASS condition. Condition D's frozen design (jitter_s=0.30 with delay_s=0.15) is EXPECTED and INTENDED to produce genuine out-of-order delivery -- the manipulation-check success criterion for this condition is out_of_order_count > 0 in both directions, which is what was observed. The missing_count/capture_ratio fields above are also METHOD_INVALID under reordering (sequence_counter.py adjacent-delta accounting bug, see project_status.json and reordering_delivery_audit.json for the reorder-safe, set-based replacement). This FAIL label should NOT be read as a real defect or safety failure. The condition-appropriate verdict is determined separately in condition_D_trial004_corrected_verdict.json."
+  "trial_verdict_clarification_note": "This automated strict-criteria gate (missing_count==0, out_of_order_count==0, etc.) was built for Conditions A/B/C, where zero reordering is the PASS condition. Condition D's frozen design (jitter_s=0.30 with delay_s=0.15) is EXPECTED and INTENDED to produce genuine out-of-order delivery -- the manipulation-check success criterion for this condition is out_of_order_count > 0 in both directions, which is what was observed. The missing_count/capture_ratio fields above are also METHOD_INVALID under reordering (sequence_counter.py adjacent-delta accounting bug, see project_status.json and reordering_delivery_audit.json for the reorder-safe, set-based replacement). This FAIL label should NOT be read as a real defect or safety failure. The condition-appropriate verdict is determined separately in three_axis_verdict.json.",
+  "five_axis_correction_2026_07_19": {
+    "note": "See STOP_CONDITION_REPORT.md's correction section and three_axis_verdict.json (five-axis schema) for the authoritative classification.",
+    "DATA_ARTIFACT_INTEGRITY": "VALID",
+    "MANIPULATION_VALIDITY": "VALID",
+    "TASK_OUTCOME": "SUCCESS",
+    "FORMAL_MEASUREMENT_VALIDITY": "INVALID",
+    "FORMAL_BATCH_INCLUSION": "EXCLUDED",
+    "classification": "EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT",
+    "exclusion_reason": "ROSbag-only single-message capture gap: sequence 17 was forwarded and received by the online counter but absent from the bag. This violates the preregistered aligned-window bag capture ratio=1.0 requirement.",
+    "not_rerun": true,
+    "not_counted_toward_formal_n5": true
+  }
 }

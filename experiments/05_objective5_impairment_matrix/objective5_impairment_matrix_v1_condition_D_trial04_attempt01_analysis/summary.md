@@ -3,9 +3,20 @@
 `objective5_impairment_matrix_v1_condition_D_trial04_attempt01` -- part of a formal n=5 batch for Condition D.
 Automated sequential batch run (D Trials 02-05), authorized by the user, single wsl.exe invocation per trial (interop register+verify, then eamon-session orchestrator invocation). manual_observation.status=NOT_OBSERVED throughout this batch per explicit user instruction.
 
-## Verdict
+## Verdict (corrected five-axis, see `three_axis_verdict.json` and `STOP_CONDITION_REPORT.md`)
 
-`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, `FAIL`.
+`DATA_ARTIFACT_INTEGRITY=VALID`, `MANIPULATION_VALIDITY=VALID`,
+`TASK_OUTCOME=SUCCESS`, `FORMAL_MEASUREMENT_VALIDITY=INVALID`,
+`FORMAL_BATCH_INCLUSION=EXCLUDED` (`EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT`).
+
+**Exclusion reason**: ROSbag-only single-message capture gap -- sequence 17
+(epuck2→epuck1) was forwarded by the relay and received by the independent
+online `sequence_counter` subscriber, but absent from the bag. This is a
+rosbag-recording-chain-only artifact, NOT a communication-manipulation
+failure and NOT a task failure. Preserved in full, not rerun, not counted
+toward the formal n=5.
+
+`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, `FAIL` (obsolete strict-gate label, see above).
 
 ## Run identity
 

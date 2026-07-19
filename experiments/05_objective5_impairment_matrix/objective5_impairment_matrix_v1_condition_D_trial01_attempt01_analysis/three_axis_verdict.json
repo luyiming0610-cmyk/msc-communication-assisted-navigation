@@ -1,5 +1,5 @@
 {
-  "trial_id": "objective5_impairment_matrix_v1_condition_D_trial04_attempt01",
+  "trial_id": "objective5_impairment_matrix_v1_condition_D_trial01_attempt01",
   "trial_label": "FORMAL_SIM",
   "condition_id": "D",
   "verdict_kind": "FIVE_AXIS_VERDICT",
@@ -10,7 +10,7 @@
   },
   "frozen_params": {
     "condition_id": "D",
-    "trial_index": 4,
+    "trial_index": 1,
     "attempt": 1,
     "delay_s": 0.15,
     "jitter_s": 0.3,
@@ -18,9 +18,9 @@
     "outage_period_s": 0.0,
     "outage_duration_s": 0.0,
     "outage_phase_s": 0.0,
-    "seed_epuck1_to_epuck2": 4004,
-    "seed_epuck2_to_epuck1": 14004,
-    "git_commit": "c12b22a6f11983385e4a93a9e604bb6f7d3ef92a",
+    "seed_epuck1_to_epuck2": 4001,
+    "seed_epuck2_to_epuck1": 14001,
+    "git_commit": "9ace19d5ffe9966be3fb7d0f192672a0fed05e0d",
     "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
     "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
     "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
@@ -33,8 +33,8 @@
     "p99_finite_both_directions": true,
     "queue_drained": true,
     "realtime_factor": {
-      "preload_realtime_factor": 0.958,
-      "full_load_realtime_factor": 0.948,
+      "preload_realtime_factor": 0.96,
+      "full_load_realtime_factor": 0.955,
       "realtime_factor_ok": true
     },
     "bag_no_drop_warn_error": true
@@ -42,24 +42,24 @@
   "axis_2_MANIPULATION_VALIDITY": {
     "value": "VALID",
     "epuck1_to_epuck2": {
-      "out_of_order_adjacent_inversions": 97,
-      "out_of_order_displaced_count": 105,
-      "relay_forwarded_stream_actual_missing_count": 0,
-      "relay_received_to_forwarded_ratio": 1.0,
-      "online_counter_cross_check_complete": true,
-      "message_age_mean_s": 0.15986486485810697,
-      "message_age_median_s": 0.1599999999999966,
-      "message_age_p95_s": 0.29999999999999716,
-      "message_age_p99_s": 0.3000000000000007,
-      "message_age_max_s": 0.3000000000000007
-    },
-    "epuck2_to_epuck1": {
-      "out_of_order_adjacent_inversions": 84,
+      "out_of_order_adjacent_inversions": 89,
       "out_of_order_displaced_count": 92,
       "relay_forwarded_stream_actual_missing_count": 0,
       "relay_received_to_forwarded_ratio": 1.0,
       "online_counter_cross_check_complete": true,
-      "message_age_mean_s": 0.1629333333244432,
+      "message_age_mean_s": 0.16350230413824737,
+      "message_age_median_s": 0.16000000000000014,
+      "message_age_p95_s": 0.29999999999999716,
+      "message_age_p99_s": 0.30000000000000016,
+      "message_age_max_s": 0.3000000000000007
+    },
+    "epuck2_to_epuck1": {
+      "out_of_order_adjacent_inversions": 92,
+      "out_of_order_displaced_count": 97,
+      "relay_forwarded_stream_actual_missing_count": 0,
+      "relay_received_to_forwarded_ratio": 1.0,
+      "online_counter_cross_check_complete": true,
+      "message_age_mean_s": 0.15855813953255696,
       "message_age_median_s": 0.16000000000000014,
       "message_age_p95_s": 0.29999999999999716,
       "message_age_p99_s": 0.3000000000000007,
@@ -73,9 +73,9 @@
   "axis_3_TASK_OUTCOME": {
     "value": "SUCCESS",
     "collision": false,
-    "min_interrobot_distance_m": 0.14309905640064896,
+    "min_interrobot_distance_m": 0.1444723957613864,
     "safety_radius_m": 0.14,
-    "safety_margin_m": 0.0030990564006489474,
+    "safety_margin_m": 0.0044723957613863885,
     "razor_thin_margin_warning": false,
     "complete_count": 2,
     "controller_crashed": false,
@@ -87,56 +87,54 @@
         "AVOID_PASS": 1,
         "RECOVER": 1,
         "angular_direction_reversals": 1,
-        "yaw_total_variation_rad": 0.24043568968772888,
-        "path_efficiency": 0.9998819392186854,
-        "avoid_pass_duration_s": 21.39800000190735
+        "yaw_total_variation_rad": 0.33749231696128845,
+        "path_efficiency": 0.9997596854235905,
+        "avoid_pass_duration_s": 21.205000162124634
       },
       "2": {
         "AVOID_TURN": 1,
         "AVOID_PASS": 1,
         "RECOVER": 1,
         "angular_direction_reversals": 1,
-        "yaw_total_variation_rad": 0.2757291793823242,
-        "path_efficiency": 0.9996972415752495,
-        "avoid_pass_duration_s": 21.246999979019165
+        "yaw_total_variation_rad": 0.2955818176269531,
+        "path_efficiency": 0.9996783587194396,
+        "avoid_pass_duration_s": 21.10700011253357
       }
     },
     "startup_deltas_epuck1_minus_epuck2_s": {
-      "motion_start_delta_s": 2.34,
-      "cmd_vel_start_delta_s": 2.309858798980713,
-      "cruise_entry_delta_s": 2.34,
+      "motion_start_delta_s": -0.11999999999999744,
+      "cmd_vel_start_delta_s": -0.0035009384155273438,
+      "cruise_entry_delta_s": -0.05999999999999872,
       "avoid_turn_delta_s": 0.0,
       "recover_delta_s": 0.0,
-      "timebase_init_delta_s": 2.3200000000000003,
-      "startup_hold_start_delta_s": 2.5,
-      "startup_hold_end_delta_s": 2.34
+      "timebase_init_delta_s": -0.019999999999999574,
+      "startup_hold_start_delta_s": 0.0,
+      "startup_hold_end_delta_s": -0.05999999999999872
     }
   },
   "axis_4_FORMAL_MEASUREMENT_VALIDITY": {
-    "value": "INVALID",
+    "value": "VALID",
     "epuck1_to_epuck2": {
       "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
       "bag_delivered_stream_actual_missing_count": 0,
       "bag_delivered_stream_actual_missing_set": []
     },
     "epuck2_to_epuck1": {
-      "aligned_window_forwarded_to_bag_capture_ratio": 0.9976958525345622,
-      "bag_delivered_stream_actual_missing_count": 1,
-      "bag_delivered_stream_actual_missing_set": [
-        17
-      ]
+      "aligned_window_forwarded_to_bag_capture_ratio": 1.0,
+      "bag_delivered_stream_actual_missing_count": 0,
+      "bag_delivered_stream_actual_missing_set": []
     }
   },
   "axis_5_FORMAL_BATCH_INCLUSION": {
-    "value": "EXCLUDED",
-    "exclusion_reason": "ROSbag-only single-message capture gap: epuck2_to_epuck1: sequence(s) [17] forwarded by the relay but absent from the bag. This violates the preregistered aligned-window bag capture ratio=1.0 requirement. The message(s) were forwarded by the relay and received by the independent online sequence_counter subscriber, but the rosbag recording chain specifically failed to capture them."
+    "value": "INCLUDED",
+    "exclusion_reason": null
   },
   "overall": {
     "data_artifact_integrity": "VALID",
     "manipulation_validity": "VALID",
     "task_outcome": "SUCCESS",
-    "formal_measurement_validity": "INVALID",
-    "formal_batch_inclusion": "EXCLUDED",
-    "condition_D_specific_pass": false
+    "formal_measurement_validity": "VALID",
+    "formal_batch_inclusion": "INCLUDED",
+    "condition_D_specific_pass": true
   }
 }
