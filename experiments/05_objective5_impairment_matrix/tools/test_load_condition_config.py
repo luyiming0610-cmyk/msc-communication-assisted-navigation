@@ -107,10 +107,40 @@ def test_unknown_condition_id_rejected():
 
 
 def test_trial_index_out_of_range_rejected():
+    # Condition D's seed list was extended to 6 entries (2026-07-19) solely
+    # so Trial 06 can replace the excluded Trial 04 -- see
+    # test_condition_d_trial06_is_the_sole_preregistered_replacement_seed
+    # below. E/F/G were NOT extended and still reject trial_index=6, so they
+    # remain the regression guard for the general out-of-range behavior.
     with pytest.raises(TrialIndexError):
-        resolve_trial_params(REAL_CSV, "D", trial_index=6)
+        resolve_trial_params(REAL_CSV, "E", trial_index=6)
     with pytest.raises(TrialIndexError):
         resolve_trial_params(REAL_CSV, "D", trial_index=0)
+    with pytest.raises(TrialIndexError):
+        resolve_trial_params(REAL_CSV, "D", trial_index=7)
+
+
+def test_condition_d_trial06_is_the_sole_preregistered_replacement_seed():
+    """Condition D's seed_epuck1_to_epuck2/seed_epuck2_to_epuck1 columns were
+    extended with a 6th deterministic entry, 4006/14006 (continuing the
+    existing base+index pattern), for the SOLE purpose of replacing the
+    excluded Trial 04 (rosbag-only single-message capture gap). n_trials for
+    Condition D remains 5 -- this is not a general extension of the
+    randomized batch, and no other condition's seed list was touched."""
+    p6 = resolve_trial_params(REAL_CSV, "D", trial_index=6)
+    assert p6.seed_epuck1 == 4006
+    assert p6.seed_epuck2 == 14006
+    assert p6.delay_s == 0.15
+    assert p6.jitter_s == 0.30
+    # 4006/14006 do not collide with any seed used by D/E/F/G trials 1-5.
+    used_seeds = set()
+    for condition in ("D", "E", "F", "G"):
+        for trial_index in range(1, 6):
+            p = resolve_trial_params(REAL_CSV, condition, trial_index)
+            used_seeds.add(p.seed_epuck1)
+            used_seeds.add(p.seed_epuck2)
+    assert 4006 not in used_seeds
+    assert 14006 not in used_seeds
 
 
 def test_condition_a_resolves_all_zero_and_deterministic():
