@@ -3,23 +3,21 @@
 `objective5_impairment_matrix_v1_condition_D_trial01_attempt01` -- part of a formal n=5 batch for Condition D.
 Launched individually via the permanent run_objective5_matrix_from_windows.sh wrapper for direct user Webots observation (not part of an automated batch); Trial 01 of the Condition D formal n=5 batch, following the same manually-observed-first pattern as Condition A/B/C Trial 01.
 
-## Verdict
+## Verdict (five-axis, authoritative -- see `three_axis_verdict.json`)
 
-`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, automated strict-gate label `FAIL`.
+`DATA_ARTIFACT_INTEGRITY=VALID`, `MANIPULATION_VALIDITY=VALID`,
+`TASK_OUTCOME=SUCCESS`, `FORMAL_MEASUREMENT_VALIDITY=VALID`,
+`FORMAL_BATCH_INCLUSION=INCLUDED`. `manual_observation.status=NOT_OBSERVED`
+(user did not directly observe this trial; final acceptance confirmed by
+the user based on automated evidence).
 
-**Clarification**: the automated strict-gate label reuses the
-zero-reordering criteria built for Conditions A/B/C
-(`missing_count==0`, `out_of_order_count==0`). Condition D's frozen
-design (`jitter_s=0.30` with `delay_s=0.15`) is intended to produce
-genuine out-of-order delivery, and did: `out_of_order_count=89/92`
-(both directions > 0), which is the condition-specific manipulation
-check succeeding, not a defect. `capture_ratio` remains 1.0/1.0023
-(every arrived message was captured), `independent_drop_count` and
-`outage_drop_count` are 0 both directions, `min_interrobot_distance_m`
-exceeds `safety_radius_m` with a positive margin, and process cleanup
-is CLEAN. See `final_verdict.json`'s `trial_verdict_clarification_note`
-for the full text. The condition-appropriate verdict awaits the user's
-manual observation.
+The bare `DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, automated
+strict-gate label `FAIL` below is an OBSOLETE single-axis label (reuses
+Conditions A/B/C's zero-reordering criteria, invalid for a reordering
+condition) -- superseded by the five-axis verdict above. See
+`final_verdict.json`'s `trial_verdict_authoritative_note`.
+
+`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, `FAIL` (obsolete label).
 
 ## Run identity
 
@@ -30,20 +28,36 @@ manual observation.
 - sequence_counter.py SHA-256: `57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3`
 - All four match Trial 01 exactly (verified before this trial started).
 
-## Communication metrics (real analyzer, strict schema, legacy_replay=false)
+## Communication metrics -- LEGACY_METHOD_INVALID_UNDER_REORDERING
+
+The `missing`/`capture_ratio` values in this table come from the live
+`sequence_counter.py`'s adjacent-delta accounting, which is WRONG under
+reordering. **Do not use for D-condition missing/capture judgment** -- see
+the reorder-safe table below instead.
 
 | | epuck1&rarr;epuck2 | epuck2&rarr;epuck1 |
 |---|---|---|
 | sample_count | 434 | 430 |
-| missing/duplicate/out_of_order | 189/0/89 | 192/0/92 |
-| capture_ratio | 1.0 | 1.0023310023310024 |
+| missing/duplicate/out_of_order (LEGACY, invalid) | 189/0/89 | 192/0/92 |
+| capture_ratio (LEGACY, invalid) | 1.0 | 1.0023310023310024 |
 | mean/median/p95/p99/max age (s) | 0.16350230413824737/0.16000000000000014/0.29999999999999716/0.30000000000000016/0.3000000000000007 | 0.15855813953255696/0.16000000000000014/0.29999999999999716/0.3000000000000007/0.3000000000000007 |
 | latency_measurement_status | VALID_AT_SIM_CLOCK_RESOLUTION | VALID_AT_SIM_CLOCK_RESOLUTION |
 | mean bandwidth (bytes/s) | 708.5697965429898 | 709.1136118964199 |
 
 `p99_message_age_s` is a genuine finite value on both directions under
 the strict formal-trial schema gate (`schema_problems=[]` both
-directions).
+directions). Latency/throughput fields above are unaffected by the
+legacy-accounting bug and remain valid.
+
+## Communication metrics -- REORDER-SAFE (authoritative, see `reordering_delivery_audit.json`)
+
+| | epuck1&rarr;epuck2 | epuck2&rarr;epuck1 |
+|---|---|---|
+| relay forwarded (unique) | 434 | 430 |
+| relay dropped | 0 | 0 |
+| **actual_missing_count** | **0** | **0** |
+| out_of_order (adjacent/displaced, forwarded) | 89/92 | 92/97 |
+| **aligned_window_forwarded_to_bag_capture_ratio** | **1.0** | **1.0** |
 
 ## Queue drain / rosbag / realtime factor
 

@@ -2,8 +2,8 @@
 # files preserved outside git (Windows copy, verified identical to native WSL source).
 
 ## tracked (this directory)
-ee1c4b1cf53f0a80f48248eb214bf58d62a01fa2cf58c6d7b0c5461dc67a6fe7  README.md
-ce07cb4b9cc160479c0368f2034f10f8798d8bfbbdde0a4a504fed999cb4124d  final_verdict.json
+77b3aae97c02558cb3e6be3a87d0bd4b6c22c7129447b4e8028dfa14001c559d  README.md
+92bef2f5da7fe2fbfd43895bb23a105a69eae79019d0c1c9d75082a38ae05add  final_verdict.json
 fda3b91efcfc7041231e558c580ca6c956cef9750ca66703b20a94cb90c3d182  frozen_params.json
 9e7652da49688db3b1f2b3a7e585e06cecfa20db522837534d4cf7cd4151c5c1  matrix_analysis.json
 44cdddce07287c32abc73302ca23e6b4c741ce54960da5fc68cd6d2f1f3f0937  objective5_condition_D_trial03_trajectory_audit.json

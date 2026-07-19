@@ -46,44 +46,6 @@
     "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
     "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
   },
-  "communication_metrics": {
-    "epuck1_to_epuck2": {
-      "sample_count": 444,
-      "missing_count": 215,
-      "duplicate_count": 0,
-      "out_of_order_count": 97,
-      "capture_ratio": 1.002257336343115,
-      "mean_message_age_s": 0.15986486485810697,
-      "median_message_age_s": 0.1599999999999966,
-      "p95_message_age_s": 0.29999999999999716,
-      "p99_message_age_s": 0.3000000000000007,
-      "max_message_age_s": 0.3000000000000007,
-      "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
-      "mean_bandwidth_bytes_per_s": 709.2091123430952,
-      "schema_problems": [],
-      "relay_forwarded_matches_consumer_received": true,
-      "independent_drop_count": 0,
-      "outage_drop_count": 0
-    },
-    "epuck2_to_epuck1": {
-      "sample_count": 450,
-      "missing_count": 185,
-      "duplicate_count": 0,
-      "out_of_order_count": 84,
-      "capture_ratio": 1.0,
-      "mean_message_age_s": 0.1629333333244432,
-      "median_message_age_s": 0.16000000000000014,
-      "p95_message_age_s": 0.29999999999999716,
-      "p99_message_age_s": 0.3000000000000007,
-      "max_message_age_s": 0.3000000000000007,
-      "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
-      "mean_bandwidth_bytes_per_s": 710.6527989175124,
-      "schema_problems": [],
-      "relay_forwarded_matches_consumer_received": true,
-      "independent_drop_count": 0,
-      "outage_drop_count": 0
-    }
-  },
   "queue_drain": {
     "drain_duration_s": 0.5302,
     "queue_drained": true
@@ -107,5 +69,48 @@
     "exclusion_reason": "ROSbag-only single-message capture gap: sequence 17 was forwarded and received by the online counter but absent from the bag. This violates the preregistered aligned-window bag capture ratio=1.0 requirement.",
     "not_rerun": true,
     "not_counted_toward_formal_n5": true
-  }
+  },
+  "LEGACY_METHOD_INVALID_UNDER_REORDERING": {
+    "warning": "These per-direction missing_count/capture_ratio fields come from the live sequence_counter.py's adjacent-delta accounting, which is WRONG under reordering (Condition D). They MUST NOT be used to judge D-condition missing/capture. See reordering_delivery_audit.json / three_axis_verdict.json's axis_2/axis_4 for the reorder-safe, set-based replacement (actual_missing_count, aligned_window_forwarded_to_bag_capture_ratio). Values below are the ORIGINAL, UNMODIFIED numbers -- preserved for transparency, not deleted.",
+    "communication_metrics": {
+      "epuck1_to_epuck2": {
+        "sample_count": 444,
+        "missing_count": 215,
+        "duplicate_count": 0,
+        "out_of_order_count": 97,
+        "capture_ratio": 1.002257336343115,
+        "mean_message_age_s": 0.15986486485810697,
+        "median_message_age_s": 0.1599999999999966,
+        "p95_message_age_s": 0.29999999999999716,
+        "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007,
+        "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
+        "mean_bandwidth_bytes_per_s": 709.2091123430952,
+        "schema_problems": [],
+        "relay_forwarded_matches_consumer_received": true,
+        "independent_drop_count": 0,
+        "outage_drop_count": 0
+      },
+      "epuck2_to_epuck1": {
+        "sample_count": 450,
+        "missing_count": 185,
+        "duplicate_count": 0,
+        "out_of_order_count": 84,
+        "capture_ratio": 1.0,
+        "mean_message_age_s": 0.1629333333244432,
+        "median_message_age_s": 0.16000000000000014,
+        "p95_message_age_s": 0.29999999999999716,
+        "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007,
+        "latency_measurement_status": "VALID_AT_SIM_CLOCK_RESOLUTION",
+        "mean_bandwidth_bytes_per_s": 710.6527989175124,
+        "schema_problems": [],
+        "relay_forwarded_matches_consumer_received": true,
+        "independent_drop_count": 0,
+        "outage_drop_count": 0
+      }
+    }
+  },
+  "trial_verdict_superseded_by": "three_axis_verdict.json",
+  "trial_verdict_authoritative_note": "The bare 'trial_verdict' above (and any bare FAIL shown in summary.md/README.md) is an OBSOLETE single-axis label from the strict A/B/C-style gate, which is invalid for a reordering condition. The authoritative result for this trial is the five-axis verdict in 'three_axis_verdict.json' (DATA_ARTIFACT_INTEGRITY / MANIPULATION_VALIDITY / TASK_OUTCOME / FORMAL_MEASUREMENT_VALIDITY / FORMAL_BATCH_INCLUSION)."
 }

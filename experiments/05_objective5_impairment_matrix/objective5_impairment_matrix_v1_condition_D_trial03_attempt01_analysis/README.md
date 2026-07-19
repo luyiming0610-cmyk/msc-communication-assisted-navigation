@@ -14,9 +14,18 @@ Preserved at native WSL `/home/eamon/epuck_comm_bags/objective5_impairment_matri
 SHA-256-verified Windows copy at
 `experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_D_trial03_attempt01/` (gitignored).
 
-## Result
+## Result (five-axis, authoritative -- see `three_axis_verdict.json`)
 
-`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, `FAIL`.
+`DATA_ARTIFACT_INTEGRITY=VALID`, `MANIPULATION_VALIDITY=VALID`,
+`TASK_OUTCOME=SUCCESS`, `FORMAL_MEASUREMENT_VALIDITY=VALID`,
+`FORMAL_BATCH_INCLUSION=INCLUDED`.
+
+**RAZOR-THIN MARGIN**: only **+0.170mm** -- a THRESHOLD PASS, not robust
+safety. Genuine, unadjusted data.
+
+`DATA_VALIDITY=VALID`, `TASK_OUTCOME=SUCCESS`, `FAIL` (obsolete single-axis
+strict-gate label, superseded -- see `final_verdict.json`'s
+`trial_verdict_authoritative_note`).
 `min_interrobot_distance_m=0.14016992055075728` vs `safety_radius_m=0.14`.
 
 ## Batch status
