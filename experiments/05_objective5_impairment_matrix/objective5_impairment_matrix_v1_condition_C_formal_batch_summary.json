@@ -1,0 +1,207 @@
+{
+  "condition_id": "C",
+  "batch_label": "FORMAL_SIM",
+  "batch_status": "COMPLETE_FAILED_SAFETY_GATE",
+  "frozen_config": {
+    "delay_s": 1.0,
+    "jitter_s": 0.0,
+    "drop_probability": 0.0,
+    "outage": "disabled"
+  },
+  "n_trials": 5,
+  "data_validity_distribution": {
+    "VALID": 5,
+    "INVALID": 0
+  },
+  "task_outcome_distribution": {
+    "SUCCESS": 4,
+    "UNSAFE_FAILURE": 1
+  },
+  "batch_gate": {
+    "required_successes": 5,
+    "actual_successes": 4,
+    "passed": false,
+    "reason": "Trial 05 minimum inter-robot distance 0.1389085736 m was below the frozen safety radius 0.1400000000 m. The valid failure is retained and was not rerun."
+  },
+  "code_identity": {
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3",
+    "identical_across_all_5_trials": true,
+    "git_commits_per_trial": [
+      "f73df96d9fa1a90a9b0bd49514fab9bdaf547656",
+      "d26785aaa454e8f040ab4ddfe588f512eddb9885",
+      "d26785aaa454e8f040ab4ddfe588f512eddb9885",
+      "d26785aaa454e8f040ab4ddfe588f512eddb9885",
+      "d26785aaa454e8f040ab4ddfe588f512eddb9885"
+    ],
+    "note": "The git commit changed only because the C01 audit was committed between Trial 01 and Trial 02. The four frozen behavioral-code SHA-256 values remained identical."
+  },
+  "communication": {
+    "capture_ratio_both_directions_all_trials": 1.0,
+    "total_drop_count_all_trials": 0,
+    "median_message_age_s_both_directions_all_trials": 1.0,
+    "sample_count_epuck1_to_epuck2_per_trial": [446, 445, 455, 452, 453],
+    "sample_count_epuck2_to_epuck1_per_trial": [452, 451, 442, 459, 450],
+    "mean_message_age_s_epuck1_to_epuck2_per_trial": [
+      1.0001793721973093,
+      0.9997752808988761,
+      1.000175824175824,
+      1.0001327433650442,
+      1.000176600441501
+    ],
+    "mean_message_age_s_epuck2_to_epuck1_per_trial": [
+      1.000221238938053,
+      1.0002660753880264,
+      0.999954751133484,
+      1.0070588235315903,
+      1.0001333333333333
+    ],
+    "p99_message_age_s_epuck1_to_epuck2_per_trial": [
+      1.0000000005500016,
+      1.0199999999999996,
+      1.0000000004600018,
+      1.0000000000000027,
+      1.0000000004800018
+    ],
+    "p99_message_age_s_epuck2_to_epuck1_per_trial": [
+      1.0098000000199991,
+      1.0199999999999996,
+      1.0000000000000029,
+      1.2704000000000022,
+      1.0000000000000053
+    ],
+    "note": "All strict schemas passed. Trial 04 epuck2-to-epuck1 had a valid but visible p99 tail of 1.2704 s; its median remained 1.000 s and capture ratio remained 1.0."
+  },
+  "safety": {
+    "safety_radius_m": 0.14,
+    "min_interrobot_distance_m_per_trial": [
+      0.14133686853339811,
+      0.14811357904635797,
+      0.14942341444857474,
+      0.14088588504310082,
+      0.13890857361707953
+    ],
+    "safety_margin_m_per_trial": [
+      0.0013368685333980945,
+      0.008113579046357955,
+      0.009423414448574724,
+      0.0008858850431008036,
+      -0.0010914263829204796
+    ],
+    "min_interrobot_distance_stats": {
+      "mean_m": 0.14373366413770222,
+      "population_stdev_m": 0.004211719047605194,
+      "min_m": 0.13890857361707953,
+      "max_m": 0.14942341444857474
+    },
+    "safety_margin_stats": {
+      "mean_m": 0.0037336641377022197,
+      "population_stdev_m": 0.004211719047605194,
+      "min_m": -0.0010914263829204796,
+      "max_m": 0.009423414448574724
+    },
+    "unsafe_trial": "objective5_impairment_matrix_v1_condition_C_trial05_attempt01",
+    "physical_collision_observed_or_inferred": false,
+    "interpretation": "UNSAFE_FAILURE is a frozen cooperative-safety-radius violation, not a claim of physical body contact."
+  },
+  "mechanism_and_smoothness": {
+    "first_trigger_reason_per_trial": [
+      "PREDICTED_CPA",
+      "PREDICTED_CPA",
+      "PREDICTED_CPA",
+      "PREDICTED_CPA",
+      "PREDICTED_CPA"
+    ],
+    "local_layer_engaged_any_trial": false,
+    "cpa_cycles_per_robot_per_trial": 1,
+    "angular_direction_reversals_per_robot_per_trial": 9,
+    "s_curve_reproduced_trials": 5,
+    "epuck1_yaw_total_variation_rad_per_trial": [
+      5.256494551897049,
+      5.344727665185928,
+      5.357963114976883,
+      5.241054147481918,
+      5.285170346498489
+    ],
+    "epuck2_yaw_total_variation_rad_per_trial": [
+      5.26311182975769,
+      5.351345539093018,
+      5.410902976989746,
+      5.274141311645508,
+      5.2587010860443115
+    ],
+    "epuck1_path_efficiency_per_trial": [
+      0.9729151506904168,
+      0.9744332902953589,
+      0.9716130907247857,
+      0.9715846630988512,
+      0.9713534858342188
+    ],
+    "epuck2_path_efficiency_per_trial": [
+      0.9739273720474451,
+      0.9734962495316429,
+      0.972894953283783,
+      0.9726768325185813,
+      0.9711356818954184
+    ],
+    "avoid_pass_duration_s_epuck1_per_trial": [
+      20.7260000705719,
+      21.10599994659424,
+      21.194000005722046,
+      20.71399998664856,
+      20.692000150680542
+    ],
+    "avoid_pass_duration_s_epuck2_per_trial": [
+      20.766000032424927,
+      21.103999853134155,
+      21.230000019073486,
+      20.825999975204468,
+      20.69000005722046
+    ],
+    "batch_interpretation": "The approximately five-lobe S-curve is a repeatable Condition-C behavior: all 10 robot-trial trajectories show exactly 9 angular-command sign reversals during one continuous AVOID_PASS interval. It is not repeated CPA triggering and not IR/ToF LOCAL fallback."
+  },
+  "realtime_factor": {
+    "preload_per_trial": [0.996, 0.952, 0.955, 0.945, 0.97],
+    "full_load_per_trial": [1.02, 0.941, 0.952, 0.958, 0.952],
+    "all_within_0_8_to_1_2": true
+  },
+  "individual_trials": [
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_C_trial01_attempt01",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.14133686853339811,
+      "safety_margin_m": 0.0013368685333980945
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_C_trial02_attempt01",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.14811357904635797,
+      "safety_margin_m": 0.008113579046357955
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_C_trial03_attempt01",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.14942341444857474,
+      "safety_margin_m": 0.009423414448574724
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_C_trial04_attempt01",
+      "data_validity": "VALID",
+      "task_outcome": "SUCCESS",
+      "min_interrobot_distance_m": 0.14088588504310082,
+      "safety_margin_m": 0.0008858850431008036
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_C_trial05_attempt01",
+      "data_validity": "VALID",
+      "task_outcome": "UNSAFE_FAILURE",
+      "min_interrobot_distance_m": 0.13890857361707953,
+      "safety_margin_m": -0.0010914263829204796
+    }
+  ]
+}

@@ -157,6 +157,23 @@ it runs.**
   **Condition F precondition recorded in `project_status.json`**: the
   startup offset (up to ~2.66s, ~3.8x F's 0.7s outage duration) must be
   checked against actual outage-window timing before formal F begins.
+- **Formal Condition C batch, COMPLETE, FAILED SAFETY GATE (4/5 SUCCESS)**:
+  `objective5_impairment_matrix_v1_condition_C_trial01..05_attempt01`
+  (fixed `delay_s=1.00`, `jitter_s=0.0`, `drop_probability=0.0`, outage
+  disabled; the same frozen controller, world, thresholds and behavioral-code
+  SHA-256 values as Conditions A/B). All 5 trials have `DATA_VALIDITY=VALID`,
+  `capture_ratio=1.0`, zero relay drops, finite strict-schema latency fields,
+  and median message age `1.000s` in both directions. Trials 01-04 have
+  `TASK_OUTCOME=SUCCESS`; Trial 05 is the retained valid
+  `TASK_OUTCOME=UNSAFE_FAILURE` because its minimum separation
+  `0.1389086m` is below the frozen `0.1400000m` safety radius by about
+  `1.091mm`. It was not rerun and no threshold/geometry/controller value was
+  changed. All 5 first triggers are `PREDICTED_CPA`; every `LOCAL_*` count is
+  zero. The user-observed S-shaped path is a reproducible batch-level effect:
+  every robot in every trial made exactly 9 angular-command direction
+  reversals (about five S-lobes) within one continuous `AVOID_PASS`, not
+  repeated CPA encounters or IR/ToF fallback. Full evidence:
+  `objective5_impairment_matrix_v1_condition_C_formal_batch_summary.{json,md}`.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,
@@ -171,7 +188,12 @@ it runs.**
   `objective5_impairment_matrix_v1_condition_B_trial02_attempt01`,
   `objective5_impairment_matrix_v1_condition_B_trial03_attempt01`,
   `objective5_impairment_matrix_v1_condition_B_trial04_attempt01`,
-  `objective5_impairment_matrix_v1_condition_B_trial05_attempt01`.
+  `objective5_impairment_matrix_v1_condition_B_trial05_attempt01`,
+  `objective5_impairment_matrix_v1_condition_C_trial01_attempt01`,
+  `objective5_impairment_matrix_v1_condition_C_trial02_attempt01`,
+  `objective5_impairment_matrix_v1_condition_C_trial03_attempt01`,
+  `objective5_impairment_matrix_v1_condition_C_trial04_attempt01`,
+  `objective5_impairment_matrix_v1_condition_C_trial05_attempt01`.
 
 ### 06_physical_pipuck
 Two physical e-puck2/Pi-puck units, Wi-Fi validation, disconnect/recovery,

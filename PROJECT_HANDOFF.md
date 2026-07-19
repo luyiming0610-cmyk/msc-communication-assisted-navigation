@@ -135,7 +135,7 @@ verified identical across all 5 trials. Full cross-trial statistics:
 above** — it is a separate, later, more rigorously-schema-gated formal
 result within the same Objective 5 zero-impairment question, run via
 the impairment-matrix orchestrator rather than the earlier
-comm-baseline script. **Conditions B-G of the matrix have not started.**
+comm-baseline script. **Conditions B and C are now complete. Condition B: 5/5 PASS. Condition C: COMPLETE_FAILED_SAFETY_GATE (4/5 SUCCESS + 1/5 UNSAFE_FAILURE).** C05 reached 0.1389086m, about 1.091mm below the frozen 0.14m safety radius; the valid failure was retained and not rerun. All five C trials reproduced exactly 9 steering-direction reversals per robot inside one continuous AVOID_PASS, with PREDICTED_CPA and no LOCAL_* takeover.
 
 The registry's first `evidence_level=FORMAL_PHYSICAL` row (distinct from
 `FORMAL_SIM`) is `physical_single_device_zero_impairment_baseline_v1`
@@ -161,20 +161,14 @@ row per experiment/batch — `status`, `evidence_level`,
 
 ## Current single next step
 
-The Objective 5 impairment matrix (Conditions A-G) is designed, frozen,
-and its orchestrator (`run_objective5_impairment_matrix_trial.sh`) has
-been exclusionary-pilot-verified and used for a completed formal batch.
-**Condition A's formal n=5 batch is COMPLETE (5/5 PASS)** — see the
-`FORMAL_SIM` paragraph above and
-`objective5_impairment_matrix_v1_condition_A_formal_batch_summary.md`.
-**Conditions B-G (30 more trials) have not started.** Per instruction,
-Condition A's completion does NOT auto-start Condition B — each
-remaining condition's Trial 01 requires explicit user confirmation
-before it runs. When that confirmation arrives, the same orchestrator
-and strict analyzer schema gate used for Condition A apply unchanged
-(one unified script, frozen CSV as the only parameter source, no
-hand-typed override).
-
+Conditions A and B are complete at 5/5 PASS. Condition C is also complete,
+but its correct result is `4/5 SUCCESS + 1/5 UNSAFE_FAILURE`; do not rerun
+C05 or relabel the batch as a pass. The next runnable condition is D
+(jitter/reordering), whose Trial 01 still requires explicit user approval.
+Conditions D-G have not started. Condition F additionally remains blocked
+by the mandatory outage-window/startup-offset audit in
+`experiments/project_status.json`. Use the same frozen orchestrator and
+strict analyzer schema; the CSV remains the only parameter source.
 ## What to read first, in order
 
 1. **This file.**

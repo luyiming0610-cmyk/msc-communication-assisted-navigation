@@ -1,170 +1,198 @@
 {
-  "schema_version": "1.1.0",
-  "last_updated": "2026-07-18",
-  "index_generated_from_commit": "2558216",
-  "index_files_commit": "026223b",
-  "runtime_head_commit": "READ_WITH_GIT_REV_PARSE_HEAD -- do not hardcode; run `git rev-parse HEAD` for the true current value, since this file cannot self-referentially contain the hash of the commit that includes it",
-  "frozen_controller": {
-    "version": "controller_v4_timebase_fix_20260717",
-    "key_commits": ["980e7d0", "06e0f0f", "f1830c5"],
-    "status": "FROZEN -- no avoidance-algorithm changes planned unless a new blocking safety defect is found",
-    "test_suite_result": "144/144 passed (epuck2_comm full suite, verified via pytest in the rebuilt ROS workspace after the protocol_v1.1_stamp_semantics changes)"
-  },
-  "protocol_version": {
-    "value": "PROTOCOL_VERSION=1",
-    "sealed_at_commit": "b5a0351",
-    "message_file": "src/epuck2_comm_interfaces/msg/EpuckState.msg",
-    "sha256": "a7ec4184dec52b157a87beea20b44fb2dff5c6dee199d0c76b7c347c26abe15b",
-    "rule": "no field may be added, removed, or reordered; a structural change requires PROTOCOL_VERSION=2 as a distinct message",
-    "stamp_semantics_patch": "protocol_v1.1_stamp_semantics",
-    "stamp_semantics_note": "Wire schema unchanged (still PROTOCOL_VERSION=1, same SHA-256). This patch label distinguishes SEMANTIC reliability of the already-existing msg.stamp field: state_publisher.py now holds publication (WAITING_FOR_CLOCK) until the ROS clock is valid, and sequence_counter.py now computes live per-message latency (message.stamp vs its own get_clock().now() at receipt, same clock domain). Bags/trials recorded BEFORE this patch (e.g. objective5_comm_baseline_zero_impairment_formal_trial01) are NOT backfilled or reprocessed -- they remain registered under the pre-patch semantics with latency=NOT_MEASURED, permanently."
-  },
-  "completed_batches": [
-    {
-      "name": "Phase 1 static wooden obstacle, locked batch",
-      "status": "PASS",
-      "trial_count": "OPEN (5 per batch-summary filename vs 6 directories on disk -- unresolved, see known_limitations)",
-      "evidence_level": "FORMAL_SIM",
-      "sealed": false,
-      "note": "controller_v1 era; still valid because Phase 1 runtime windows never reached the extended-tail window where the v1 defect manifests"
-    },
-    {
-      "name": "Phase 2/3 head-on / offset / crossing / ablation batches",
-      "status": "PASS",
-      "trial_count": 45,
-      "evidence_level": "FORMAL_SIM",
-      "sealed": false,
-      "note": "controller_v1 era; still valid for the same reason as Phase 1; see cooperative_avoidance_experiment_index_20260716.md for the authoritative per-trial table"
-    },
-    {
-      "name": "Phase 4 formal batch: staged local-obstacle then communication-assisted proximity/cooperative avoidance",
-      "status": "PASS",
-      "trial_count": 5,
-      "pass_count": 5,
-      "evidence_level": "FORMAL_SIM",
-      "sealed": true,
-      "sealed_at_commit": "e32560e",
-      "batch_summary_commit": "cbb1897",
-      "binding_note": "ALL 5/5 trials triggered via PROXIMITY_FALLBACK, none via PREDICTED_CPA -- must never be cited as evidence of preventing an otherwise-certain head-on collision"
-    },
-    {
-      "name": "Objective 5 communication-performance analyzer + network impairment relay implementation",
-      "status": "PASS",
-      "evidence_level": "UNIT_TEST",
-      "test_count": 126,
-      "sealed": false,
-      "commits": ["31ab4ec", "03ce36c"]
-    },
-    {
-      "name": "Objective 5 zero-impairment communication baseline, formal (objective5_comm_baseline_zero_impairment_formal_trial01)",
-      "status": "PASS",
-      "trial_count": 1,
-      "pass_count": 1,
-      "evidence_level": "FORMAL_SIM",
-      "sealed": false,
-      "metric_coverage": {
-        "PDR": "VALID", "sequence_integrity": "VALID", "throughput": "VALID",
-        "task_behavior": "VALID", "latency": "NOT_MEASURED"
-      },
-      "note": "genuine cooperative_avoider task completion (not max_runtime/FAILSAFE/TASK_TIMEOUT), native WSL ext4 bag path, relay/counter subscribed before state_publisher/controller started; PDR=1.0 (aligned window), sequence_gap_count=duplicate_count=out_of_order_count=0 both robots, realtime factor 0.963/0.951, sequence_counter complete=true both robots. latency=NOT_MEASURED: root cause is analyze_comm_performance.py mixing rosbag2's own wall-clock recording timestamp with message.stamp (sim time) -- NOT that stamp was unset (state_publisher.py did set it correctly even in this trial). This is a permanent NOT_MEASURED for this specific trial; it is not re-analyzed or backfilled. This trial's PASS verdict is unaffected and stands as PDR/sequence/throughput/task evidence. See objective5_comm_baseline_zero_impairment_formal_trial02_stamp for the latency-complete companion (does not replace this trial)."
-    },
-    {
-      "name": "Objective 5 timestamp/latency measurement-chain validation pilot (objective5_timestamp_latency_validation_pilot01)",
-      "status": "PASS",
-      "evidence_level": "PILOT",
-      "sealed": false,
-      "note": "diagnostic-only (no cooperative_avoider), 2 conditions (delay=0, delay=0.25s), same seed=4001. condition_a mean_message_age_s ~0 (small positive, not epoch-scale); condition_b observed increment ~0.26s vs configured 0.25s, error ~0.01s (<0.05s tolerance); aligned-window PDR=1.0 all conditions/robots. Run before trial02_stamp specifically to validate the measurement chain first. Never pooled with formal statistics."
-    },
-    {
-      "name": "Objective 5 zero-impairment communication baseline, formal, latency-complete (objective5_comm_baseline_zero_impairment_formal_trial02_stamp)",
-      "status": "PASS",
-      "trial_count": 1,
-      "pass_count": 1,
-      "evidence_level": "FORMAL_SIM",
-      "sealed": false,
-      "metric_coverage": {
-        "PDR": "VALID", "sequence_integrity": "VALID", "throughput": "VALID",
-        "task_behavior": "VALID", "latency": "VALID"
-      },
-      "note": "does NOT replace trial01 -- both remain separately registered with different metric_coverage. Same acceptance criteria as trial01, PASS: aligned-window PDR=1.0 both robots, 0 gaps/dup/oo, complete=true both robots, realtime factor 0.996/1.003, genuine task completion. Latency (NEW, via live sequence_counter, same clock domain as message.stamp): mean/median/p95/max message_age_s = 0.0 both robots (zero configured delay, near-instant relay), valid_age_sample_count=836/823, 0 negative/anomalous age samples."
-    },
-    {
-      "name": "Physical single-device zero-impairment communication baseline, formal (physical_single_device_zero_impairment_baseline_v1)",
-      "status": "FINAL_BATCH_PASS",
-      "trial_count": 5,
-      "pass_count": 5,
-      "evidence_level": "FORMAL_PHYSICAL",
-      "sealed": false,
-      "note": "First FORMAL physical-hardware result of the whole project (everything physical before this is DIAGNOSTIC_PHYSICAL). Stationary (no ground motion, no controller), single e-puck2 #5809, expanded Pi-TCP-WSL bridge + EpuckState.msg protocol. 5 trials (trial01_attempt02, trial02_attempt02, trial03_attempt01, trial04_attempt01, trial05_attempt01) all FINAL_PASS -- one continuous driver/Pi-expanded-server/WSL-bridge session, NOT 5 independent cold starts (only state_publisher FRESH-restarted per trial). Each trial: real 4-source (bag/WSL bridge-status CSV/WSL system-metrics CSV/batch Pi system-metrics CSV) overlap 309.9-311.1s, centered 240.000s main window, >=34.9s buffer both sides. Tier A (APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO, trial-start-vs-end snapshot delta of the bridge's own counters, NOT IP/TCP loss) = 1.0 all 5, 0 missing/out_of_order; duplicate_count NOT_MEASURABLE every trial (never reported as 0). Tier B (EpuckState bag capture) ratio 1.0 all 5, actual measured rate ~8.88-8.94 Hz. Tier C (raw sensor topics) ~9.2 Hz, 0 stall, no PDR claimed. RTT (1Hz status snapshot, not a full transaction census): tail ~20-25% >50ms, ~20-25% >100ms, 0% >200ms, recurring across all 5 windows -- observed repeatable pattern only, NO root-cause attribution. One-way Pi-to-WSL latency NOT reported/NOT measured (no NTP/chrony clock-sync verified). trial01_attempt01_short_window and trial02_attempt01_short_window are EXCLUDED diagnostic evidence (window-timing defect in the now-deprecated run_baseline_v1_trial.sh, fixed by run_baseline_v1_trial_v2.sh, orchestrator_git_commit a7f2a7e) -- not part of this n=5. Evidence: experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/batch_summary.md and per-trial physical_single_device_zero_impairment_baseline_v1_trial0N_attemptNN_analysis/ directories. Raw rosbag/CSVs/logs live outside the git repo at native WSL path /home/eamon/epuck_comm_bags/."
-    }
-  ],
-  "active_experiment": {
-    "name": "Objective 5 delay/loss impairment matrix design",
-    "status": "matrix design only -- not yet run, awaiting user confirmation",
-    "finding_so_far": "zero-impairment formal baselines PASSED this session: trial01 (PDR/sequence/throughput/task VALID, latency NOT_MEASURED) and trial02_stamp (all five metrics VALID, including latency via the new live sequence_counter measurement). The /mnt/c rosbag-write-loss root cause is fully resolved via the native WSL ext4 bag path. The timestamp/latency measurement chain itself was independently validated by objective5_timestamp_latency_validation_pilot01 before trial02_stamp was run.",
-    "not_yet_done": [
-      "the delay/loss impairment matrix (A-G conditions, evidence-based tiers) must be designed and submitted for explicit user confirmation before any such run begins -- per instruction, do not auto-run it after the baseline PASS"
-    ]
-  },
-  "next_action": "Conditions A and B formal n=5 batches are both COMPLETE (5/5 PASS each). Condition C Trial 01 is the next step and requires explicit user confirmation before it runs (not auto-started). Before formal Condition F, the mandatory outage-window/startup-offset confound analysis recorded in blocked_items must be completed.",
-  "blocked_items": [
-    {
-      "item": "Objective 5 delay/loss impairment matrix (A-G conditions) -- formal n=5 batch completion",
-      "blocked_by": "PARTIALLY RESOLVED as of 2026-07-18: Condition A's formal n=5 batch is COMPLETE, 5/5 PASS (objective5_impairment_matrix_v1_condition_A_trial01..05_attempt01). Trial 01 launched manually and individually observed by the user; Trials 02-05 ran automatically under explicit user authorization (frozen config, behavioral-code SHA-256 verified identical to Trial 01 before each run, no per-trial manual observation, batch would stop immediately on any single-trial failure). All 5 trials: DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, analyzer_ok=true under the strict formal-trial latency schema gate (p99 finite both directions, legacy_replay=false), capture_ratio=1.0 and 0 drops both directions, process cleanup CLEAN. min_interrobot_distance_m ranged [0.14178534915907265, 0.15064050840214138] across the 5 trials, all exceeding safety_radius_m=0.14 -- safety margin mean ~6.73mm, tightest ~1.79mm (Trial 05), reported explicitly, not grounds to alter frozen geometry/controller. Full cross-trial statistics in objective5_impairment_matrix_v1_condition_A_formal_batch_summary.md. A permanent, git-tracked Windows->WSL launch wrapper (experiments/05_objective5_impairment_matrix/tools/run_objective5_matrix_from_windows.sh) now replaces the ad hoc scratchpad launch scripts used through Condition A; it includes a --check-only mode verifying interop/orchestrator/behavioral-code SHA-256 without launching Webots. Condition B Trial 01 (objective5_impairment_matrix_v1_condition_B_trial01_attempt01, delay_s=0.20/jitter_s=0.0/drop_probability=0.0, outage disabled, local ToF/IR layer still enabled) was launched via this wrapper manually for individual observation: DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, analyzer_ok=true, capture_ratio=1.0 and 0 drops both directions, measured message age closely tracks the configured 0.20s delay (mean~0.209s, median=0.200s exactly), min_interrobot_distance_m=0.14777153762172363 (safety margin ~7.77mm), process cleanup CLEAN, offline trigger-mechanism audit shows PREDICTED_CPA with every LOCAL_* counter 0 (PURE_COMMUNICATION_CPA_AVOIDANCE). Manual observation received and confirmed (final_confirmed_verdict=PASS); the separately-observed ~2.6s startup asynchrony was audited offline and classified as ORCHESTRATOR_LAUNCH_TIMING_VARIANCE (present in Condition A too, direction not fixed, B01 within A-group range, AVOID_TURN/RECOVER synchronized in every audited trial) -- not a communication-delay degradation. Condition B's formal n=5 batch is now COMPLETE, 5/5 PASS (Trials 02-05 ran automatically under explicit authorization, behavioral-code SHA-256 verified identical to B01 before each run): all 5 DATA_VALIDITY=VALID/TASK_OUTCOME=SUCCESS/analyzer_ok=true, capture_ratio=1.0 and 0 drops both directions, PREDICTED_CPA with LOCAL_* all 0 in every trial, median message age = 0.200s exactly (configured 0.20s delay), min_interrobot_distance_m range [0.1418936528990241, 0.14777153762172363] (margin mean ~4.66mm, tightest ~1.89mm Trial 05), per-trial TIMEBASE_INIT startup deltas recorded as covariates ([-2.64,-2.38,-0.02,-0.34,0.00]s, AVOID_TURN/RECOVER deltas 0.000s in all 5). Full statistics: objective5_impairment_matrix_v1_condition_B_formal_batch_summary.{json,md}. Remaining blocker: Conditions C-G (25 more trials) have not started -- each condition's Trial 01 requires explicit user confirmation before it runs, per instruction; the Condition-F outage-window/startup-offset precondition (separate blocked-item) must be satisfied before formal F."
-    },
-    {
-      "item": "Condition F formal trials -- MANDATORY pre-start outage-window/startup-offset confound analysis",
-      "blocked_by": "PRECONDITION, recorded 2026-07-19 per user instruction after the Condition B Trial 01 startup-sync audit: the observed orchestrator startup offset (up to ~2.66s between the two controllers' TIMEBASE_INIT, direction not fixed across trials) EXCEEDS Condition F's outage_duration_s=0.7 by ~3.8x. Because F's outage windows are anchored to absolute /clock elapsed time (10/25/40/55s), not to either robot's own started_at, this offset can materially shift which outage windows overlap each trial's critical CPA decision period -- possibly differently per trial and per robot. It is NOT acceptable to dismiss this by noting outage_period_s=15.0 exceeds the startup offset (an earlier over-inference, explicitly retracted). Before formal Condition F Trial 01 runs, an analysis MUST reconstruct, for the planned timing scheme, the global outage-window schedule against each trial's actual TIMEBASE_INIT/CRUISE/AVOID_TURN times -- proving which windows each trial actually experiences and whether any cover the CPA decision phase. This is a Condition-F-specific precondition; nothing is changed in the current Condition B phase."
-    },
-    {
-      "item": "Phase 4 formal Trials 06+ or any new avoidance scenario",
-      "blocked_by": "intentionally paused per route re-alignment against the official COMP5200M Spec/SP (see docs/ and HANDOFF_20260717.md) -- avoidance-algorithm scope is frozen, project effort has moved to Objective 5/6/7"
-    },
-    {
-      "item": "Objective 5 formal communication metrics (PDR, rate, bandwidth, latency) suitable for the dissertation",
-      "blocked_by": "RESOLVED as of this session: trial01 (PDR/sequence/throughput/task VALID, latency NOT_MEASURED) plus trial02_stamp (all five metrics VALID including latency, via the new live sequence_counter measurement, protocol_v1.1_stamp_semantics) together give formal, task-level, latency-complete zero-impairment evidence. The delay/loss impairment matrix conditions remain not yet run."
-    },
-    {
-      "item": "Physical Pi-puck validation (Objective 1/5/6/7)",
-      "blocked_by": "PARTIALLY RESOLVED as of 2026-07-18: physical_single_device_zero_impairment_baseline_v1 (stationary, single e-puck2 #5809, expanded Pi-TCP-WSL bridge + EpuckState.msg) is now FINAL_BATCH_PASS (5/5) -- the first FORMAL physical-hardware result of the project (see completed_batches). This project has and will only ever have ONE physical e-puck2/Pi-puck unit, #5809 -- the paper must never claim a completed dual-physical-robot experiment; the second node is a virtual/laptop peer. Remaining blockers: (1) no ground-motion/controller physical trial has run yet (this batch is stationary, comm-layer-only); (2) one-way Pi-to-WSL latency remains NOT reported -- cross-device clock-sync (verify_clock_sync() stub) is still unimplemented, though the bridge's own sequence-acknowledgement RTT does not depend on clock sync and is already available and measured; (3) no EpuckState.msg converter exists yet for real-hardware data beyond the expanded bridge already used in this batch (see physical_protocol_gap_report.md for the original gap finding)."
-    }
-  ],
-  "formal_data_roots": [
-    "experiments/fusion_static_neighbor_20260716/bags/local_static_long_trial_0{2..7} (Phase 1, controller_v1)",
-    "experiments/cooperative_avoidance_20260716/bags/*_formal_trial_0{1..5} (Phase 2/3, controller_v1)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_combined_formal_trial0{1..5} (Phase 4, controller_v4, SEALED)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_comm_baseline_zero_impairment_formal_trial01 (Objective 5, zero-impairment formal baseline, PASS, latency=NOT_MEASURED)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_comm_baseline_zero_impairment_formal_trial02_stamp (Objective 5, zero-impairment formal baseline, PASS, latency=VALID; does not replace trial01)",
-    "experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/ + physical_single_device_zero_impairment_baseline_v1_trial0{1..5}_attemptNN_analysis/ (Objective 1/5/6, first FORMAL_PHYSICAL result, FINAL_BATCH_PASS 5/5; raw rosbag/CSVs outside git at native WSL path /home/eamon/epuck_comm_bags/)",
-    "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_A_trial0{1..5}_attempt01_analysis/ + objective5_impairment_matrix_v1_condition_A_formal_batch_summary.{json,md} (Objective 5 impairment matrix, Condition A formal n=5 batch, FORMAL_SIM, COMPLETE 5/5 PASS; raw rosbag/diag_logs outside git at native WSL path /home/eamon/epuck_comm_bags/ and a SHA-256-verified Windows copy under experiments/05_objective5_impairment_matrix/bags/, also gitignored)",
-    "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_B_trial0{1..5}_attempt01_analysis/ + objective5_impairment_matrix_v1_condition_B_formal_batch_summary.{json,md} (Objective 5 impairment matrix, Condition B formal n=5 batch, FORMAL_SIM, COMPLETE 5/5 PASS; raw rosbag/diag_logs outside git at native WSL path /home/eamon/epuck_comm_bags/ and a SHA-256-verified Windows copy under experiments/05_objective5_impairment_matrix/bags/, also gitignored)"
-  ],
-  "diagnostic_data_roots": [
-    "experiments/controller_v2_local_latch_20260717/bags/ (controller_v2 development)",
-    "experiments/controller_v3_unified_encounter_20260717/bags/ (controller_v3 development)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_* (controller_v4 development, pilots a/a4/b/b2/b3)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_{head_on_cpa_pure_c1,combined_trial1,combined_trial2_timebasefix} (Phase 4 exclusionary pilots)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_trial{1,2,3} (Objective 5, /mnt/c bag-loss diagnostics)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_native_trial0{1,2} (Objective 5, native-WSL-path measurement-chain isolation)",
-    "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_timestamp_latency_validation_pilot01_condition_{a_delay0,b_delay025} (Objective 5, stamp/latency measurement-chain validation, PASS, diagnostic-only)",
-    "experiments/cooperative_avoidance_20260716/bags/combined_* (controller_v1 combined-scenario defect evidence)",
-    "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionA_exclusionary_pilot01_analysis (orchestrator equivalence check, EXCLUSIONARY_DIAGNOSTIC, corrected verdict DATA_VALIDITY=VALID/TASK_OUTCOME=SUCCESS, not part of formal n=5)",
-    "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionF_exclusionary_pilot0{1,2}_analysis (failed attempts, real orchestrator bugs, preserved with NOTE.md, EXCLUSIONARY_DIAGNOSTIC, not part of formal n=5)",
-    "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionF_exclusionary_pilot03_analysis (valid bidirectional-outage exclusionary pilot, DATA_VALIDITY=VALID/TASK_OUTCOME=SUCCESS, EXCLUSIONARY_DIAGNOSTIC, not part of formal n=5)"
-  ],
-  "paper_ready_outputs": [],
-  "known_limitations": [
-    "Phase 4's combined scenario (all 5/5 formal trials) triggers via PROXIMITY_FALLBACK, never PREDICTED_CPA -- the two robots' post-box trajectories are not on a strict head-on collision course; this is a genuine, reproducible property of the frozen geometry (epuck1's LOCAL_RECOVER restores heading, not lateral position), not a controller defect, and must not be described as preventing a certain collision",
-    "Old EpuckState-format bags (5 pre-protocol-freeze bags in cooperative_avoidance_20260716/, specifically head_on_cpa_only_trial_02..06_postfix) cannot be reprocessed by any analyzer assuming the current PROTOCOL_VERSION=1 message shape (Fast CDR deserialization exception); their original, contemporaneous analysis outputs remain valid historical evidence but must not be re-analyzed with current tooling",
-    "The /mnt/c rosbag-write-loss finding is confirmed via two independent native-path diagnostic trials (aligned-window PDR=1.0 both times); the full formal zero-impairment baseline (with cooperative_avoider actually running) was completed and PASSED this session under the native-WSL-bag-path workflow (objective5_comm_baseline_zero_impairment_formal_trial01)",
-    "sequence_counter (the third-party comm-diagnostic observer) was rewritten this session to remove its dependency on a custom SIGINT handler: it now uses periodic atomic checkpoints (complete=false) plus a finally-block final write (complete=true), verified working in the formal baseline PASS (complete=true both robots, 0 gaps/dup/oo). The FIRST 3 attempts at the formal baseline still failed for a related but distinct orchestration-script bug: the shell script's stop_pid sent SIGINT only to the relay+counter launch-service's own PID, not its child rclpy processes, so children were sometimes orphaned before writing complete=true; fixed by launching that process tree under setsid and signaling the whole process group on shutdown (see run_objective5_comm_baseline_formal_trial.sh's stop_pid_group)",
-    "CORRECTED (was wrong in an earlier pass of this file): state_publisher.py DOES set EpuckState.stamp (self.get_clock().now().to_msg()) -- the actual root cause of trial01's epoch-scale 'age' figures was analyze_comm_performance.py mixing rosbag2's own wall-clock recording timestamp with message.stamp (sim time), two different clock domains. Fixed (protocol_v1.1_stamp_semantics): state_publisher.py now holds publication (WAITING_FOR_CLOCK) until the clock is valid so stamp is never a fake zero; analyze_comm_performance.py's bag-based age computation now excludes negative/implausibly-large ages and reports latency_domain_mismatch_detected rather than silently averaging garbage in; sequence_counter.py now computes its own LIVE latency (message.stamp vs its own get_clock().now() at receipt, same clock domain, no mismatch) -- validated by objective5_timestamp_latency_validation_pilot01 and used for objective5_comm_baseline_zero_impairment_formal_trial02_stamp's latency=VALID coverage. PDR, rate, and bandwidth were never affected by this bug.",
-    "peer_timeout_s audit finding (read-only, frozen cooperative_avoider unmodified): peer freshness is judged by CALLBACK RECEIPT TIME (self._now_s() at the moment _peer_callback fires), not by msg.stamp. A fixed/constant relay delay does NOT necessarily trigger peer_timeout -- it only shifts the whole message stream later by a constant offset; the steady-state gap between consecutive receipts stays close to the publish period regardless of a constant delay. Only jitter (variance) or real message loss can plausibly cause a receipt gap large enough to exceed peer_timeout_s. An earlier matrix-design draft's claim that a 0.6s configured delay would trigger peer-timeout degradation is RETRACTED. Changing freshness semantics to use msg.stamp instead would be a new protocol/safety-version decision, not made this session.",
-    "network_impairment_relay.py audit finding: relay scheduling uses ROS/sim time (get_clock().now() under use_sim_time=true), so delay/jitter semantics do not drift with Webots realtime factor. jitter CAN cause reordering (the release-time min-heap flushes strictly by release_time, not receive order). drop/jitter use random.Random(seed), fully reproducible given the same seed. Relay CSV now also records source_stamp_s and actual_release_time_s (appended columns, existing readers keyed by column name unaffected).",
-    "experiment_registry.csv now carries verification_status/verification_basis columns per row (DIRECTLY_VERIFIED / SUMMARY_VERIFIED / NAMING_INFERRED / UNVERIFIED) so evidence rigor is explicit rather than implied; rows marked NAMING_INFERRED or UNVERIFIED always have included_in_paper=NO by construction -- see that CSV for the per-row basis rather than treating any aggregate trial_count as independently re-verified this pass",
-    "fusion_static_neighbor_20260716's Phase 1 trial count is intentionally left OPEN in experiment_registry.csv (batch-summary filename implies 03-07 = 5 trials; 6 directories local_static_long_trial_02..07 exist on disk) -- do not pick either number without reconciling the discrepancy first",
-    "communication_baseline_20260716/ was investigated this pass (previous pass had only confirmed no bags/ subdirectory): it contains exactly one file, an empty (0-byte) state_monitor_20260716_105522.jsonl stub, predating and unrelated to the current Objective 5 comm-baseline work. Registered EXCLUDED, included_in_paper=false, artifact_missing=true.",
-    "CPU/memory overhead for communication performance is not measured anywhere yet (analyze_comm_performance.py explicitly reports this as NOT MEASURED, pending a live psutil-style sampling companion)",
-    "Cross-device (physical Pi-puck) clock synchronization has no implementation yet -- verify_clock_sync() in analyze_comm_performance.py intentionally raises NotImplementedError until Objective 6 begins"
-  ]
+    "schema_version":  "1.1.0",
+    "last_updated":  "2026-07-19",
+    "index_generated_from_commit":  "2558216",
+    "index_files_commit":  "026223b",
+    "runtime_head_commit":  "READ_WITH_GIT_REV_PARSE_HEAD -- do not hardcode; run `git rev-parse HEAD` for the true current value, since this file cannot self-referentially contain the hash of the commit that includes it",
+    "frozen_controller":  {
+                              "version":  "controller_v4_timebase_fix_20260717",
+                              "key_commits":  [
+                                                  "980e7d0",
+                                                  "06e0f0f",
+                                                  "f1830c5"
+                                              ],
+                              "status":  "FROZEN -- no avoidance-algorithm changes planned unless a new blocking safety defect is found",
+                              "test_suite_result":  "144/144 passed (epuck2_comm full suite, verified via pytest in the rebuilt ROS workspace after the protocol_v1.1_stamp_semantics changes)"
+                          },
+    "protocol_version":  {
+                             "value":  "PROTOCOL_VERSION=1",
+                             "sealed_at_commit":  "b5a0351",
+                             "message_file":  "src/epuck2_comm_interfaces/msg/EpuckState.msg",
+                             "sha256":  "a7ec4184dec52b157a87beea20b44fb2dff5c6dee199d0c76b7c347c26abe15b",
+                             "rule":  "no field may be added, removed, or reordered; a structural change requires PROTOCOL_VERSION=2 as a distinct message",
+                             "stamp_semantics_patch":  "protocol_v1.1_stamp_semantics",
+                             "stamp_semantics_note":  "Wire schema unchanged (still PROTOCOL_VERSION=1, same SHA-256). This patch label distinguishes SEMANTIC reliability of the already-existing msg.stamp field: state_publisher.py now holds publication (WAITING_FOR_CLOCK) until the ROS clock is valid, and sequence_counter.py now computes live per-message latency (message.stamp vs its own get_clock().now() at receipt, same clock domain). Bags/trials recorded BEFORE this patch (e.g. objective5_comm_baseline_zero_impairment_formal_trial01) are NOT backfilled or reprocessed -- they remain registered under the pre-patch semantics with latency=NOT_MEASURED, permanently."
+                         },
+    "completed_batches":  [
+                              {
+                                  "name":  "Phase 1 static wooden obstacle, locked batch",
+                                  "status":  "PASS",
+                                  "trial_count":  "OPEN (5 per batch-summary filename vs 6 directories on disk -- unresolved, see known_limitations)",
+                                  "evidence_level":  "FORMAL_SIM",
+                                  "sealed":  false,
+                                  "note":  "controller_v1 era; still valid because Phase 1 runtime windows never reached the extended-tail window where the v1 defect manifests"
+                              },
+                              {
+                                  "name":  "Phase 2/3 head-on / offset / crossing / ablation batches",
+                                  "status":  "PASS",
+                                  "trial_count":  45,
+                                  "evidence_level":  "FORMAL_SIM",
+                                  "sealed":  false,
+                                  "note":  "controller_v1 era; still valid for the same reason as Phase 1; see cooperative_avoidance_experiment_index_20260716.md for the authoritative per-trial table"
+                              },
+                              {
+                                  "name":  "Phase 4 formal batch: staged local-obstacle then communication-assisted proximity/cooperative avoidance",
+                                  "status":  "PASS",
+                                  "trial_count":  5,
+                                  "pass_count":  5,
+                                  "evidence_level":  "FORMAL_SIM",
+                                  "sealed":  true,
+                                  "sealed_at_commit":  "e32560e",
+                                  "batch_summary_commit":  "cbb1897",
+                                  "binding_note":  "ALL 5/5 trials triggered via PROXIMITY_FALLBACK, none via PREDICTED_CPA -- must never be cited as evidence of preventing an otherwise-certain head-on collision"
+                              },
+                              {
+                                  "name":  "Objective 5 communication-performance analyzer + network impairment relay implementation",
+                                  "status":  "PASS",
+                                  "evidence_level":  "UNIT_TEST",
+                                  "test_count":  126,
+                                  "sealed":  false,
+                                  "commits":  [
+                                                  "31ab4ec",
+                                                  "03ce36c"
+                                              ]
+                              },
+                              {
+                                  "name":  "Objective 5 zero-impairment communication baseline, formal (objective5_comm_baseline_zero_impairment_formal_trial01)",
+                                  "status":  "PASS",
+                                  "trial_count":  1,
+                                  "pass_count":  1,
+                                  "evidence_level":  "FORMAL_SIM",
+                                  "sealed":  false,
+                                  "metric_coverage":  {
+                                                          "PDR":  "VALID",
+                                                          "sequence_integrity":  "VALID",
+                                                          "throughput":  "VALID",
+                                                          "task_behavior":  "VALID",
+                                                          "latency":  "NOT_MEASURED"
+                                                      },
+                                  "note":  "genuine cooperative_avoider task completion (not max_runtime/FAILSAFE/TASK_TIMEOUT), native WSL ext4 bag path, relay/counter subscribed before state_publisher/controller started; PDR=1.0 (aligned window), sequence_gap_count=duplicate_count=out_of_order_count=0 both robots, realtime factor 0.963/0.951, sequence_counter complete=true both robots. latency=NOT_MEASURED: root cause is analyze_comm_performance.py mixing rosbag2\u0027s own wall-clock recording timestamp with message.stamp (sim time) -- NOT that stamp was unset (state_publisher.py did set it correctly even in this trial). This is a permanent NOT_MEASURED for this specific trial; it is not re-analyzed or backfilled. This trial\u0027s PASS verdict is unaffected and stands as PDR/sequence/throughput/task evidence. See objective5_comm_baseline_zero_impairment_formal_trial02_stamp for the latency-complete companion (does not replace this trial)."
+                              },
+                              {
+                                  "name":  "Objective 5 timestamp/latency measurement-chain validation pilot (objective5_timestamp_latency_validation_pilot01)",
+                                  "status":  "PASS",
+                                  "evidence_level":  "PILOT",
+                                  "sealed":  false,
+                                  "note":  "diagnostic-only (no cooperative_avoider), 2 conditions (delay=0, delay=0.25s), same seed=4001. condition_a mean_message_age_s ~0 (small positive, not epoch-scale); condition_b observed increment ~0.26s vs configured 0.25s, error ~0.01s (\u003c0.05s tolerance); aligned-window PDR=1.0 all conditions/robots. Run before trial02_stamp specifically to validate the measurement chain first. Never pooled with formal statistics."
+                              },
+                              {
+                                  "name":  "Objective 5 zero-impairment communication baseline, formal, latency-complete (objective5_comm_baseline_zero_impairment_formal_trial02_stamp)",
+                                  "status":  "PASS",
+                                  "trial_count":  1,
+                                  "pass_count":  1,
+                                  "evidence_level":  "FORMAL_SIM",
+                                  "sealed":  false,
+                                  "metric_coverage":  {
+                                                          "PDR":  "VALID",
+                                                          "sequence_integrity":  "VALID",
+                                                          "throughput":  "VALID",
+                                                          "task_behavior":  "VALID",
+                                                          "latency":  "VALID"
+                                                      },
+                                  "note":  "does NOT replace trial01 -- both remain separately registered with different metric_coverage. Same acceptance criteria as trial01, PASS: aligned-window PDR=1.0 both robots, 0 gaps/dup/oo, complete=true both robots, realtime factor 0.996/1.003, genuine task completion. Latency (NEW, via live sequence_counter, same clock domain as message.stamp): mean/median/p95/max message_age_s = 0.0 both robots (zero configured delay, near-instant relay), valid_age_sample_count=836/823, 0 negative/anomalous age samples."
+                              },
+                              {
+                                  "name":  "Physical single-device zero-impairment communication baseline, formal (physical_single_device_zero_impairment_baseline_v1)",
+                                  "status":  "FINAL_BATCH_PASS",
+                                  "trial_count":  5,
+                                  "pass_count":  5,
+                                  "evidence_level":  "FORMAL_PHYSICAL",
+                                  "sealed":  false,
+                                  "note":  "First FORMAL physical-hardware result of the whole project (everything physical before this is DIAGNOSTIC_PHYSICAL). Stationary (no ground motion, no controller), single e-puck2 #5809, expanded Pi-TCP-WSL bridge + EpuckState.msg protocol. 5 trials (trial01_attempt02, trial02_attempt02, trial03_attempt01, trial04_attempt01, trial05_attempt01) all FINAL_PASS -- one continuous driver/Pi-expanded-server/WSL-bridge session, NOT 5 independent cold starts (only state_publisher FRESH-restarted per trial). Each trial: real 4-source (bag/WSL bridge-status CSV/WSL system-metrics CSV/batch Pi system-metrics CSV) overlap 309.9-311.1s, centered 240.000s main window, \u003e=34.9s buffer both sides. Tier A (APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO, trial-start-vs-end snapshot delta of the bridge\u0027s own counters, NOT IP/TCP loss) = 1.0 all 5, 0 missing/out_of_order; duplicate_count NOT_MEASURABLE every trial (never reported as 0). Tier B (EpuckState bag capture) ratio 1.0 all 5, actual measured rate ~8.88-8.94 Hz. Tier C (raw sensor topics) ~9.2 Hz, 0 stall, no PDR claimed. RTT (1Hz status snapshot, not a full transaction census): tail ~20-25% \u003e50ms, ~20-25% \u003e100ms, 0% \u003e200ms, recurring across all 5 windows -- observed repeatable pattern only, NO root-cause attribution. One-way Pi-to-WSL latency NOT reported/NOT measured (no NTP/chrony clock-sync verified). trial01_attempt01_short_window and trial02_attempt01_short_window are EXCLUDED diagnostic evidence (window-timing defect in the now-deprecated run_baseline_v1_trial.sh, fixed by run_baseline_v1_trial_v2.sh, orchestrator_git_commit a7f2a7e) -- not part of this n=5. Evidence: experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/batch_summary.md and per-trial physical_single_device_zero_impairment_baseline_v1_trial0N_attemptNN_analysis/ directories. Raw rosbag/CSVs/logs live outside the git repo at native WSL path /home/eamon/epuck_comm_bags/."
+                              },
+                              {
+                                  "name":  "Objective 5 impairment matrix Condition C fixed 1.00s delay",
+                                  "status":  "COMPLETE_FAILED_SAFETY_GATE",
+                                  "trial_count":  5,
+                                  "pass_count":  4,
+                                  "failed_count":  1,
+                                  "evidence_level":  "FORMAL_SIM",
+                                  "sealed":  false,
+                                  "note":  "All five datasets VALID. C05 retained as UNSAFE_FAILURE because min separation 0.1389086m was below frozen 0.14m safety radius. Five-lobe S-shaped response repeated in 5/5 trials; 9 angular sign reversals per robot per trial; PREDICTED_CPA; LOCAL_* all zero."
+                              }
+                          ],
+    "active_experiment":  {
+                              "name":  "Objective 5 impairment matrix -- Condition C formal batch",
+                              "status":  "COMPLETE_FAILED_SAFETY_GATE -- 4/5 SUCCESS, 1/5 UNSAFE_FAILURE",
+                              "finding_so_far":  "Condition C fixed-delay 1.00s batch is complete. All five datasets are VALID with capture_ratio=1.0, zero drops, median message age 1.000s, and PREDICTED_CPA with LOCAL_* all zero. Trials 01-04 succeeded. Trial 05 is a retained valid UNSAFE_FAILURE: minimum separation 0.1389086m, 1.091mm below the frozen 0.14m safety radius. The repeatable five-lobe S path was quantified as exactly 9 angular-command sign reversals per robot in all five trials.",
+                              "not_yet_done":  [
+                                                   "Conditions D, E, F and G have not started",
+                                                   "Condition D Trial 01 requires explicit user approval",
+                                                   "Condition F remains blocked by the outage-window/startup-offset precondition"
+                                               ]
+                          },
+    "next_action":  "Do not rerun Condition C Trial 05 and do not alter frozen controller/geometry/thresholds. The next runnable step is Condition D Trial 01 (jitter/reordering) after explicit user approval. Before Condition F, complete the mandatory outage-window/startup-offset audit.",
+    "blocked_items":  [
+                          {
+                              "item":  "Objective 5 delay/loss impairment matrix (A-G conditions) -- formal n=5 batch completion",
+                              "blocked_by":  "PARTIALLY RESOLVED as of 2026-07-19: Condition A COMPLETE 5/5 PASS; Condition B COMPLETE 5/5 PASS; Condition C COMPLETE but FAILED SAFETY GATE (4/5 SUCCESS plus retained Trial05 UNSAFE_FAILURE at min distance 0.1389086m \u003c frozen 0.14m radius). All C data are VALID; capture_ratio=1.0, zero drops, median age 1.000s, PREDICTED_CPA and LOCAL_* all zero. The repeatable S-shaped response is quantified as 9 steering-direction reversals per robot in every C trial. Conditions D-G remain; each condition Trial01 requires explicit approval and F has a separate mandatory precondition."
+                          },
+                          {
+                              "item":  "Condition F formal trials -- MANDATORY pre-start outage-window/startup-offset confound analysis",
+                              "blocked_by":  "PRECONDITION, recorded 2026-07-19 per user instruction after the Condition B Trial 01 startup-sync audit: the observed orchestrator startup offset (up to ~2.66s between the two controllers\u0027 TIMEBASE_INIT, direction not fixed across trials) EXCEEDS Condition F\u0027s outage_duration_s=0.7 by ~3.8x. Because F\u0027s outage windows are anchored to absolute /clock elapsed time (10/25/40/55s), not to either robot\u0027s own started_at, this offset can materially shift which outage windows overlap each trial\u0027s critical CPA decision period -- possibly differently per trial and per robot. It is NOT acceptable to dismiss this by noting outage_period_s=15.0 exceeds the startup offset (an earlier over-inference, explicitly retracted). Before formal Condition F Trial 01 runs, an analysis MUST reconstruct, for the planned timing scheme, the global outage-window schedule against each trial\u0027s actual TIMEBASE_INIT/CRUISE/AVOID_TURN times -- proving which windows each trial actually experiences and whether any cover the CPA decision phase. This is a Condition-F-specific precondition; nothing is changed in the current Condition B phase."
+                          },
+                          {
+                              "item":  "Phase 4 formal Trials 06+ or any new avoidance scenario",
+                              "blocked_by":  "intentionally paused per route re-alignment against the official COMP5200M Spec/SP (see docs/ and HANDOFF_20260717.md) -- avoidance-algorithm scope is frozen, project effort has moved to Objective 5/6/7"
+                          },
+                          {
+                              "item":  "Objective 5 formal communication metrics (PDR, rate, bandwidth, latency) suitable for the dissertation",
+                              "blocked_by":  "RESOLVED as of this session: trial01 (PDR/sequence/throughput/task VALID, latency NOT_MEASURED) plus trial02_stamp (all five metrics VALID including latency, via the new live sequence_counter measurement, protocol_v1.1_stamp_semantics) together give formal, task-level, latency-complete zero-impairment evidence. The delay/loss impairment matrix conditions remain not yet run."
+                          },
+                          {
+                              "item":  "Physical Pi-puck validation (Objective 1/5/6/7)",
+                              "blocked_by":  "PARTIALLY RESOLVED as of 2026-07-18: physical_single_device_zero_impairment_baseline_v1 (stationary, single e-puck2 #5809, expanded Pi-TCP-WSL bridge + EpuckState.msg) is now FINAL_BATCH_PASS (5/5) -- the first FORMAL physical-hardware result of the project (see completed_batches). This project has and will only ever have ONE physical e-puck2/Pi-puck unit, #5809 -- the paper must never claim a completed dual-physical-robot experiment; the second node is a virtual/laptop peer. Remaining blockers: (1) no ground-motion/controller physical trial has run yet (this batch is stationary, comm-layer-only); (2) one-way Pi-to-WSL latency remains NOT reported -- cross-device clock-sync (verify_clock_sync() stub) is still unimplemented, though the bridge\u0027s own sequence-acknowledgement RTT does not depend on clock sync and is already available and measured; (3) no EpuckState.msg converter exists yet for real-hardware data beyond the expanded bridge already used in this batch (see physical_protocol_gap_report.md for the original gap finding)."
+                          }
+                      ],
+    "formal_data_roots":  [
+                              "experiments/fusion_static_neighbor_20260716/bags/local_static_long_trial_0{2..7} (Phase 1, controller_v1)",
+                              "experiments/cooperative_avoidance_20260716/bags/*_formal_trial_0{1..5} (Phase 2/3, controller_v1)",
+                              "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_combined_formal_trial0{1..5} (Phase 4, controller_v4, SEALED)",
+                              "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_comm_baseline_zero_impairment_formal_trial01 (Objective 5, zero-impairment formal baseline, PASS, latency=NOT_MEASURED)",
+                              "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_comm_baseline_zero_impairment_formal_trial02_stamp (Objective 5, zero-impairment formal baseline, PASS, latency=VALID; does not replace trial01)",
+                              "experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/ + physical_single_device_zero_impairment_baseline_v1_trial0{1..5}_attemptNN_analysis/ (Objective 1/5/6, first FORMAL_PHYSICAL result, FINAL_BATCH_PASS 5/5; raw rosbag/CSVs outside git at native WSL path /home/eamon/epuck_comm_bags/)",
+                              "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_A_trial0{1..5}_attempt01_analysis/ + objective5_impairment_matrix_v1_condition_A_formal_batch_summary.{json,md} (Objective 5 impairment matrix, Condition A formal n=5 batch, FORMAL_SIM, COMPLETE 5/5 PASS; raw rosbag/diag_logs outside git at native WSL path /home/eamon/epuck_comm_bags/ and a SHA-256-verified Windows copy under experiments/05_objective5_impairment_matrix/bags/, also gitignored)",
+                              "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_B_trial0{1..5}_attempt01_analysis/ + objective5_impairment_matrix_v1_condition_B_formal_batch_summary.{json,md} (Objective 5 impairment matrix, Condition B formal n=5 batch, FORMAL_SIM, COMPLETE 5/5 PASS; raw rosbag/diag_logs outside git at native WSL path /home/eamon/epuck_comm_bags/ and a SHA-256-verified Windows copy under experiments/05_objective5_impairment_matrix/bags/, also gitignored)",
+                              "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_C_trial0{1..5}_attempt01_analysis/ + objective5_impairment_matrix_v1_condition_C_formal_batch_summary.{json,md} (Objective 5 impairment matrix, Condition C formal n=5 batch, FORMAL_SIM, COMPLETE_FAILED_SAFETY_GATE: 4/5 SUCCESS, 1/5 UNSAFE_FAILURE; raw rosbag/diag_logs preserved at native WSL and verified Windows gitignored copy)"
+                          ],
+    "diagnostic_data_roots":  [
+                                  "experiments/controller_v2_local_latch_20260717/bags/ (controller_v2 development)",
+                                  "experiments/controller_v3_unified_encounter_20260717/bags/ (controller_v3 development)",
+                                  "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_static_box_* (controller_v4 development, pilots a/a4/b/b2/b3)",
+                                  "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_{head_on_cpa_pure_c1,combined_trial1,combined_trial2_timebasefix} (Phase 4 exclusionary pilots)",
+                                  "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_trial{1,2,3} (Objective 5, /mnt/c bag-loss diagnostics)",
+                                  "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_comm_baseline_native_trial0{1,2} (Objective 5, native-WSL-path measurement-chain isolation)",
+                                  "experiments/controller_v4_full_sensor_bypass_20260717/bags/controller_v4_full_sensor_bypass_20260717_objective5_timestamp_latency_validation_pilot01_condition_{a_delay0,b_delay025} (Objective 5, stamp/latency measurement-chain validation, PASS, diagnostic-only)",
+                                  "experiments/cooperative_avoidance_20260716/bags/combined_* (controller_v1 combined-scenario defect evidence)",
+                                  "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionA_exclusionary_pilot01_analysis (orchestrator equivalence check, EXCLUSIONARY_DIAGNOSTIC, corrected verdict DATA_VALIDITY=VALID/TASK_OUTCOME=SUCCESS, not part of formal n=5)",
+                                  "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionF_exclusionary_pilot0{1,2}_analysis (failed attempts, real orchestrator bugs, preserved with NOTE.md, EXCLUSIONARY_DIAGNOSTIC, not part of formal n=5)",
+                                  "experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionF_exclusionary_pilot03_analysis (valid bidirectional-outage exclusionary pilot, DATA_VALIDITY=VALID/TASK_OUTCOME=SUCCESS, EXCLUSIONARY_DIAGNOSTIC, not part of formal n=5)"
+                              ],
+    "paper_ready_outputs":  [
+
+                            ],
+    "known_limitations":  [
+                              "Phase 4\u0027s combined scenario (all 5/5 formal trials) triggers via PROXIMITY_FALLBACK, never PREDICTED_CPA -- the two robots\u0027 post-box trajectories are not on a strict head-on collision course; this is a genuine, reproducible property of the frozen geometry (epuck1\u0027s LOCAL_RECOVER restores heading, not lateral position), not a controller defect, and must not be described as preventing a certain collision",
+                              "Old EpuckState-format bags (5 pre-protocol-freeze bags in cooperative_avoidance_20260716/, specifically head_on_cpa_only_trial_02..06_postfix) cannot be reprocessed by any analyzer assuming the current PROTOCOL_VERSION=1 message shape (Fast CDR deserialization exception); their original, contemporaneous analysis outputs remain valid historical evidence but must not be re-analyzed with current tooling",
+                              "The /mnt/c rosbag-write-loss finding is confirmed via two independent native-path diagnostic trials (aligned-window PDR=1.0 both times); the full formal zero-impairment baseline (with cooperative_avoider actually running) was completed and PASSED this session under the native-WSL-bag-path workflow (objective5_comm_baseline_zero_impairment_formal_trial01)",
+                              "sequence_counter (the third-party comm-diagnostic observer) was rewritten this session to remove its dependency on a custom SIGINT handler: it now uses periodic atomic checkpoints (complete=false) plus a finally-block final write (complete=true), verified working in the formal baseline PASS (complete=true both robots, 0 gaps/dup/oo). The FIRST 3 attempts at the formal baseline still failed for a related but distinct orchestration-script bug: the shell script\u0027s stop_pid sent SIGINT only to the relay+counter launch-service\u0027s own PID, not its child rclpy processes, so children were sometimes orphaned before writing complete=true; fixed by launching that process tree under setsid and signaling the whole process group on shutdown (see run_objective5_comm_baseline_formal_trial.sh\u0027s stop_pid_group)",
+                              "CORRECTED (was wrong in an earlier pass of this file): state_publisher.py DOES set EpuckState.stamp (self.get_clock().now().to_msg()) -- the actual root cause of trial01\u0027s epoch-scale \u0027age\u0027 figures was analyze_comm_performance.py mixing rosbag2\u0027s own wall-clock recording timestamp with message.stamp (sim time), two different clock domains. Fixed (protocol_v1.1_stamp_semantics): state_publisher.py now holds publication (WAITING_FOR_CLOCK) until the clock is valid so stamp is never a fake zero; analyze_comm_performance.py\u0027s bag-based age computation now excludes negative/implausibly-large ages and reports latency_domain_mismatch_detected rather than silently averaging garbage in; sequence_counter.py now computes its own LIVE latency (message.stamp vs its own get_clock().now() at receipt, same clock domain, no mismatch) -- validated by objective5_timestamp_latency_validation_pilot01 and used for objective5_comm_baseline_zero_impairment_formal_trial02_stamp\u0027s latency=VALID coverage. PDR, rate, and bandwidth were never affected by this bug.",
+                              "peer_timeout_s audit finding (read-only, frozen cooperative_avoider unmodified): peer freshness is judged by CALLBACK RECEIPT TIME (self._now_s() at the moment _peer_callback fires), not by msg.stamp. A fixed/constant relay delay does NOT necessarily trigger peer_timeout -- it only shifts the whole message stream later by a constant offset; the steady-state gap between consecutive receipts stays close to the publish period regardless of a constant delay. Only jitter (variance) or real message loss can plausibly cause a receipt gap large enough to exceed peer_timeout_s. An earlier matrix-design draft\u0027s claim that a 0.6s configured delay would trigger peer-timeout degradation is RETRACTED. Changing freshness semantics to use msg.stamp instead would be a new protocol/safety-version decision, not made this session.",
+                              "network_impairment_relay.py audit finding: relay scheduling uses ROS/sim time (get_clock().now() under use_sim_time=true), so delay/jitter semantics do not drift with Webots realtime factor. jitter CAN cause reordering (the release-time min-heap flushes strictly by release_time, not receive order). drop/jitter use random.Random(seed), fully reproducible given the same seed. Relay CSV now also records source_stamp_s and actual_release_time_s (appended columns, existing readers keyed by column name unaffected).",
+                              "experiment_registry.csv now carries verification_status/verification_basis columns per row (DIRECTLY_VERIFIED / SUMMARY_VERIFIED / NAMING_INFERRED / UNVERIFIED) so evidence rigor is explicit rather than implied; rows marked NAMING_INFERRED or UNVERIFIED always have included_in_paper=NO by construction -- see that CSV for the per-row basis rather than treating any aggregate trial_count as independently re-verified this pass",
+                              "fusion_static_neighbor_20260716\u0027s Phase 1 trial count is intentionally left OPEN in experiment_registry.csv (batch-summary filename implies 03-07 = 5 trials; 6 directories local_static_long_trial_02..07 exist on disk) -- do not pick either number without reconciling the discrepancy first",
+                              "communication_baseline_20260716/ was investigated this pass (previous pass had only confirmed no bags/ subdirectory): it contains exactly one file, an empty (0-byte) state_monitor_20260716_105522.jsonl stub, predating and unrelated to the current Objective 5 comm-baseline work. Registered EXCLUDED, included_in_paper=false, artifact_missing=true.",
+                              "CPU/memory overhead for communication performance is not measured anywhere yet (analyze_comm_performance.py explicitly reports this as NOT MEASURED, pending a live psutil-style sampling companion)",
+                              "Cross-device (physical Pi-puck) clock synchronization has no implementation yet -- verify_clock_sync() in analyze_comm_performance.py intentionally raises NotImplementedError until Objective 6 begins"
+                          ]
 }
