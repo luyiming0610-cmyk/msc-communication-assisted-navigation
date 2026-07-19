@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-# Measurement-chain isolation diagnostic (comm_baseline_native_trial01).
-# Goal: determine whether the ~40-45% message shortfall seen in
-# comm_baseline_v1 Trials 01-03 (all writing their rosbag under /mnt/c) is
-# a rosbag/disk-I/O issue, or a genuine loss somewhere in
-# publisher->relay->subscriber. Zero impairment throughout (delay=0,
-# jitter=0, drop=0). No cooperative_avoider is launched -- this isolates
-# the communication layer only, deliberately excluding avoidance behaviour.
+# Objective5 formal zero-impairment communication baseline
+# (objective5_comm_baseline_zero_impairment_formal_trial01).
 #
-# Launch order (per diagnostic requirement): relay + sequence_counter
-# FIRST, then state_publisher, so their subscriptions exist from
-# sequence 0. rosbag writes to a NATIVE WSL ext4 path
-# (/home/eamon/epuck_comm_bags/...), not /mnt/c, and is only copied to the
-# Windows experiment tree AFTER it has been cleanly stopped and closed.
+# Combines everything learned from the prior diagnostics in this
+# directory: (1) relay + sequence_counter subscribe BEFORE
+# state_publisher/controller exist, so no early sequence is missed as a
+# late ROS subscriber; (2) rosbag is written to a NATIVE WSL ext4 path,
+# never directly to /mnt/c, and only copied into the Windows experiment
+# tree after being cleanly stopped and its metadata.yaml verified; (3)
+# unlike the earlier comm-layer-only native diagnostics, this trial
+# ALSO launches the real cooperative_avoider controllers (identical
+# frozen head_on_cpa_v4 geometry/CPA parameters) so this is a genuine
+# task-level formal baseline, not just a transport-layer check.
 #
-# Usage: run_comm_baseline_native_diagnostic.sh TRIAL_NAME
+# Usage: run_objective5_comm_baseline_formal_trial.sh TRIAL_NAME
 
 if (( $# != 1 )); then
   echo "Usage: $0 TRIAL_NAME" >&2
@@ -23,21 +23,21 @@ if (( $# != 1 )); then
 fi
 
 TRIAL="$1"
-WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/simulation_comm_experiment_v1/working"
-EXPERIMENT_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717"
+WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/2-1.仿真通信实验/working"
+EXPERIMENT_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/3-3.全传感器避障实验"
 CONFIG_DIR="$EXPERIMENT_DIR/config/comm_baseline_v1"
-STEM="comm_baseline_native_${TRIAL}"
+STEM="objective5_comm_baseline_zero_impairment_${TRIAL}"
 NATIVE_BAG_ROOT="/home/eamon/epuck_comm_bags"
 NATIVE_BAG_DIR="$NATIVE_BAG_ROOT/$STEM"
 FINAL_BAG_DIR="$EXPERIMENT_DIR/bags/controller_v4_full_sensor_bypass_20260717_${STEM}"
 DIAG_LOG_DIR="$NATIVE_BAG_ROOT/${STEM}_diag_logs"
+CONTROLLER_LOG="$EXPERIMENT_DIR/logs/controller_v4_full_sensor_bypass_20260717_${STEM}.log"
 EXECUTION_LOG="$EXPERIMENT_DIR/logs/controller_v4_full_sensor_bypass_20260717_${STEM}_execution.log"
 SIM_LOG="$EXPERIMENT_DIR/logs/controller_v4_full_sensor_bypass_20260717_${STEM}_simulation.log"
 STATE1_LOG="$EXPERIMENT_DIR/logs/controller_v4_full_sensor_bypass_20260717_${STEM}_state_epuck1.log"
 STATE2_LOG="$EXPERIMENT_DIR/logs/controller_v4_full_sensor_bypass_20260717_${STEM}_state_epuck2.log"
 QOS_LOG="$EXPERIMENT_DIR/logs/controller_v4_full_sensor_bypass_20260717_${STEM}_qos_info.log"
 BAG_RECORD_LOG="$EXPERIMENT_DIR/logs/controller_v4_full_sensor_bypass_20260717_${STEM}_bag_record.log"
-DIAGNOSTIC_DURATION_S=40
 RELAY_COUNTER_LOG="$EXPERIMENT_DIR/logs/controller_v4_full_sensor_bypass_20260717_${STEM}_relay_counter.log"
 
 source /opt/ros/humble/setup.bash
@@ -72,6 +72,47 @@ stop_pid() {
     sleep 0.5
   done
   return 1
+}
+
+# stop_pid signals only the single launch-service PID. That process is a
+# launch.LaunchService managing several rclpy child processes as separate
+# OS processes; if the parent dies (or is escalated to SIGTERM) before it
+# finishes forwarding shutdown to its children, the children are orphaned
+# and never receive their own SIGINT, so they never run their graceful
+# rclpy.spin()-return -> write_final_summary(complete=true) path (this was
+# observed directly: sequence_counter's checkpoint files kept updating
+# for several seconds after stop_pid reported the launch-service PID
+# already dead). Signaling the whole process group instead reaches every
+# child rclpy node directly and independently of the parent's own
+# forwarding logic.
+stop_pid_group() {
+  local pid="${1:-}"
+  if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
+    return 0
+  fi
+  kill -INT "-$pid" 2>/dev/null || true
+  for _ in $(seq 1 30); do
+    if ! kill -0 "$pid" 2>/dev/null && ! pgrep -g "$pid" >/dev/null 2>&1; then
+      wait "$pid" 2>/dev/null || true
+      return 0
+    fi
+    sleep 0.5
+  done
+  kill -TERM "-$pid" 2>/dev/null || true
+  for _ in $(seq 1 10); do
+    if ! kill -0 "$pid" 2>/dev/null && ! pgrep -g "$pid" >/dev/null 2>&1; then
+      wait "$pid" 2>/dev/null || true
+      return 0
+    fi
+    sleep 0.5
+  done
+  kill -KILL "-$pid" 2>/dev/null || true
+  sleep 0.5
+  wait "$pid" 2>/dev/null || true
+  if kill -0 "$pid" 2>/dev/null || pgrep -g "$pid" >/dev/null 2>&1; then
+    return 1
+  fi
+  return 0
 }
 
 wait_for_topics() {
@@ -109,7 +150,7 @@ from rosgraph_msgs.msg import Clock
 
 stage = os.environ["RATE_STAGE"]
 rclpy.init()
-node = rclpy.create_node(f"comm_baseline_native_{stage.lower()}_clock_rate_check")
+node = rclpy.create_node(f"obj5_formal_{stage.lower()}_clock_rate_check")
 samples = []
 
 def callback(message):
@@ -145,18 +186,20 @@ SIM_PID=""
 RELAY_COUNTER_PID=""
 STATE1_PID=""
 STATE2_PID=""
+CONTROLLER_PID=""
 BAG_PID=""
 
 cleanup() {
   stop_pid "$STATE1_PID" || true
   stop_pid "$STATE2_PID" || true
-  stop_pid "$RELAY_COUNTER_PID" || true
+  stop_pid "$CONTROLLER_PID" || true
+  stop_pid_group "$RELAY_COUNTER_PID" || true
   stop_pid "$BAG_PID" || true
   stop_pid "$SIM_PID" || true
 }
 trap cleanup EXIT
 
-echo "[$(date -Iseconds)] $STEM START (measurement-chain isolation diagnostic)" | tee "$EXECUTION_LOG"
+echo "[$(date -Iseconds)] $STEM START (Objective5 formal zero-impairment baseline)" | tee "$EXECUTION_LOG"
 /mnt/c/Windows/System32/cmd.exe /c echo WSL_INTEROP_OK | tee -a "$EXECUTION_LOG"
 
 echo "no residual process check:" | tee -a "$EXECUTION_LOG"
@@ -173,8 +216,13 @@ echo "[$(date -Iseconds)] odometry and local sensors ready" | tee -a "$EXECUTION
 PRELOAD_OUTPUT="$(verify_realtime_factor PRELOAD | tee -a "$EXECUTION_LOG")"
 PRELOAD_FACTOR="$(grep -o 'PRELOAD_REALTIME_FACTOR=[0-9.]*' <<<"$PRELOAD_OUTPUT" | cut -d= -f2)"
 
-# Relay + counting subscriber FIRST, before state_publisher exists at all.
-stdbuf -oL -eL python3 "$CONFIG_DIR/run_diagnostic_relay_and_counter.py" "$DIAG_LOG_DIR" "$DIAG_LOG_DIR" \
+# Relay + sequence_counter FIRST, before state_publisher exists at all.
+# Launched via setsid so it gets its own dedicated process group/session:
+# this script runs non-interactively (job control off), so plain `&`
+# backgrounding does not isolate each job into its own group, and a
+# process-group signal (see stop_pid_group) sent to a non-isolated PID
+# could otherwise reach sibling jobs (webots, rosbag, controllers) too.
+setsid stdbuf -oL -eL python3 "$CONFIG_DIR/run_diagnostic_relay_and_counter.py" "$DIAG_LOG_DIR" "$DIAG_LOG_DIR" \
   >"$RELAY_COUNTER_LOG" 2>&1 &
 RELAY_COUNTER_PID=$!
 sleep 2
@@ -209,6 +257,7 @@ echo "[$(date -Iseconds)] QoS info captured to $QOS_LOG" | tee -a "$EXECUTION_LO
 mkdir -p "$NATIVE_BAG_ROOT"
 ros2 bag record -o "$NATIVE_BAG_DIR" \
   /epuck1/state_raw /epuck2/state_raw /epuck1/state /epuck2/state \
+  /epuck1/cmd_vel /epuck2/cmd_vel \
   >"$BAG_RECORD_LOG" 2>&1 &
 BAG_PID=$!
 sleep 3
@@ -221,19 +270,41 @@ echo "[$(date -Iseconds)] rosbag recording to NATIVE path: $NATIVE_BAG_DIR" | te
 FULL_LOAD_OUTPUT="$(verify_realtime_factor FULL_LOAD | tee -a "$EXECUTION_LOG")"
 FULL_LOAD_FACTOR="$(grep -o 'FULL_LOAD_REALTIME_FACTOR=[0-9.]*' <<<"$FULL_LOAD_OUTPUT" | cut -d= -f2)"
 
-echo "[$(date -Iseconds)] running fixed diagnostic window: ${DIAGNOSTIC_DURATION_S}s" | tee -a "$EXECUTION_LOG"
-sleep "$DIAGNOSTIC_DURATION_S"
+# Controller launched LAST, strictly after relay/counter subscriptions and
+# the bag are already live.
+stdbuf -oL -eL python3 "$CONFIG_DIR/run_comm_baseline_formal_controllers.py" \
+  >"$CONTROLLER_LOG" 2>&1 &
+CONTROLLER_PID=$!
 
-# Shutdown order per diagnostic requirement: state_publisher -> relay
-# (SIGINT lets sequence_counter write its JSON and the relay close its
-# CSV cleanly) -> rosbag (wait for a clean close) -> analysis -> only
-# THEN copy the closed bag to the Windows experiment tree.
+deadline=$((SECONDS + 75))
+complete_count=0
+while (( SECONDS < deadline )); do
+  complete_count="$(grep -c 'COMPLETE: cooperative recovery completed; commanding zero' "$CONTROLLER_LOG" 2>/dev/null || true)"
+  if (( complete_count >= 2 )); then
+    break
+  fi
+  if ! kill -0 "$CONTROLLER_PID" 2>/dev/null; then
+    echo "Controller exited before both robots completed" >&2
+    break
+  fi
+  sleep 0.5
+done
+echo "[$(date -Iseconds)] controller stage finished (complete_count=$complete_count)" | tee -a "$EXECUTION_LOG"
+
+# Shutdown order per instructions: state_publisher -> controller ->
+# relay/counter (SIGINT lets the counter's normal-path final write with
+# complete=true happen; even if it doesn't, the periodic checkpoint
+# already has a recent complete=false snapshot) -> rosbag (wait for a
+# clean close) -> analysis -> only THEN copy the closed bag out.
 echo "[$(date -Iseconds)] stopping state_publisher" | tee -a "$EXECUTION_LOG"
 stop_pid "$STATE1_PID"; STATE1_PID=""
 stop_pid "$STATE2_PID"; STATE2_PID=""
 
+echo "[$(date -Iseconds)] stopping controller" | tee -a "$EXECUTION_LOG"
+stop_pid "$CONTROLLER_PID"; CONTROLLER_PID=""
+
 echo "[$(date -Iseconds)] stopping relay + sequence_counter" | tee -a "$EXECUTION_LOG"
-stop_pid "$RELAY_COUNTER_PID"; RELAY_COUNTER_PID=""
+stop_pid_group "$RELAY_COUNTER_PID"; RELAY_COUNTER_PID=""
 sleep 1
 
 echo "[$(date -Iseconds)] stopping rosbag recorder" | tee -a "$EXECUTION_LOG"
@@ -250,20 +321,24 @@ sleep 2
 
 grep -iE 'drop|warn|error' "$BAG_RECORD_LOG" | tee -a "$EXECUTION_LOG" || echo "no drop/warn/error lines in bag_record.log" | tee -a "$EXECUTION_LOG"
 
-python3 "$CONFIG_DIR/analyze_measurement_chain.py" \
+python3 -m epuck2_comm.analyze_comm_performance "$NATIVE_BAG_DIR" --output-dir "$DIAG_LOG_DIR" >>"$EXECUTION_LOG" 2>&1
+
+python3 "$CONFIG_DIR/analyze_objective5_formal_baseline.py" \
   --native-bag-dir "$NATIVE_BAG_DIR" \
   --diag-log-dir "$DIAG_LOG_DIR" \
+  --controller-log "$CONTROLLER_LOG" \
   --state1-log "$STATE1_LOG" \
   --state2-log "$STATE2_LOG" \
   --bag-record-log "$BAG_RECORD_LOG" \
   --relay-counter-log "$RELAY_COUNTER_LOG" \
   --preload-factor "${PRELOAD_FACTOR:-0}" \
   --full-load-factor "${FULL_LOAD_FACTOR:-0}" \
-  --output-path "$DIAG_LOG_DIR/measurement_chain_verdict.json" \
+  --complete-count "$complete_count" \
+  --output-path "$DIAG_LOG_DIR/objective5_formal_baseline_verdict.json" \
   | tee -a "$EXECUTION_LOG"
 
-VERDICT="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['verdict'])" "$DIAG_LOG_DIR/measurement_chain_verdict.json" 2>/dev/null || echo UNKNOWN)"
-echo "[$(date -Iseconds)] measurement-chain diagnostic verdict=$VERDICT" | tee -a "$EXECUTION_LOG"
+VERDICT="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['verdict'])" "$DIAG_LOG_DIR/objective5_formal_baseline_verdict.json" 2>/dev/null || echo UNKNOWN)"
+echo "[$(date -Iseconds)] Objective5 formal baseline verdict=$VERDICT" | tee -a "$EXECUTION_LOG"
 
 # Only now copy the CLOSED native bag (and diagnostic logs) into the
 # Windows experiment tree, as required.

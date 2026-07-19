@@ -10,7 +10,7 @@ turn-ledger ``LocalAvoidanceLatch`` with ``EncounterAvoidanceV4``, a five-phase
 state machine (``CLOSED -> DETECT_TURN -> SIDE_TRACK -> PASS_CONFIRM ->
 RECOVERY_ALLOWED -> CLOSED``, with a terminal ``FAILSAFE`` branch) driven by
 this design motivation: pilot_a3's real-Webots collision (see
-``experiments/controller_v3_unified_encounter_20260717/`` and its forensic
+``experiments/3-2.统一遭遇避障实验/`` and its forensic
 diagnostic in the design doc) showed the true failure was NOT the turn-ledger
 mechanism (which worked correctly -- the second encounter's own ledger stayed
 under its cap) but that v1/v2/v3's exit condition -- a fixed forward

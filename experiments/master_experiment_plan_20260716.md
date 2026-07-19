@@ -128,9 +128,9 @@ found a `controller_v1` safety defect, not a scenario-geometry problem: after
 repeatedly re-arm an unbounded turn (a single continuous turn of up to ~4.8 s /
 ~1.2 rad was observed), swinging the robot into the box. This paused Phase 4 and
 triggered three successive controller revisions (see
-`experiments/controller_v2_local_latch_20260717/`,
-`experiments/controller_v3_unified_encounter_20260717/`, and
-`experiments/controller_v4_full_sensor_bypass_20260717/`), each committed and
+`experiments/3-1.局部避障锁存实验/`,
+`experiments/3-2.统一遭遇避障实验/`, and
+`experiments/3-3.全传感器避障实验/`), each committed and
 tested independently before the next was designed.
 
 `controller_v4_ros_time_consistency` (the current tip) additionally found and
@@ -145,7 +145,7 @@ such timer reads `self.get_clock().now()` exclusively.
 Three excluded, non-statistical v4 pilots were run to re-validate all three
 components before returning to Phase 4's formal Trial 01 (evidence: git commits
 `06e2b5c`, `4d70beb`, `fd0f03d`; full pilot detail in
-`experiments/controller_v4_full_sensor_bypass_20260717/`):
+`experiments/3-3.全传感器避障实验/`):
 
 - `pilot_v4_b3` (static box, `enable_peer_avoidance:=true`, no moving peer):
   PASS. Real `max_x=0.1895m` past the pass threshold, clearance 0.1237m, no
@@ -173,7 +173,7 @@ observing Webots throughout (per explicit instruction); Trials 02-05 then
 ran automatically via `run_combined_v4_pilot.sh` once Trials 01-02 both
 confirmed the identical frozen `combined_v4/` configuration passes. Full
 detail, per-trial table, and batch statistics:
-`experiments/controller_v4_full_sensor_bypass_20260717/PHASE4_FORMAL_BATCH_SUMMARY_20260717.md`.
+`experiments/3-3.全传感器避障实验/PHASE4_FORMAL_BATCH_SUMMARY_20260717.md`.
 
 **Result: 5/5 PASS, 0/5 collision.** Mean minimum robot-robot separation
 0.2736 ± 0.0044 m, mean box clearance 0.1229 m, mean full-load realtime

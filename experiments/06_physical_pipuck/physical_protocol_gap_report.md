@@ -4,7 +4,7 @@ Read-only audit. No wire schema was modified. Compares three things:
 
 1. The old JSON `/epuck1/state` publisher: `epuck1_state_publisher.py`
    (Windows snapshot copy read at
-   `simulation_comm_experiment_v1/source_snapshot/epuck1_state_publisher.py`;
+   `2-1.仿真通信实验/source_snapshot/epuck1_state_publisher.py`;
    WSL original per handoff doc at
    `/home/eamon/epuck_ws/epuck_comm_project/epuck1_state_publisher.py`, not
    independently re-read this pass — the two are expected to be identical
@@ -13,7 +13,7 @@ Read-only audit. No wire schema was modified. Compares three things:
    (`src/epuck2_comm_interfaces/msg/EpuckState.msg`, `PROTOCOL_VERSION=1`,
    `protocol_v1.1_stamp_semantics`).
 3. What the real-robot TCP bridge (`real_robot_bridge/`,
-   `real_robot_avoidance_v1/`) currently carries, to determine what a WSL-side
+   `1-1.实体机器人避障实验/`) currently carries, to determine what a WSL-side
    converter would need to fill in.
 
 ## Field-by-field comparison
@@ -30,7 +30,7 @@ Read-only audit. No wire schema was modified. Compares three things:
 | `obstacle_status` (string: `clear`/`front_obstacle`/`left_obstacle`/`right_obstacle`) | `obstacle_status` (uint8 enum: `OBSTACLE_UNKNOWN`/`CLEAR`/`FRONT`/`LEFT`/`RIGHT`/`MULTIPLE`) | NO, and old is lossy | old never reports `MULTIPLE` (single if/elif priority chain: front > left > right) and never distinguishes true-clear from unknown-because-no-scan-yet (both collapse to `"clear"`) |
 | — (absent) | `validity_flags` (uint8, `FLAG_ODOM_VALID`/`FLAG_IR_VALID`/`FLAG_TOF_VALID`) | **MISSING, cannot be backfilled** | old script has no per-sensor freshness signal in the message itself (only an internal `self.odom is None` gate that isn't published); a converter must compute this fresh from the bridge's own per-topic timestamps, it cannot be reconstructed from old recorded data |
 | — (absent) | `version`, `PROTOCOL_VERSION` marker | **MISSING** | old data carries no protocol version at all |
-| — (absent) | `left_front_m`, `left_mid_m`, `left_rear_m`, `right_front_m`, `right_mid_m`, `right_rear_m` (v4 zones) | **MISSING, but fillable going forward** | old JSON has no per-IR-sensor breakdown at all (only 3 LaserScan-derived sectors, no rear coverage). The **sensor-extended** bridge (`real_robot_avoidance_v1/pi_epuck_tcp_server_sensors.py`) already forwards a `range_sensors` dict with raw `ps0`..`ps7` + `tof` values in its own bridge-level JSON (not `EpuckState.msg`) — a new WSL-side converter node could compute the v4 zones from that raw data reusing `state_publisher.py`'s existing zone-mapping logic, but this does not exist yet and nothing here should be read as claiming it does. |
+| — (absent) | `left_front_m`, `left_mid_m`, `left_rear_m`, `right_front_m`, `right_mid_m`, `right_rear_m` (v4 zones) | **MISSING, but fillable going forward** | old JSON has no per-IR-sensor breakdown at all (only 3 LaserScan-derived sectors, no rear coverage). The **sensor-extended** bridge (`1-1.实体机器人避障实验/pi_epuck_tcp_server_sensors.py`) already forwards a `range_sensors` dict with raw `ps0`..`ps7` + `tof` values in its own bridge-level JSON (not `EpuckState.msg`) — a new WSL-side converter node could compute the v4 zones from that raw data reusing `state_publisher.py`'s existing zone-mapping logic, but this does not exist yet and nothing here should be read as claiming it does. |
 
 ## Message-type transport compatibility (Foxy vs. Humble)
 

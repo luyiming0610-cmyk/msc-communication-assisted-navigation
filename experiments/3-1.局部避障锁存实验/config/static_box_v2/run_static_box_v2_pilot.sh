@@ -21,8 +21,8 @@ if (( $# != 1 )); then
 fi
 
 TRIAL="$1"
-SIM_WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/simulation_comm_experiment_v1/working"
-EXPERIMENT_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v2_local_latch_20260717"
+SIM_WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/2-1.仿真通信实验/working"
+EXPERIMENT_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/3-1.局部避障锁存实验"
 CONFIG_DIR="$EXPERIMENT_DIR/config/static_box_v2"
 STEM="controller_v2_local_latch_20260717_static_box_${TRIAL}"
 BAG_DIR="$EXPERIMENT_DIR/bags/$STEM"

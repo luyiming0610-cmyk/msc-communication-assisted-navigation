@@ -14,7 +14,7 @@ where v1/v2/v3 all silently did, which is the specific gap that produced the
 real collision.
 
 Ground-truth values are taken directly from
-experiments/controller_v3_unified_encounter_20260717/'s pilot_a3 forensic
+experiments/3-2.统一遭遇避障实验/'s pilot_a3 forensic
 trace: encounter #1 opened at t=5.16s (raw front-warn), turn settled to
 yaw~-0.4566rad by t=7.0s, and the old code declared "bypass complete" at
 local_bypass_distance_m=0.08m of straight-line travel (~t=6.73-13.71s),

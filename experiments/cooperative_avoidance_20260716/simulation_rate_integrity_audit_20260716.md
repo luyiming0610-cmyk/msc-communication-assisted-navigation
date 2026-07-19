@@ -126,7 +126,7 @@ replay of recorded bag data through the real, unmodified state machine showed
 several `controller_v1`-era encounters should have completed successfully,
 yet the live runs hit `FAILSAFE`. Root cause was the wall-clock/sim-time
 mismatch this audit originally flagged. Post-fix pilot evidence (`pilot_v4_b2`
-then `pilot_v4_b3`, `experiments/controller_v4_full_sensor_bypass_20260717/`)
+then `pilot_v4_b3`, `experiments/3-3.全传感器避障实验/`)
 confirmed zero FAILSAFE on the same scenario that previously failed reliably
 at the same PASS_CONFIRM-then-FAILSAFE pattern.
 

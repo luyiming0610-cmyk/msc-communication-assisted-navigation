@@ -1,7 +1,7 @@
 # Physical experiment data inventory (2026-07-18, read-only)
 
 Source directory:
-`C:\Users\路一鸣\Desktop\硬件实验毕设\real_robot_avoidance_v1\experiment_data_20260715\`
+`C:\Users\路一鸣\Desktop\硬件实验毕设\1-1.实体机器人避障实验\experiment_data_20260715\`
 
 Classification legend, superseded 2026-07-18 per explicit instruction: old
 JSON `/epuck1/state`-family data is labeled **only** `LEGACY_PHYSICAL_EVIDENCE`

@@ -115,7 +115,7 @@ is development/diagnostic evidence, NOT formal statistics.
 
 **How to reproduce**: each pilot config directory's `run_*.sh` script is
 self-contained (sources ROS2 Humble + the `epuck_ws` workspace, launches
-Webots via `simulation_comm_experiment_v1/working/run_*.py`, records a
+Webots via `2-1.仿真通信实验/working/run_*.py`, records a
 rosbag, runs its analyzer). See `PHASE4_FORMAL_EVIDENCE_MANIFEST_20260717.md`
 for the exact frozen configuration fingerprint (file hashes, geometry,
 parameters) used for the sealed batch.

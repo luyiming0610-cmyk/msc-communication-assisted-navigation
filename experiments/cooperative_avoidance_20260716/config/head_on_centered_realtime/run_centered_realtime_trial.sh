@@ -7,7 +7,7 @@ if (( $# != 1 )); then
 fi
 
 TRIAL="$1"
-WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/simulation_comm_experiment_v1/working"
+WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/2-1.仿真通信实验/working"
 EXPERIMENT_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/cooperative_avoidance_20260716"
 STEM="head_on_centered_realtime_formal_trial_${TRIAL}"
 BAG_DIR="$EXPERIMENT_DIR/bags/$STEM"

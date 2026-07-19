@@ -18,7 +18,7 @@ relative topic names, i.e. resolve to the global namespace unless remapped):
 - `tof` (`sensor_msgs/msg/Range`)
 
 The **extended** sensor bridge
-(`real_robot_avoidance_v1/wsl_epuck_tcp_bridge_sensors.py`, read directly
+(`1-1.实体机器人避障实验/wsl_epuck_tcp_bridge_sensors.py`, read directly
 this session) publishes exactly these topics, in the same global namespace,
 with the same message types:
 

@@ -63,7 +63,7 @@ been sent at any point during this bringup session.
   per the same discipline already established for the simulation-side
   Objective 5 work this session).
 - Does not touch, overwrite, or delete any of the 8 existing
-  `real_robot_avoidance_v1/experiment_data_20260715/` bag directories.
+  `1-1.实体机器人避障实验/experiment_data_20260715/` bag directories.
 - Does not touch the old JSON `/epuck1/state`-family scripts.
 
 ## Explicitly out of scope for this pilot

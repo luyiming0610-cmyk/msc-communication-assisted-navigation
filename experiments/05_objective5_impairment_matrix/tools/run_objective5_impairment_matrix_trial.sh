@@ -53,8 +53,8 @@ fi
 MATRIX_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/05_objective5_impairment_matrix"
 TOOLS_DIR="$MATRIX_DIR/tools"
 CONDITIONS_CSV="$MATRIX_DIR/objective5_impairment_matrix_conditions.csv"
-BASELINE_CONFIG_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717/config/comm_baseline_v1"
-WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/simulation_comm_experiment_v1/working"
+BASELINE_CONFIG_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/3-3.全传感器避障实验/config/comm_baseline_v1"
+WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/2-1.仿真通信实验/working"
 
 source /opt/ros/humble/setup.bash
 source "$HOME/epuck_ws/install/setup.bash"

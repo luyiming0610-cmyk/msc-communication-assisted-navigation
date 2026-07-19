@@ -15,9 +15,9 @@ overwrite this one.
 | Controller-fix commit | `980e7d0` |
 | Protocol | `EpuckState` `PROTOCOL_VERSION=1`, frozen at `b5a0351` (`src/epuck2_comm_interfaces/PROTOCOL_FREEZE_20260717.md`) |
 | `EpuckState.msg` SHA-256 | `a7ec4184dec52b157a87beea20b44fb2dff5c6dee199d0c76b7c347c26abe15b` |
-| World file | `simulation_comm_experiment_v1/working/combined_wood_moving_peer_world.wbt` |
+| World file | `2-1.仿真通信实验/working/combined_wood_moving_peer_world.wbt` |
 | World file SHA-256 | `9ebf375c14e68786821bb3a9525d686fb2c6b584de7b59725ee0b77914d9f196` |
-| Pilot run script | `experiments/controller_v4_full_sensor_bypass_20260717/config/combined_v4/run_combined_v4_pilot.sh` |
+| Pilot run script | `experiments/3-3.全传感器避障实验/config/combined_v4/run_combined_v4_pilot.sh` |
 | Run script SHA-256 | `44907343af17f119003fc1eedcf96f82183e51aa873c7b224e6e5676351a7824` |
 | Controllers launch script | `.../combined_v4/run_combined_v4_controllers.py` |
 | Controllers launch SHA-256 | `5ec667d883c54ae9e5d0a362278485dfc27d19ee7955cfd22091083e2033b668` |

@@ -19,8 +19,8 @@ if (( $# != 1 )); then
 fi
 
 TRIAL="$1"
-WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/simulation_comm_experiment_v1/working"
-EXPERIMENT_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/controller_v4_full_sensor_bypass_20260717"
+WORK_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/2-1.仿真通信实验/working"
+EXPERIMENT_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/3-3.全传感器避障实验"
 CONFIG_DIR="$EXPERIMENT_DIR/config/combined_v4"
 LEGACY_ANALYZER_DIR="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm/experiments/cooperative_avoidance_20260716/config/combined_wood_moving_peer"
 STEM="controller_v4_full_sensor_bypass_20260717_combined_${TRIAL}"

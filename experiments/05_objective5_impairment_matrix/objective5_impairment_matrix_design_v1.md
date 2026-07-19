@@ -22,7 +22,7 @@ commit pair -- not reused from any earlier trial, including
 trial02_stamp.
 
 This design supersedes the retracted claim (see
-`experiments/controller_v4_full_sensor_bypass_20260717/README.md` lines
+`experiments/3-3.全传感器避障实验/README.md` lines
 77-84 and `experiments/project_status.json`'s `known_limitations[4]`)
 that "a 0.6s configured delay would trigger peer-timeout degradation."
 That claim is wrong for the reason worked out in section 2.5 below: a
@@ -185,7 +185,7 @@ See `objective5_impairment_matrix_conditions.csv` for the machine-readable versi
 
 | item | value | source |
 |---|---|---|
-| Webots world / scenario script | `run_dual_head_on_clean.py` (outside git tree, `/mnt/c/.../simulation_comm_experiment_v1/working`, per `run_objective5_comm_baseline_formal_trial.sh` line 210) | unchanged since trial01/trial02_stamp |
+| Webots world / scenario script | `run_dual_head_on_clean.py` (outside git tree, `/mnt/c/.../2-1.仿真通信实验/working`, per `run_objective5_comm_baseline_formal_trial.sh` line 210) | unchanged since trial01/trial02_stamp |
 | Initial pose | epuck1 `(x=-0.35, y=0.0, yaw=0.0)`, epuck2 `(x=0.35, y=0.0, yaw=π)` | `run_comm_baseline_formal_controllers.py` |
 | Controller commit | `controller_v4_timebase_fix_20260717` (`980e7d0`/`06e0f0f`/`f1830c5`), confirmed unchanged via `git log` (section 1.1) | `cooperative_avoider.py`, `local_obstacle_logic.py` |
 | Protocol/message commit | `EpuckState.msg` SHA-256 `a7ec4184...`, frozen at `06dae306` | `PROTOCOL_FREEZE_20260717.md` |

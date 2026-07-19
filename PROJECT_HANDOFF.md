@@ -45,8 +45,12 @@ Pi-puck, reality gap).
 | Windows repo root | `C:\Users\路一鸣\Desktop\硬件实验毕设\e-puck2-Comm` |
 | WSL repo root (same repo, mounted) | `/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm` |
 | ROS2 workspace (built package lives here, synced from repo `src/`) | `~/epuck_ws` (i.e. `/home/eamon/epuck_ws`) |
-| Webots world/launch working directory (**outside** the git repo) | `/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/simulation_comm_experiment_v1/working` |
+| Webots world/launch working directory (**outside** the git repo) | `/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/2-1.仿真通信实验/working` |
 | Native WSL scratch path for rosbag recording (see Objective 5 finding below) | `/home/eamon/epuck_comm_bags/` |
+
+Human-facing experiment folders follow `experiments/NAMING_CONVENTION.md`.
+New folders use `实验编号-次数.实验名称`; internal protocol/controller versions
+and immutable historical trial IDs retain their original identifiers.
 
 **Workflow note**: the repo's `src/epuck2_comm` package is edited in the
 Windows-visible path, then **synced into `~/epuck_ws/src/epuck2_comm`**
@@ -162,7 +166,7 @@ row per experiment/batch — `status`, `evidence_level`,
 1. Phase 4's combined scenario (5/5 formal) triggers via `PROXIMITY_FALLBACK` in every trial, never `PREDICTED_CPA` — must be named "staged local-obstacle avoidance followed by communication-assisted proximity/cooperative avoidance," never described as preventing a certain collision.
 2. 5 pre-protocol-freeze bags cannot be reprocessed by current analyzers (old `EpuckState` wire shape) — original historical analysis remains valid, re-analysis does not work.
 3. `/mnt/c` rosbag-write message loss (confirmed via two native-path diagnostic trials) is fully resolved for formal work by using the native WSL ext4 bag path — both formal zero-impairment trials validated this at the task level (PASS). **Corrected** (an earlier pass of this document said `EpuckState.stamp` was "never populated by `state_publisher.py`" — that was wrong; it does set it, via `self.get_clock().now().to_msg()`): the real root cause of trial01's epoch-scale "age" figures was `analyze_comm_performance.py` computing age as `bag_record_time (rosbag2's own wall-clock recording timestamp) - message.stamp (sim time)` — two different clock domains. Fixed this session under the `protocol_v1.1_stamp_semantics` patch label (wire schema unchanged, still `PROTOCOL_VERSION=1`): `state_publisher.py` now holds publication (`WAITING_FOR_CLOCK`) until the clock is valid; `analyze_comm_performance.py` now detects and excludes negative/implausible ages rather than silently averaging them in; `sequence_counter.py` now computes its own live, same-clock-domain latency (validated by `objective5_timestamp_latency_validation_pilot01`, then used for trial02_stamp's latency=VALID coverage). PDR/rate/bandwidth were never affected by this bug. trial01 itself is **not** re-analyzed or backfilled — it stays registered as `latency=NOT_MEASURED` permanently.
-4. `sequence_counter` was rewritten this session (periodic atomic checkpoints + a `finally`-block final write, no custom SIGINT handler) and verified working in the formal baseline PASS (`complete=true` both robots). A related orchestration-script bug — the shell script signaling only the relay+counter launch-service's own PID, not its child processes — caused the first 3 attempts at trial01 to fail with `complete=false` (these 3 failed attempts are documented, not hidden, in `experiments/controller_v4_full_sensor_bypass_20260717/README.md`'s execution_attempts table); fixed by running that process tree under `setsid` and signaling the whole process group on shutdown (`run_objective5_comm_baseline_formal_trial.sh`'s `stop_pid_group`).
+4. `sequence_counter` was rewritten this session (periodic atomic checkpoints + a `finally`-block final write, no custom SIGINT handler) and verified working in the formal baseline PASS (`complete=true` both robots). A related orchestration-script bug — the shell script signaling only the relay+counter launch-service's own PID, not its child processes — caused the first 3 attempts at trial01 to fail with `complete=false` (these 3 failed attempts are documented, not hidden, in `experiments/3-3.全传感器避障实验/README.md`'s execution_attempts table); fixed by running that process tree under `setsid` and signaling the whole process group on shutdown (`run_objective5_comm_baseline_formal_trial.sh`'s `stop_pid_group`).
 5. `peer_timeout_s` audit finding (read-only; frozen `cooperative_avoider` NOT modified): peer freshness is judged by callback receipt time, not `msg.stamp`. A constant relay delay does not by itself trigger `peer_timeout` — only jitter or real loss can plausibly do that. An earlier impairment-matrix draft's "0.6s delay triggers timeout" claim is retracted.
 6. Webots R2025a is used, not Gazebo as the Spec names — this is a disclosed, deliberate deviation (protocol/library are simulator-agnostic; see `HANDOFF_20260717.md` for the full risk note and the recommendation to confirm with the supervisor). Do not silently redo the platform in Gazebo.
 7. No CPU/memory overhead measurement exists yet (would need a live psutil-style sampling companion).
@@ -208,7 +212,7 @@ the CSV remains the only parameter source.
 Then, depending on what you're doing: `experiments/experiment_registry.csv`
 (per-experiment detail), `experiments/path_manifest.csv` (exact paths,
 Windows+WSL, existence/size), or
-`experiments/controller_v4_full_sensor_bypass_20260717/HANDOFF_20260717.md`
+`experiments/3-3.全传感器避障实验/HANDOFF_20260717.md`
 (the detailed controller v1→v4 technical narrative).
 
 ## Do not

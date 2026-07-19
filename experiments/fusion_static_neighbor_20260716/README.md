@@ -29,7 +29,7 @@ flagged in `project_status.json`'s `known_limitations`.
 
 **Config**: no `config/` subdirectory in this experiment folder; the pilot
 scripts that produced these bags live in
-`simulation_comm_experiment_v1/working/` (outside the git repo) — see
+`2-1.仿真通信实验/working/` (outside the git repo) — see
 `run_fusion_static_neighbor.py`, `run_fusion_static_long_course.py`.
 
 **Git commit**: baseline `e76adf3` (`controller_v1`), predates this

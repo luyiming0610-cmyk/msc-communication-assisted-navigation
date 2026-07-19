@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 _RELATIVE_SUBPATH = (
-    "experiments/controller_v4_full_sensor_bypass_20260717/"
+    "experiments/3-3.全传感器避障实验/"
     "config/static_box_v4/analyze_static_v4_task.py"
 )
 # WSL only mirrors src/ into the colcon workspace (see the repo's own

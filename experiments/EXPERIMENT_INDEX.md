@@ -1,5 +1,9 @@
 # Experiment Index
 
+Display-folder naming is governed by `NAMING_CONVENTION.md`. Historical
+controller versions and bag/trial IDs shown below remain unchanged for
+reproducibility even when their parent display folder has been renamed.
+
 Human-readable index into `experiment_registry.csv` (machine-readable, one
 row per experiment/batch) and `path_manifest.csv` (every logical path, both
 Windows and WSL forms). This document does NOT move, rename, or duplicate
@@ -24,10 +28,10 @@ Message definition, protocol version, unit tests, build results.
 v1/v2/v3/v4 controller design, defect diagnosis, regression evidence. This
 is controller-development evidence — **not** formal communication-performance
 statistics, even though some of it lives inside `cooperative_avoidance_20260716/`.
-- `experiments/controller_v2_local_latch_20260717/` — controller_v2 pilot_a/pilot_a2
-- `experiments/controller_v3_unified_encounter_20260717/` — controller_v3 pilot_a3 (forensic evidence that motivated v4)
-- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_static_box_{a,b,c,d}` — pilot_v4_a attempts 1-4 (3 fails, 1 pass)
-- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_static_box_fusion_{a,b2,b3}` — pilot_v4_b/b2/b3 (fail, partial, pass)
+- `experiments/3-1.局部避障锁存实验/` — controller_v2 pilot_a/pilot_a2
+- `experiments/3-2.统一遭遇避障实验/` — controller_v3 pilot_a3 (forensic evidence that motivated v4)
+- `experiments/3-3.全传感器避障实验/bags/*_static_box_{a,b,c,d}` — pilot_v4_a attempts 1-4 (3 fails, 1 pass)
+- `experiments/3-3.全传感器避障实验/bags/*_static_box_fusion_{a,b2,b3}` — pilot_v4_b/b2/b3 (fail, partial, pass)
 - `experiments/cooperative_avoidance_20260716/bags/combined_*` — the controller_v1 combined-scenario box-corner-runaway-turn defect that started the whole v1→v4 chain (see `combined_wood_moving_peer_README.md`'s 2026-07-17 entry)
 - Registry rows: `controller_v2_*`, `controller_v3_*`, `v4_pilot_*`, `combined_wood_moving_peer_v1_defect_pilots`, `combined_wood_moving_peer_postfix_pilots`
 
@@ -36,7 +40,7 @@ Static wooden block, pure CPA, combined avoidance — Objective 4's
 task-specific validation vehicle.
 - **Phase 1** (controller_v1): `experiments/fusion_static_neighbor_20260716/` — 5/5 formal (`local_static_long_trial_02..07`), 1 diagnostic (`local_static_trial_01`)
 - **Phase 2/3** (controller_v1): `experiments/cooperative_avoidance_20260716/` — 45 formal trials across 9 batches (head-on centered/offset/crossing/ablation local-only/ablation fused), see `cooperative_avoidance_experiment_index_20260716.md` for the authoritative per-trial table
-- **Phase 4** (controller_v4, **SEALED**): `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_combined_formal_trial0{1..5}` — **5/5 PASS**, manifest commit `e32560e`, batch summary commit `cbb1897`
+- **Phase 4** (controller_v4, **SEALED**): `experiments/3-3.全传感器避障实验/bags/*_combined_formal_trial0{1..5}` — **5/5 PASS**, manifest commit `e32560e`, batch summary commit `cbb1897`
   - **Binding limitation**: all 5/5 trials triggered via `PROXIMITY_FALLBACK`, none via `PREDICTED_CPA`. Naming rule: "staged local-obstacle avoidance followed by communication-assisted proximity/cooperative avoidance." Never describe this batch as preventing an otherwise-certain head-on collision.
   - Exclusionary pilots (not pooled with the formal 5/5): `head_on_cpa_pure_c1`, `combined_trial1`, `combined_trial2_timebasefix`
 - Registry rows: `phase1_*`, `phase2_3_*`, `v4_pure_cpa_*`, `v4_combined_pilot_*`, `v4_phase4_formal_trial0{1..5}`, `phase4_formal_batch_5of5`
@@ -45,11 +49,11 @@ task-specific validation vehicle.
 Zero-delay/zero-loss communication baseline. Two formal results now
 exist (latency-partial + latency-complete); the rest of this category
 remains diagnostic-only.
-- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_comm_baseline_trial{1,2,3}` — FAIL, `/mnt/c` rosbag-write message loss (~40-55%), superseded by the native-path diagnostic
-- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_comm_baseline_native_trial0{1,2}` — PASS (comm-layer-only, no `cooperative_avoider`), aligned-window PDR=1.0, confirms root cause is `/mnt/c` I/O not the relay/transport
-- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_objective5_comm_baseline_zero_impairment_formal_trial01` — **PASS, FORMAL_SIM.** Genuine `cooperative_avoider` task completion under zero impairment, native WSL ext4 bag path. Aligned-window PDR=1.0 both robots; `sequence_gap_count`=`duplicate_count`=`out_of_order_count`=0 both robots; `sequence_counter` `complete=true` both robots; realtime factor 0.963 (preload) / 0.951 (full load); message rate ≈8.69 Hz/robot; mean bandwidth ≈696 bytes/s/robot; no bag/QoS drop-warn-error lines. **metric_coverage: PDR=VALID sequence_integrity=VALID throughput=VALID task_behavior=VALID latency=NOT_MEASURED.** Message age/latency is N/A, permanently (not re-analyzed/backfilled) — root cause was `analyze_comm_performance.py` mixing rosbag2's own wall-clock recording timestamp with `message.stamp` (sim time), NOT an unset stamp field (`state_publisher.py` sets it correctly). The first 3 attempts at this exact trial failed for orchestration-script reasons (WSL interop, then two distinct process-shutdown bugs in `run_objective5_comm_baseline_formal_trial.sh`), not communication-result reasons — kept, not deleted, in that experiment directory's README execution_attempts table.
-- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_objective5_timestamp_latency_validation_pilot01_condition_{a_delay0,b_delay025}` — PASS, PILOT (diagnostic-only, no `cooperative_avoider`). Validates the stamp/latency measurement chain before trial02_stamp: condition_a (delay=0) mean age ~microsecond-scale; condition_b (delay=0.25s) observed increment ~0.26s vs configured 0.25s, error ~0.01s. Never pooled with formal statistics.
-- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_objective5_comm_baseline_zero_impairment_formal_trial02_stamp` — **PASS, FORMAL_SIM.** Latency-complete companion to trial01 under `protocol_v1.1_stamp_semantics` (wire schema unchanged, still `PROTOCOL_VERSION=1`): `state_publisher.py` now gates publication on a valid ROS clock (`WAITING_FOR_CLOCK`), `sequence_counter.py` now computes live per-message latency (message.stamp vs its own receipt time, same clock domain). Same PDR/sequence/task results as trial01 (aligned-window PDR=1.0, 0 gaps/dup/oo, `complete=true`, realtime factor 0.996/1.003) plus **metric_coverage all five VALID**: live-counter mean/median/p95/max `message_age_s`=0.0 both robots (zero configured delay). **Does not replace trial01** — both remain separately registered with different metric_coverage.
+- `experiments/3-3.全传感器避障实验/bags/*_comm_baseline_trial{1,2,3}` — FAIL, `/mnt/c` rosbag-write message loss (~40-55%), superseded by the native-path diagnostic
+- `experiments/3-3.全传感器避障实验/bags/*_comm_baseline_native_trial0{1,2}` — PASS (comm-layer-only, no `cooperative_avoider`), aligned-window PDR=1.0, confirms root cause is `/mnt/c` I/O not the relay/transport
+- `experiments/3-3.全传感器避障实验/bags/*_objective5_comm_baseline_zero_impairment_formal_trial01` — **PASS, FORMAL_SIM.** Genuine `cooperative_avoider` task completion under zero impairment, native WSL ext4 bag path. Aligned-window PDR=1.0 both robots; `sequence_gap_count`=`duplicate_count`=`out_of_order_count`=0 both robots; `sequence_counter` `complete=true` both robots; realtime factor 0.963 (preload) / 0.951 (full load); message rate ≈8.69 Hz/robot; mean bandwidth ≈696 bytes/s/robot; no bag/QoS drop-warn-error lines. **metric_coverage: PDR=VALID sequence_integrity=VALID throughput=VALID task_behavior=VALID latency=NOT_MEASURED.** Message age/latency is N/A, permanently (not re-analyzed/backfilled) — root cause was `analyze_comm_performance.py` mixing rosbag2's own wall-clock recording timestamp with `message.stamp` (sim time), NOT an unset stamp field (`state_publisher.py` sets it correctly). The first 3 attempts at this exact trial failed for orchestration-script reasons (WSL interop, then two distinct process-shutdown bugs in `run_objective5_comm_baseline_formal_trial.sh`), not communication-result reasons — kept, not deleted, in that experiment directory's README execution_attempts table.
+- `experiments/3-3.全传感器避障实验/bags/*_objective5_timestamp_latency_validation_pilot01_condition_{a_delay0,b_delay025}` — PASS, PILOT (diagnostic-only, no `cooperative_avoider`). Validates the stamp/latency measurement chain before trial02_stamp: condition_a (delay=0) mean age ~microsecond-scale; condition_b (delay=0.25s) observed increment ~0.26s vs configured 0.25s, error ~0.01s. Never pooled with formal statistics.
+- `experiments/3-3.全传感器避障实验/bags/*_objective5_comm_baseline_zero_impairment_formal_trial02_stamp` — **PASS, FORMAL_SIM.** Latency-complete companion to trial01 under `protocol_v1.1_stamp_semantics` (wire schema unchanged, still `PROTOCOL_VERSION=1`): `state_publisher.py` now gates publication on a valid ROS clock (`WAITING_FOR_CLOCK`), `sequence_counter.py` now computes live per-message latency (message.stamp vs its own receipt time, same clock domain). Same PDR/sequence/task results as trial01 (aligned-window PDR=1.0, 0 gaps/dup/oo, `complete=true`, realtime factor 0.996/1.003) plus **metric_coverage all five VALID**: live-counter mean/median/p95/max `message_age_s`=0.0 both robots (zero configured delay). **Does not replace trial01** — both remain separately registered with different metric_coverage.
 - `src/epuck2_comm/epuck2_comm/{analyze_comm_performance,network_impairment,network_impairment_relay,sequence_counter,state_publisher}.py` — the tooling itself, 144/144 unit tests passing (10 sequence_counter reliability tests + this pass's stamp-semantics tests: state_publisher WAITING_FOR_CLOCK, sequence_counter live latency, relay CSV source_stamp/actual_release_time, analyze_comm_performance clock-domain-mismatch guard)
 - **peer_timeout_s audit** (read-only, frozen controller untouched): freshness is judged by callback receipt time, not `msg.stamp`; a constant delay alone does not trigger `peer_timeout` (only jitter/loss can) — an earlier draft's "0.6s delay triggers timeout" claim is retracted.
 - **network_impairment_relay audit**: scheduling uses ROS/sim time (not wall time), so delay semantics don't drift with realtime factor; jitter can cause reordering (release-time min-heap); drop/jitter fully reproducible via seeded `random.Random`.
@@ -287,7 +291,7 @@ excluded runs. Nothing here is deleted.
   current analyzers (`Fast CDR` deserialization exception against the
   current `EpuckState` message shape); original contemporaneous analysis
   outputs remain valid historical evidence
-- `experiments/controller_v4_full_sensor_bypass_20260717/bags/*_combined_formal_trial01_INCOMPLETE_no_controller_log/` — first Trial 01 attempt, controller log was never captured (manual-command redirection oversight), preserved not deleted, excluded from the formal batch
+- `experiments/3-3.全传感器避障实验/bags/*_combined_formal_trial01_INCOMPLETE_no_controller_log/` — first Trial 01 attempt, controller log was never captured (manual-command redirection oversight), preserved not deleted, excluded from the formal batch
 - Various `cooperative_avoidance_20260716` diagnostic/invalid/interrupted/timeout runs — see `cooperative_avoidance_20260716_diagnostics_and_invalid` registry row and the experiment's own index doc
 - `communication_baseline_20260716/` — registry row `communication_baseline_20260716_stub`; contains exactly one file, an empty (0-byte) stub, no real experiment ever ran here (`artifact_missing`); unrelated to the current Objective 5 comm-baseline work despite the similar name
 

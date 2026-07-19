@@ -77,7 +77,7 @@ Phases 1–3 (the defect only manifests in the extended-runtime, box-corner-
 grazing tail that Phase 1–3 protocols never reached).
 
 Three excluded `controller_v4_ros_time_consistency` pilots (evidence under
-`experiments/controller_v4_full_sensor_bypass_20260717/`, not this directory,
+`experiments/3-3.全传感器避障实验/`, not this directory,
 and not pooled with any table above) re-validated static-box, pure-CPA and
 combined behaviour before returning to Phase 4:
 
