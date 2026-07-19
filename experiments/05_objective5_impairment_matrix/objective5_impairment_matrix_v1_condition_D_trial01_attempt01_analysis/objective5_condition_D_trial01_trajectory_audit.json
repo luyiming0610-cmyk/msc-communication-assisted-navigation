@@ -1,0 +1,100 @@
+{
+  "label": "condition_D_trial01",
+  "audit_type": "OFFLINE_TRAJECTORY_MODE_AUDIT",
+  "webots_run_for_this_audit": false,
+  "tool": "experiments/05_objective5_impairment_matrix/tools/analyze_objective5_trajectory.py",
+  "robots": {
+    "1": {
+      "mode_entry_counts": {
+        "SAFE_STOP_STALE": 1,
+        "STARTUP_HOLD": 1,
+        "CRUISE": 2,
+        "AVOID_TURN": 1,
+        "AVOID_PASS": 1,
+        "RECOVER": 1,
+        "COMPLETE": 1
+      },
+      "cpa_avoid_turn_entries": 1,
+      "cpa_avoid_pass_entries": 1,
+      "cpa_recover_entries": 1,
+      "local_transition_counts": {},
+      "avoid_pass": {
+        "present": true,
+        "start_wall_time": 1784446651.906,
+        "end_wall_time": 1784446673.111,
+        "duration_s": 21.205000162124634,
+        "command": {
+          "sample_count": 407,
+          "duration_s": 21.086538553237915,
+          "angular_sign_runs_threshold_0_05": [-1, 1],
+          "angular_direction_reversals": 1,
+          "absolute_angular_command_integral_rad": 0.26404879983262375,
+          "signed_angular_command_integral_rad": 0.11271443522354997,
+          "max_abs_angular_command_rps": 0.2580632472038269,
+          "mean_linear_command_mps": 0.011997542997542928
+        },
+        "trajectory": {
+          "sample_count": 190,
+          "path_length_m": 0.24297283450822207,
+          "displacement_m": 0.24291444459441822,
+          "path_efficiency": 0.9997596854235905,
+          "lateral_span_m": 0.10641667060554028,
+          "yaw_range_rad": 0.16764315962791443,
+          "yaw_total_variation_rad": 0.33749231696128845,
+          "yaw_net_change_rad": 0.09485068917274475
+        }
+      }
+    },
+    "2": {
+      "mode_entry_counts": {
+        "SAFE_STOP_STALE": 1,
+        "STARTUP_HOLD": 1,
+        "CRUISE": 2,
+        "AVOID_TURN": 1,
+        "AVOID_PASS": 1,
+        "RECOVER": 1,
+        "COMPLETE": 1
+      },
+      "cpa_avoid_turn_entries": 1,
+      "cpa_avoid_pass_entries": 1,
+      "cpa_recover_entries": 1,
+      "local_transition_counts": {},
+      "avoid_pass": {
+        "present": true,
+        "start_wall_time": 1784446652.004,
+        "end_wall_time": 1784446673.111,
+        "duration_s": 21.10700011253357,
+        "command": {
+          "sample_count": 405,
+          "duration_s": 20.995570182800293,
+          "angular_sign_runs_threshold_0_05": [-1, 1],
+          "angular_direction_reversals": 1,
+          "absolute_angular_command_integral_rad": 0.2603219366441687,
+          "signed_angular_command_integral_rad": 0.18140782380398562,
+          "max_abs_angular_command_rps": 0.32953226565840466,
+          "mean_linear_command_mps": 0.011997530864197463
+        },
+        "trajectory": {
+          "sample_count": 189,
+          "path_length_m": 0.24140285353310442,
+          "displacement_m": 0.24132520841016308,
+          "path_efficiency": 0.9996783587194396,
+          "lateral_span_m": 0.10584998480044305,
+          "yaw_range_rad": 0.20293641090393066,
+          "yaw_total_variation_rad": 0.2955818176269531,
+          "yaw_net_change_rad": 0.16764307022094727
+        }
+      }
+    }
+  },
+  "cross_condition_comparison_descriptive_only": {
+    "note": "n=1 for D so far; comparison is descriptive only, no significance claimed. Trial01 values for A/B/C are each also n=1 (their own Trial01), not batch means.",
+    "table": [
+      {"condition": "A", "delay_s": 0.0, "jitter_s": 0.0, "angular_direction_reversals_e1_e2": "0/1", "yaw_total_variation_rad_e1_e2": "0.079/0.110", "path_efficiency_e1_e2": "1.0000/1.0000"},
+      {"condition": "B", "delay_s": 0.20, "jitter_s": 0.0, "angular_direction_reversals_e1_e2": "1/1", "yaw_total_variation_rad_e1_e2": "0.329/0.375", "path_efficiency_e1_e2": "0.9997/0.9997"},
+      {"condition": "D_trial01", "delay_s": 0.15, "jitter_s": 0.30, "angular_direction_reversals_e1_e2": "1/1", "yaw_total_variation_rad_e1_e2": "0.337/0.296", "path_efficiency_e1_e2": "0.9998/0.9997", "note": "genuine reordering present (out_of_order_count=89/92) but oscillation/path-efficiency profile resembles B, not C"},
+      {"condition": "C", "delay_s": 1.00, "jitter_s": 0.0, "angular_direction_reversals_e1_e2": "9/9", "yaw_total_variation_rad_e1_e2": "5.256/5.263", "path_efficiency_e1_e2": "0.9729/0.9739"}
+    ],
+    "interpretation": "In this single D trial, despite genuine message reordering (unlike A/B/C which have out_of_order_count=0 by construction), the avoidance trajectory does NOT show C-style repeated S-curve oscillation. It is closer to B's single-reversal, near-ideal-path-efficiency profile. This suggests the oscillatory degradation seen in Condition C may track the DELAY MAGNITUDE (mean/peak state age) more than jitter-driven reordering per se -- but this is a single trial (n=1) and must be confirmed or refuted by D Trials 02-05 before any claim is made in the dissertation."
+  }
+}

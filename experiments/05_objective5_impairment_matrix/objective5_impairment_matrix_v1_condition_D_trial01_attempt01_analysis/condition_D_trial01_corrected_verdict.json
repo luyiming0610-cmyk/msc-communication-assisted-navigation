@@ -1,0 +1,101 @@
+{
+  "trial_id": "objective5_impairment_matrix_v1_condition_D_trial01_attempt01",
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "D",
+  "condition_name": "Jitter / reordering (delay_s=0.15, jitter_s=0.30, drop_probability=0.0, outage disabled)",
+  "verdict_kind": "CORRECTED_THREE_AXIS_VERDICT",
+  "supersedes": "final_verdict.json's single reused-strict-gate 'FAIL' label (which applied A/B/C's out_of_order==0 criterion, invalid for a reordering condition)",
+  "correction_basis": "reordering_delivery_audit.json (reorder_safe_delivery_analyzer.py v1, set-based) + analyze_objective5_trajectory.py (edge/transition-based mode counting)",
+  "raw_evidence_unmodified": true,
+  "webots_run_for_this_correction": false,
+
+  "manual_observation": {
+    "status": "NOT_OBSERVED",
+    "reason": "user did not directly observe this trial"
+  },
+
+  "axis_1_DATA_VALIDITY": {
+    "value": "VALID",
+    "basis": [
+      "measurement_validity=VALID, legacy_replay=false, schema_problems=[] both directions",
+      "reorder-safe set-based accounting self-consistent both directions (no impossible ratios; all ratios in [0,1])",
+      "latency VALID_AT_SIM_CLOCK_RESOLUTION both directions, p99 finite",
+      "queue_drained=true, realtime_factor in band (preload 0.96 / full 0.955)",
+      "ros2 bag info OK (3234 msgs, 7 topics, 53.29s); no drop/warn/error in bag_record.log",
+      "process cleanup CLEAN before and after"
+    ],
+    "note": "The reused strict gate in final_verdict.json labelled the trial FAIL only because it required out_of_order_count==0 (an A/B/C criterion). Under Condition D that criterion is inverted; it does not bear on DATA_VALIDITY."
+  },
+
+  "axis_2_MANIPULATION_VALIDITY": {
+    "value": "VALID",
+    "basis": {
+      "reordering_occurred": true,
+      "out_of_order_adjacent_inversions_forwarded": {"epuck1_to_epuck2": 89, "epuck2_to_epuck1": 92},
+      "out_of_order_displaced_forwarded": {"epuck1_to_epuck2": 92, "epuck2_to_epuck1": 97},
+      "actual_missing_count": {"epuck1_to_epuck2": 0, "epuck2_to_epuck1": 0},
+      "relay_total_drop_count": {"epuck1_to_epuck2": 0, "epuck2_to_epuck1": 0},
+      "forwarded_to_bag_capture_ratio": {"epuck1_to_epuck2": 1.0, "epuck2_to_epuck1": 1.0},
+      "source_to_forwarded_delivery_ratio": {"epuck1_to_epuck2": 1.0, "epuck2_to_epuck1": 1.0},
+      "duplicate_count": {"epuck1_to_epuck2": 0, "epuck2_to_epuck1": 0},
+      "message_age_mean_s": {"epuck1_to_epuck2": 0.16350230413824737, "epuck2_to_epuck1": 0.15855813953255696},
+      "message_age_median_s": {"epuck1_to_epuck2": 0.16, "epuck2_to_epuck1": 0.16},
+      "message_age_p95_s": {"epuck1_to_epuck2": 0.30, "epuck2_to_epuck1": 0.30},
+      "message_age_max_s": {"epuck1_to_epuck2": 0.30, "epuck2_to_epuck1": 0.30},
+      "configured_range_s": [0.0, 0.30]
+    },
+    "criteria_for_condition_D": {
+      "out_of_order_event_count_gt_0": "PASS (89/92 forwarded reversals)",
+      "actual_missing_count_eq_0_as_configured": "PASS (0/0)",
+      "relay_total_drop_count_eq_0": "PASS (0/0)",
+      "forwarded_to_bag_capture_ratio_eq_1": "PASS (1.0/1.0)",
+      "queue_drained": "PASS (true)"
+    },
+    "note": "The planned jitter perturbation (delay_s=0.15 + jitter spread 0.30s, i.e. a per-message release delay in [0,0.30]s, ~2.6x the 0.1151s publish period) genuinely produced reordering while introducing zero unplanned loss. The observed message-age distribution (median 0.16s, max 0.30s) is measurably wider than A (~0), B (fixed 0.20s), and C (fixed 1.00s), consistent with the configured jitter range."
+  },
+
+  "axis_3_TASK_OUTCOME": {
+    "value": "SUCCESS",
+    "collision": false,
+    "min_interrobot_distance_m": 0.1444723957613864,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.0044723957613863885,
+    "complete_count": 2,
+    "recovered_and_auto_stopped": "inferred from complete_count=2 and edge-based RECOVER->COMPLETE transitions; NOT from manual observation (status NOT_OBSERVED)",
+    "first_trigger_reason": "PREDICTED_CPA",
+    "local_layer_engaged": false,
+    "all_LOCAL_star_counts": 0,
+    "edge_based_mode_entries_per_robot": {
+      "AVOID_TURN": 1,
+      "AVOID_PASS": 1,
+      "RECOVER": 1,
+      "note": "Counted from TRANSITION log edges via analyze_objective5_trajectory.py, NOT from raw log-line grep. The earlier trigger_mechanism_audit.json raw counts (AVOID_TURN=8, AVOID_PASS=86, RECOVER=10) are line-match counts that also match per-tick 'ARMED mode=...' diagnostic lines emitted while a robot REMAINS in a mode; they are NOT independent trigger events. Each robot had exactly ONE encounter: one CRUISE->AVOID_TURN->AVOID_PASS->RECOVER->COMPLETE cycle."
+    },
+    "avoid_pass_duration_s": {"epuck1": 21.205, "epuck2": 21.107},
+    "angular_direction_reversals_within_avoid_pass": {"epuck1": 1, "epuck2": 1},
+    "path_efficiency": {"epuck1": 0.9998, "epuck2": 0.9997},
+    "note": "Despite genuine reordering, the avoidance trajectory in this single trial resembles Condition B (one reversal, near-ideal path efficiency), NOT Condition C's repeated S-curve (9 reversals, efficiency ~0.973). Descriptive, n=1; to be confirmed by D02-05."
+  },
+
+  "overall": {
+    "data_validity": "VALID",
+    "manipulation_validity": "VALID",
+    "task_outcome": "SUCCESS",
+    "condition_D_specific_pass": true,
+    "condition_D_specific_pass_reason": "All Condition-D criteria met: out_of_order>0 (perturbation genuinely applied), actual_missing=0 as configured, relay drop=0, forwarded_to_bag_capture_ratio=1.0, queue_drained=true, DATA_VALIDITY=VALID, TASK_OUTCOME=SUCCESS, min distance > safety radius.",
+    "NOT_a_final_user_verdict": "Per user instruction, DATA_VALIDITY/MANIPULATION_VALIDITY/TASK_OUTCOME are reported; the trial may be included as a formal automated-measurement trial in the n=5 (see corrected_summary.md's inclusion assessment). No PASS/FAIL is asserted here as a substitute for the user's own judgement; the user did not manually observe this trial."
+  },
+
+  "run_identity": {
+    "git_commit": "9ace19d5ffe9966be3fb7d0f192672a0fed05e0d",
+    "orchestrator_sha256": "20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3",
+    "frozen_params": {
+      "delay_s": 0.15, "jitter_s": 0.30, "drop_probability": 0.0,
+      "outage_period_s": 0.0, "outage_duration_s": 0.0, "outage_phase_s": 0.0,
+      "seed_epuck1_to_epuck2": 4001, "seed_epuck2_to_epuck1": 14001
+    }
+  }
+}

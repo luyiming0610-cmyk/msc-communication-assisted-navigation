@@ -163,12 +163,25 @@ row per experiment/batch — `status`, `evidence_level`,
 
 Conditions A and B are complete at 5/5 PASS. Condition C is also complete,
 but its correct result is `4/5 SUCCESS + 1/5 UNSAFE_FAILURE`; do not rerun
-C05 or relabel the batch as a pass. The next runnable condition is D
-(jitter/reordering), whose Trial 01 still requires explicit user approval.
-Conditions D-G have not started. Condition F additionally remains blocked
-by the mandatory outage-window/startup-offset audit in
-`experiments/project_status.json`. Use the same frozen orchestrator and
-strict analyzer schema; the CSV remains the only parameter source.
+C05 or relabel the batch as a pass. **Condition D Trial 01 (jitter/reordering)
+has been run and offline-corrected** — three-axis verdict
+`DATA_VALIDITY=VALID / MANIPULATION_VALIDITY=VALID / TASK_OUTCOME=SUCCESS`,
+`manual_observation.status=NOT_OBSERVED`. Running D01 surfaced a
+**sequence-accounting bug**: `sequence_counter.py`'s adjacent-delta
+missing/expected accounting is wrong under reordering (it reported bogus
+`missing=189/192` and an impossible `capture_ratio=1.00233`). It is corrected
+by a new offline, versioned, set-based analyzer
+`experiments/05_objective5_impairment_matrix/tools/reorder_safe_delivery_analyzer.py`
+(12 unit tests; both directions true missing=0, capture=1.0). For Conditions D
+and the jitter component of G, use `reordering_delivery_audit.json`, NOT
+`matrix_analysis.json`'s `sequence.missing_count/capture_ratio` (annotated
+METHOD_INVALID). The frozen `sequence_counter.py` itself was NOT modified (it
+stays correct for the in-order streams of A/B/C/E). **D02-05 are not started
+and require explicit user acceptance of the corrected D01 first.** Conditions
+E-G have not started; Condition F additionally remains blocked by the
+mandatory outage-window/startup-offset audit in
+`experiments/project_status.json`. Use the same frozen orchestrator; the CSV
+remains the only parameter source.
 ## What to read first, in order
 
 1. **This file.**

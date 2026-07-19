@@ -174,6 +174,30 @@ it runs.**
   reversals (about five S-lobes) within one continuous `AVOID_PASS`, not
   repeated CPA encounters or IR/ToF fallback. Full evidence:
   `objective5_impairment_matrix_v1_condition_C_formal_batch_summary.{json,md}`.
+- **Condition D Trial 01 (jitter/reordering), RUN + sequence-accounting
+  CORRECTED, awaiting user acceptance before D02-05**:
+  `objective5_impairment_matrix_v1_condition_D_trial01_attempt01` (frozen
+  `delay_s=0.15`, `jitter_s=0.30` peak-to-peak → per-message release delay
+  `[0,0.30]s`, `drop_probability=0.0`, outage disabled, seeds `4001/14001`;
+  same frozen controller/world/thresholds/behavioral-code SHA-256 as A/B/C).
+  Three-axis verdict: `DATA_VALIDITY=VALID`, `MANIPULATION_VALIDITY=VALID`,
+  `TASK_OUTCOME=SUCCESS` (no collision; `min_interrobot_distance_m=0.1444723957613864`,
+  margin +4.472mm; `PREDICTED_CPA`; `LOCAL_*` all zero; one edge-based
+  AVOID_TURN→AVOID_PASS→RECOVER cycle per robot). `manual_observation.status=
+  NOT_OBSERVED` (user did not directly observe). **Sequence-accounting bug
+  found and corrected offline** (no rerun, no param change): the live
+  `sequence_counter.py` mis-derives missing/expected under reordering, giving
+  bogus `missing_count=189/192` and an impossible `capture_ratio=1.00233`.
+  Replaced by a new versioned set-based analyzer,
+  `tools/reorder_safe_delivery_analyzer.py` (v1, 12 unit tests, all pass):
+  both directions **actual_missing=0**, **forwarded_to_bag_capture_ratio=1.0**,
+  relay drop=0, duplicate=0, out_of_order genuinely >0 (89/92 = reordering
+  applied, not loss). The disputed `matrix_analysis.json` fields are annotated
+  METHOD_INVALID (preserved). Evidence:
+  `objective5_impairment_matrix_v1_condition_D_trial01_attempt01_analysis/`
+  (`reordering_delivery_audit.{json,md}`,
+  `condition_D_trial01_corrected_verdict.json`,
+  `condition_D_trial01_corrected_summary.md`). D02-05 not started.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,

@@ -1,0 +1,136 @@
+{
+  "analyzer": "reorder_safe_delivery_analyzer.py v1",
+  "audit_type": "OFFLINE_REORDER_SAFE_DELIVERY_AUDIT",
+  "webots_run_for_this_audit": false,
+  "trial_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_D_trial01_attempt01",
+  "directions": {
+    "epuck1_to_epuck2": {
+      "relay_csv": "epuck1_relay.csv",
+      "delivered_topic": "/epuck1/state",
+      "source_topic": "/epuck1/state_raw",
+      "relay_forwarded_set_size": 434,
+      "relay_dropped_set_size": 0,
+      "bag_received_set_size": 414,
+      "bag_delivered_stream": {
+        "measurable": true,
+        "total_arrivals": 414,
+        "unique_count": 414,
+        "duplicate_count": 0,
+        "min_sequence": 20,
+        "max_sequence": 433,
+        "first_arrival_sequence": 20,
+        "first_arrival_is_min": true,
+        "expected_count": 414,
+        "actual_missing_count": 0,
+        "actual_missing_set": [],
+        "out_of_order_adjacent_inversions": 87,
+        "out_of_order_displaced_count": 90,
+        "reordering_present": true,
+        "within_window_capture_ratio": 1.0
+      },
+      "relay_forwarded_stream": {
+        "measurable": true,
+        "total_arrivals": 434,
+        "unique_count": 434,
+        "duplicate_count": 0,
+        "min_sequence": 0,
+        "max_sequence": 433,
+        "first_arrival_sequence": 0,
+        "first_arrival_is_min": true,
+        "expected_count": 434,
+        "actual_missing_count": 0,
+        "actual_missing_set": [],
+        "out_of_order_adjacent_inversions": 89,
+        "out_of_order_displaced_count": 92,
+        "reordering_present": true,
+        "within_window_capture_ratio": 1.0
+      },
+      "forwarded_to_bag": {
+        "measurable": true,
+        "bag_window_min": 20,
+        "bag_window_max": 433,
+        "forwarded_in_bag_window_count": 414,
+        "bag_captured_in_window_count": 414,
+        "forwarded_to_bag_capture_ratio": 1.0,
+        "forwarded_but_not_in_bag_count": 0,
+        "bag_sequences_not_in_forwarded_set": []
+      },
+      "relay_source_to_forwarded": {
+        "measurable": true,
+        "relay_input_count": 434,
+        "forwarded_count": 434,
+        "dropped_count": 0,
+        "source_to_forwarded_delivery_ratio": 1.0
+      },
+      "data_validity": {
+        "data_validity": "VALID",
+        "reason": "reorder-safe set-based accounting self-consistent",
+        "reordering_present_but_not_a_validity_failure": true
+      }
+    },
+    "epuck2_to_epuck1": {
+      "relay_csv": "epuck2_relay.csv",
+      "delivered_topic": "/epuck2/state",
+      "source_topic": "/epuck2/state_raw",
+      "relay_forwarded_set_size": 430,
+      "relay_dropped_set_size": 0,
+      "bag_received_set_size": 423,
+      "bag_delivered_stream": {
+        "measurable": true,
+        "total_arrivals": 423,
+        "unique_count": 423,
+        "duplicate_count": 0,
+        "min_sequence": 18,
+        "max_sequence": 440,
+        "first_arrival_sequence": 18,
+        "first_arrival_is_min": true,
+        "expected_count": 423,
+        "actual_missing_count": 0,
+        "actual_missing_set": [],
+        "out_of_order_adjacent_inversions": 90,
+        "out_of_order_displaced_count": 95,
+        "reordering_present": true,
+        "within_window_capture_ratio": 1.0
+      },
+      "relay_forwarded_stream": {
+        "measurable": true,
+        "total_arrivals": 430,
+        "unique_count": 430,
+        "duplicate_count": 0,
+        "min_sequence": 11,
+        "max_sequence": 440,
+        "first_arrival_sequence": 12,
+        "first_arrival_is_min": false,
+        "expected_count": 430,
+        "actual_missing_count": 0,
+        "actual_missing_set": [],
+        "out_of_order_adjacent_inversions": 92,
+        "out_of_order_displaced_count": 97,
+        "reordering_present": true,
+        "within_window_capture_ratio": 1.0
+      },
+      "forwarded_to_bag": {
+        "measurable": true,
+        "bag_window_min": 18,
+        "bag_window_max": 440,
+        "forwarded_in_bag_window_count": 423,
+        "bag_captured_in_window_count": 423,
+        "forwarded_to_bag_capture_ratio": 1.0,
+        "forwarded_but_not_in_bag_count": 0,
+        "bag_sequences_not_in_forwarded_set": []
+      },
+      "relay_source_to_forwarded": {
+        "measurable": true,
+        "relay_input_count": 430,
+        "forwarded_count": 430,
+        "dropped_count": 0,
+        "source_to_forwarded_delivery_ratio": 1.0
+      },
+      "data_validity": {
+        "data_validity": "VALID",
+        "reason": "reorder-safe set-based accounting self-consistent",
+        "reordering_present_but_not_a_validity_failure": true
+      }
+    }
+  }
+}
