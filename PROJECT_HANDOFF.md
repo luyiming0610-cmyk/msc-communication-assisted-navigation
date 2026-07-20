@@ -93,7 +93,7 @@ python3 -m pytest test/ -q
 
 ## Experiment categories (full detail: `experiments/EXPERIMENT_INDEX.md`)
 
-01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-D complete; E-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (NEW 2026-07-20, supervisor-requested task-level N-robot comm-vs-no-comm study; design + analyzer tooling complete, N2 pilots BLOCKED by a missing Webots working directory, see below).
+01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-D complete; E-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (NEW 2026-07-20, supervisor-requested task-level N-robot comm-vs-no-comm study; design + analyzer tooling complete, N2 pilots in progress, see below).
 
 **New 2026-07-20**: `10_cooperative_exit_navigation_20260720/` studies a
 DIFFERENT question from Objective 5's A-D (which stays frozen, unmodified,
@@ -104,12 +104,15 @@ audit) and Phase 2 (design doc, frozen conditions CSV, a new
 goal/exit-region task-completion analyzer, and a design-only multi-peer
 risk-ranking module) are complete — 29/29 new tests pass, 165/165 existing
 `epuck2_comm` tests still pass (nothing in the frozen controller/protocol
-was touched). **Phase 3 (the two N2 pilots) is BLOCKED**: the Webots
-simulation working directory every prior formal trial depended on
-(`simulation_comm_experiment_v1/working`, documented as living outside
-this git repo) does not exist in this environment as of 2026-07-20. See
+was touched). The external Webots working directory was renamed to
+`2-1.仿真通信实验/working` and has now been located and verified (see
+`experiments/NAMING_CONVENTION.md`) — an earlier note in this document
+claimed it was missing; that was a self-inflicted verification error
+(a stale remembered path was tested instead of reading the orchestrator
+script's own already-correct `WORK_DIR`), now corrected. See
 `experiments/10_cooperative_exit_navigation_20260720/cooperative_exit_navigation_design_20260720.md`
-section 9 and `experiments/project_status.json`'s blocked_items.
+section 9 and `experiments/project_status.json`'s `blocked_items` for the
+full correction record.
 
 ## Formal vs. diagnostic — the distinction that matters most
 

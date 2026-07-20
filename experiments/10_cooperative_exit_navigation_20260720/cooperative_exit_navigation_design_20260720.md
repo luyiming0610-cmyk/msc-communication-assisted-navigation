@@ -206,33 +206,45 @@ N-robot task, not a post-hoc adjustment.
 2. **Phase 2 — design + minimal implementation + tests.** DONE for N2:
    this document, the frozen CSV, `task_completion_analyzer.py` (20/20
    tests), `multi_peer_risk.py` design-only module (9/9 tests, not wired
-   into the controller). NOT done: the N2 Webots world file and
-   orchestrator/launch scripts — **BLOCKED**, see section 9.
-3. **Phase 3 — two exclusionary pilots only** (`N2_COMM_OFF pilot01`,
-   `N2_COMM_ON pilot01`). NOT started — blocked by section 9, and in any
-   case requires the user to manually launch and observe Trial 01 of
-   each formal condition per the separate manual-observation requirement
-   below; pilots themselves may run automatically once the Webots
-   environment is restored, since pilots are diagnostic/exclusionary, not
-   formal Trial01.
+   into the controller). N2 reuses the EXISTING, verified Webots world
+   file and launch scripts (`two_epuck_head_on_clean_world.wbt`,
+   `run_dual_head_on_clean.py`, `dual_namespaced_launch.py` at
+   `2-1.仿真通信实验/working`, see section 9) unmodified; the new
+   deliverable is the N2 orchestrator wrapper and goal-region world
+   overlay described below.
+3. **Phase 3 — two exclusionary pilots only** (`N2_COMM_OFF_EXCLUSIONARY_PILOT01`,
+   `N2_COMM_ON_EXCLUSIONARY_PILOT01`, strictly sequential, COMM_ON only
+   attempted if COMM_OFF's data is valid with no structural scenario
+   error). Pilots are diagnostic/exclusionary and may run automatically;
+   each condition's actual formal Trial 01 still requires the user's own
+   manual launch and observation, per the separate manual-observation
+   requirement below.
 4. **Phase 4 — compare the two pilots**, confirm task/record/success/
    fairness criteria before any formal trial.
 5. **Phase 5 — wait for explicit user confirmation** before running formal
    n=5 or any N3/N4 work.
 
-## 9. BLOCKING ENVIRONMENT FINDING (reported separately in this session's
-   final summary, repeated here for the permanent record)
+## 9. Webots working-directory path correction (2026-07-20, CORRECTED)
 
-The Webots simulation working directory referenced by every prior formal
-trial's orchestrator (`simulation_comm_experiment_v1/working`, documented
-in `PROJECT_HANDOFF.md` as living OUTSIDE the git repo by design) does not
-exist in this environment as of 2026-07-20. Webots itself remains
-installed (`C:\Program Files\Webots`), and all A-D raw evidence remains
-intact at the native WSL bag path (`/home/eamon/epuck_comm_bags/`) — only
-the ephemeral launch/world-file working directory is missing. No Webots
-trial (old or new) can be launched until this is resolved. This blocks
-Phase 3 entirely; it does not block Phases 1-2 (this document, the CSV,
-and the two new analyzer modules), which are complete and tested.
+**Correction, superseding an earlier false-alarm claim in this document's
+first version**: this document originally reported the Webots working
+directory as "missing." That was a self-inflicted verification error, not
+a real environment defect — the check tested a stale path
+(`simulation_comm_experiment_v1/working`) recalled from memory rather than
+reading the actual current orchestrator script. The external Webots
+working directory was renamed to `2-1.仿真通信实验/working` and has now
+been located and verified. `experiments/NAMING_CONVENTION.md` (already in
+the repo, part of the 2026-07-19 folder-renaming pass) documents this exact
+mapping. `run_objective5_impairment_matrix_trial.sh`'s own `WORK_DIR`
+variable was ALREADY correctly updated to the new path — confirmed by
+reading the script directly, not assumed. Read-only content verification
+(`run_dual_head_on_clean.py`, `dual_namespaced_launch.py`, and
+`two_epuck_head_on_clean_world.wbt`) confirms all three are fully
+self-referencing (`WORK_DIR = os.path.dirname(os.path.abspath(__file__))`)
+with no hardcoded old-path string anywhere in their content — the same
+files, unmodified, just under their renamed parent directory. Phase 3 is
+therefore NOT blocked by a missing environment; see the pilot results
+below (or the session's next commit) for actual Phase 3 status.
 
 ## 10. Paper-scope wording (binding)
 

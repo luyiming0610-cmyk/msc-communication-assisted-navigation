@@ -327,14 +327,15 @@ study.
   rule with 9/9 tests pass) and
   `multi_peer_extension_design_20260720.md` (the minimal-change design
   required before any N3/N4 controller change, per instruction).
-- **Phase 3 (2 exclusionary pilots, N2_COMM_OFF/N2_COMM_ON) BLOCKED**: the
-  Webots simulation working directory every prior formal A-D trial
-  depended on (`simulation_comm_experiment_v1/working`, documented as
-  living outside this git repo) does not exist in this environment as of
-  2026-07-20. No Webots trial (old or new) can launch until this is
-  resolved. See `project_status.json`'s `blocked_items` and the design
-  doc's section 9. Full A-D raw evidence remains intact at the native WSL
-  bag path; only the ephemeral world/launch working directory is missing.
+- **Phase 3 (2 exclusionary pilots, N2_COMM_OFF/N2_COMM_ON) in progress**:
+  the external Webots working directory was renamed to
+  `2-1.仿真通信实验/working` and has now been located and verified (see
+  `experiments/NAMING_CONVENTION.md`) -- an earlier note here claimed it
+  was missing; that was a self-inflicted verification error (a stale
+  remembered path was tested instead of the orchestrator's own
+  already-correct `WORK_DIR`), now corrected. See `project_status.json`'s
+  `blocked_items` (kept as an honest record of the mistake and its
+  correction) and the design doc's section 9.
 - Phases 4-5 (pilot comparison; formal n=5 / N3 / N4) not started, and
   per instruction will not auto-start even once Phase 3 is unblocked --
   every condition's formal Trial 01 requires explicit user manual launch
