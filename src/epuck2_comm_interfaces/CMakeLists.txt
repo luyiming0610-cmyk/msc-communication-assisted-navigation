@@ -7,6 +7,8 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/EpuckState.msg"
+  "msg/GoalAnnouncement.msg"
+  "msg/NavigationIntent.msg"
   DEPENDENCIES builtin_interfaces
 )
 

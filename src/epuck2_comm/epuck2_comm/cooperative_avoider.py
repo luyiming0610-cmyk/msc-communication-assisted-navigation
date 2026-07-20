@@ -2,7 +2,7 @@ import math
 import time
 
 import rclpy
-from epuck2_comm_interfaces.msg import EpuckState
+from epuck2_comm_interfaces.msg import EpuckState, NavigationIntent
 from geometry_msgs.msg import Twist
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -45,6 +45,17 @@ class CooperativeAvoider(Node):
         self.declare_parameter("peer_state_topic", "/epuck2/state")
         self.declare_parameter("armed", False)
         self.declare_parameter("desired_heading_rad", 0.0)
+        # shared_exit_navigation: OFF by default, byte-for-byte preserving
+        # every prior study's behavior (Objective 5 A-D, Stage 0). When
+        # enabled, desired_heading is updated live from a NavigationIntent
+        # topic (see _nav_intent_callback) instead of staying fixed at the
+        # launch-time value for the whole trial. CPA avoidance, local
+        # IR/ToF safety-stop, and stale-state handling are unaffected and
+        # remain strictly higher priority -- this input only ever supplies
+        # an advisory direction, never a command, and never itself stops
+        # or starts motion.
+        self.declare_parameter("enable_dynamic_heading", False)
+        self.declare_parameter("nav_intent_timeout_s", 1.0)
         self.declare_parameter("nominal_speed_mps", 0.025)
         self.declare_parameter("avoidance_speed_mps", 0.012)
         self.declare_parameter("turn_rate_rps", 0.65)
@@ -98,6 +109,14 @@ class CooperativeAvoider(Node):
         self.peer_topic = str(self.get_parameter("peer_state_topic").value)
         self.armed = bool(self.get_parameter("armed").value)
         self.desired_heading = float(self.get_parameter("desired_heading_rad").value)
+        self._default_desired_heading = self.desired_heading
+        self.enable_dynamic_heading = bool(
+            self.get_parameter("enable_dynamic_heading").value
+        )
+        self.nav_intent_timeout = float(
+            self.get_parameter("nav_intent_timeout_s").value
+        )
+        self.nav_intent_received_at = None
         self.nominal_speed = float(self.get_parameter("nominal_speed_mps").value)
         self.avoidance_speed = float(self.get_parameter("avoidance_speed_mps").value)
         self.turn_rate = float(self.get_parameter("turn_rate_rps").value)
@@ -259,6 +278,10 @@ class CooperativeAvoider(Node):
             self.create_subscription(
                 EpuckState, self.peer_topic, self._peer_callback, 20
             )
+        if self.enable_dynamic_heading:
+            self.create_subscription(
+                NavigationIntent, "nav_intent", self._nav_intent_callback, 10
+            )
         self.timer = self.create_timer(0.05, self._control)
 
         self.get_logger().info(
@@ -309,6 +332,11 @@ class CooperativeAvoider(Node):
             f"stop after recovery={self.stop_after_recovery}, "
             f"post-recovery hold={self.post_recovery_hold:.2f}s"
         )
+        if self.enable_dynamic_heading:
+            self.get_logger().info(
+                f"dynamic heading ENABLED: nav_intent_timeout={self.nav_intent_timeout:.2f}s, "
+                f"default fallback heading={self._default_desired_heading:.3f}rad"
+            )
 
     def _own_callback(self, message: EpuckState) -> None:
         self.own_state = message
@@ -317,6 +345,17 @@ class CooperativeAvoider(Node):
     def _peer_callback(self, message: EpuckState) -> None:
         self.peer_state = message
         self.peer_received = self._now_s()
+
+    def _nav_intent_callback(self, message: NavigationIntent) -> None:
+        # shared_exit_navigation: advisory only. Invalid messages are
+        # ignored outright (never adopted as a heading) rather than
+        # resetting the freshness clock -- a stream of valid=false
+        # messages must look identical to no messages at all, so the
+        # staleness fallback in _control_body still engages correctly.
+        if not message.valid:
+            return
+        self.desired_heading = float(message.desired_heading_rad)
+        self.nav_intent_received_at = self._now_s()
 
     def _publish(
         self,
@@ -348,8 +387,9 @@ class CooperativeAvoider(Node):
             return float(command.linear.x), float(command.angular.z)
         return target_linear, target_angular
 
-    def _fresh(self, received_at, now: float) -> bool:
-        return received_at is not None and now - received_at <= self.peer_timeout
+    def _fresh(self, received_at, now: float, timeout: float = None) -> bool:
+        limit = self.peer_timeout if timeout is None else timeout
+        return received_at is not None and now - received_at <= limit
 
     def _local_decision(self, now: float):
         if not self.enable_local_avoidance or self.own_state is None:
@@ -675,6 +715,16 @@ class CooperativeAvoider(Node):
             self._publish(0.0, 0.0, force_zero=True)
             self._log(now, metrics, 0.0, 0.0)
             return
+
+        if self.enable_dynamic_heading and not self._fresh(
+            self.nav_intent_received_at, now, self.nav_intent_timeout
+        ):
+            # shared_exit_navigation: never hold a stale heading as if it
+            # were current. Falls back to the launch-time default rather
+            # than stopping -- heading staleness alone is not a safety
+            # condition; CPA/local-avoidance/odometry-staleness above are
+            # the only branches that halt the robot.
+            self.desired_heading = self._default_desired_heading
 
         heading_error = normalize_angle(self.desired_heading - self.own_state.yaw_rad)
         if (
