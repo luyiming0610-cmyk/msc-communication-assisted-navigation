@@ -339,10 +339,15 @@ echo "[$(date -Iseconds)] task_completion_monitor launched (read-only, watching 
 # Robot A ("informed"): navigates directly to the exit from t=0. In
 # COMM_ON, ALSO announces it at a bounded rate. This is Robot A's own
 # a-priori knowledge, not the communication channel under study.
-NAV_A_ARGS=(--robot-id 1 --state-topic /epuck1/state --nav-intent-topic /epuck1/nav_intent
-            --mode informed --target-x "$GOAL_CENTER_X_M" --target-y "$GOAL_CENTER_Y_M" --rate-hz 2.0)
+# Numeric/waypoint values are passed with = syntax throughout (never as
+# a separate token) -- a value that starts with "-" (e.g. a negative
+# coordinate) passed as a separate argv token is misread by argparse as
+# another option flag rather than the current option's value. This was
+# a real bug (PILOT01, --waypoints "-0.2:-0.2,...", fixed here).
+NAV_A_ARGS=(--robot-id=1 --state-topic=/epuck1/state --nav-intent-topic=/epuck1/nav_intent
+            --mode=informed "--target-x=$GOAL_CENTER_X_M" "--target-y=$GOAL_CENTER_Y_M" --rate-hz=2.0)
 if [[ "$COMM_MODE" == "N2_EXIT_COMM_ON" ]]; then
-  NAV_A_ARGS+=(--announce --announce-topic /epuck1/goal_announcement --goal-id "$GOAL_ID")
+  NAV_A_ARGS+=(--announce --announce-topic=/epuck1/goal_announcement "--goal-id=$GOAL_ID")
 fi
 setsid stdbuf -oL -eL python3 "$TOOLS_DIR/goal_navigator.py" "${NAV_A_ARGS[@]}" >"$NAV_LOG_A" 2>&1 &
 NAV_A_PID=$!
@@ -351,11 +356,11 @@ NAV_A_PID=$!
 # OFF/ON. COMM_OFF launches NO subscription to the announcement topic at
 # all -- not merely an unused one -- so there is no code path through
 # which exit information could ever reach it.
-NAV_B_ARGS=(--robot-id 2 --state-topic /epuck2/state --nav-intent-topic /epuck2/nav_intent
-            --mode search --waypoints "$ROBOT_B_WAYPOINTS"
-            --waypoint-arrival-radius "$ROBOT_B_WAYPOINT_ARRIVAL_RADIUS_M" --rate-hz 2.0)
+NAV_B_ARGS=(--robot-id=2 --state-topic=/epuck2/state --nav-intent-topic=/epuck2/nav_intent
+            --mode=search "--waypoints=$ROBOT_B_WAYPOINTS"
+            "--waypoint-arrival-radius=$ROBOT_B_WAYPOINT_ARRIVAL_RADIUS_M" --rate-hz=2.0)
 if [[ "$COMM_MODE" == "N2_EXIT_COMM_ON" ]]; then
-  NAV_B_ARGS+=(--goal-announcement-topic /epuck1/goal_announcement)
+  NAV_B_ARGS+=(--goal-announcement-topic=/epuck1/goal_announcement)
 fi
 setsid stdbuf -oL -eL python3 "$TOOLS_DIR/goal_navigator.py" "${NAV_B_ARGS[@]}" >"$NAV_LOG_B" 2>&1 &
 NAV_B_PID=$!
