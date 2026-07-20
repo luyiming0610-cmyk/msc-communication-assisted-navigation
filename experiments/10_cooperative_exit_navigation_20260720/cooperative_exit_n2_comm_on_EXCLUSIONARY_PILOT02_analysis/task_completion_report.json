@@ -1,0 +1,62 @@
+{
+  "trial_id": "cooperative_exit_n2_comm_on_EXCLUSIONARY_PILOT02",
+  "sample_counts": {
+    "epuck1": 179,
+    "epuck2": 186
+  },
+  "final_positions": {
+    "epuck1": {
+      "x_m": -0.15415409207344055,
+      "y_m": -0.0051232511177659035
+    },
+    "epuck2": {
+      "x_m": 0.15566104650497437,
+      "y_m": 0.005120603367686272
+    }
+  },
+  "ended_by_max_runtime": false,
+  "latched_failsafe": false,
+  "failsafe_causes_seen": [
+    "NONE"
+  ],
+  "path_length_m": {
+    "epuck1": 0.19700257875144778,
+    "epuck2": 0.1954953060600575
+  },
+  "cumulative_heading_change_rad": {
+    "epuck1": 0.5536634624004364,
+    "epuck2": 0.5536634922027588
+  },
+  "stop_duration_s": {
+    "epuck1": 10.660000000000004,
+    "epuck2": 11.54
+  },
+  "edge_based_mode_entry_counts": {
+    "epuck1": {
+      "SAFE_STOP_STALE": 1,
+      "STARTUP_HOLD": 1,
+      "CRUISE": 1,
+      "AVOID_TURN": 1,
+      "AVOID_PASS": 1
+    },
+    "epuck2": {
+      "SAFE_STOP_STALE": 1,
+      "STARTUP_HOLD": 1,
+      "CRUISE": 1,
+      "AVOID_TURN": 1,
+      "AVOID_PASS": 1
+    }
+  },
+  "verdict": {
+    "data_validity": "VALID",
+    "task_outcome": "SUCCESS",
+    "task_outcome_reason": "all 2 robots held the goal region for >= 2.0s; no collision; min pairwise distance 0.309984m >= safety radius",
+    "all_robots_reached_goal": true,
+    "completed_robot_count": 2,
+    "total_robot_count": 2,
+    "makespan_s": 30.42,
+    "minimum_pairwise_distance_m": 0.30998444581475626,
+    "safety_margin_m": 0.16998444581475625,
+    "collision_count": 0
+  }
+}

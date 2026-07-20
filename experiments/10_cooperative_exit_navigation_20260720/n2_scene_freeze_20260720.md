@@ -42,7 +42,7 @@ orchestrator BEFORE every trial, never adjusted after seeing a result)
 | Parameter | Value | Shared by OFF/ON |
 |---|---|---|
 | `goal_center_x_m`, `goal_center_y_m` | 0.0, 0.0 | yes |
-| `goal_radius_m` | 0.5 | yes |
+| `goal_radius_m` | 0.20 (corrected from an initial 0.5 -- see PILOT04 finding below) | yes |
 | `goal_hold_time_s` | 2.0 | yes |
 | `safety_radius_m` | 0.14 (unchanged, per instruction) | yes |
 | `collision_contact_distance_m` | 0.07 | yes |
@@ -51,6 +51,19 @@ orchestrator BEFORE every trial, never adjusted after seeing a result)
 | epuck2 start pose | (0.35, 0, 0), yaw pi | yes |
 | obstacles | none (open arena, `RectangleArena 1.5x1.5`) | yes |
 | world file | `two_epuck_cooperative_exit_n2_world.wbt` | yes (both OFF and ON launch the identical world/scene; only `enable_peer_avoidance` and the relay/no-relay wiring differ) |
+
+## PILOT04 finding: initial goal_radius_m=0.5 was structurally wrong
+
+`N2_COMM_OFF_EXCLUSIONARY_PILOT04` (preserved, excluded, see its own
+`NOTE.md`) exposed that a 0.5 m goal radius is larger than the robots'
+own 0.35 m start-distance from the origin -- both robots' STATIC start
+poses were already inside the goal region, so the monitor's hold timer
+was satisfied before either robot had moved (`path_length_m=0.0` for
+both, still in `STARTUP_HOLD`). `goal_radius_m` was corrected to 0.20
+(and the visual marker's `Cylinder radius` updated to match) BEFORE the
+corrected retry (`PILOT05`) was run -- a pre-run fix of a discovered
+structural flaw, not a post-hoc adjustment to manufacture a particular
+outcome.
 
 ## Task-completion monitor (`task_completion_monitor.py`, new)
 

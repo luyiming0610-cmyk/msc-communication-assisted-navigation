@@ -1,0 +1,58 @@
+{
+  "trial_id": "cooperative_exit_n2_comm_off_EXCLUSIONARY_PILOT06",
+  "sample_counts": {
+    "epuck1": 163,
+    "epuck2": 167
+  },
+  "final_positions": {
+    "epuck1": {
+      "x_m": -0.125929594039917,
+      "y_m": 0.0
+    },
+    "epuck2": {
+      "x_m": 0.12580400705337524,
+      "y_m": 2.745609156613164e-17
+    }
+  },
+  "ended_by_max_runtime": false,
+  "latched_failsafe": false,
+  "failsafe_causes_seen": [
+    "NONE"
+  ],
+  "path_length_m": {
+    "epuck1": 0.22407039999961853,
+    "epuck2": 0.22419598698616028
+  },
+  "cumulative_heading_change_rad": {
+    "epuck1": 0.0,
+    "epuck2": 0.0
+  },
+  "stop_duration_s": {
+    "epuck1": 8.720000000000002,
+    "epuck2": 9.099999999999998
+  },
+  "edge_based_mode_entry_counts": {
+    "epuck1": {
+      "SAFE_STOP_STALE": 1,
+      "STARTUP_HOLD": 1,
+      "CRUISE": 1
+    },
+    "epuck2": {
+      "SAFE_STOP_STALE": 1,
+      "STARTUP_HOLD": 1,
+      "CRUISE": 1
+    }
+  },
+  "verdict": {
+    "data_validity": "VALID",
+    "task_outcome": "SUCCESS",
+    "task_outcome_reason": "all 2 robots held the goal region for >= 2.0s; no collision; min pairwise distance 0.251734m >= safety radius",
+    "all_robots_reached_goal": true,
+    "completed_robot_count": 2,
+    "total_robot_count": 2,
+    "makespan_s": 29.42,
+    "minimum_pairwise_distance_m": 0.25173360109329224,
+    "safety_margin_m": 0.11173360109329222,
+    "collision_count": 0
+  }
+}

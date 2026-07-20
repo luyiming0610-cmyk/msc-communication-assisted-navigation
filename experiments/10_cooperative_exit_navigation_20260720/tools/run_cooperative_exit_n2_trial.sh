@@ -141,9 +141,19 @@ MONITOR_VERDICT="$DIAG_LOG_DIR/monitor_verdict.json"
 # Frozen goal/exit-region parameters (also written into frozen_params.json
 # below) -- single source of truth shared by the orchestrator's own wait
 # loop and the independent task_completion_monitor.py it launches.
+# goal_radius_m corrected 2026-07-20 (post-PILOT04): 0.5 was larger than
+# the robots' own 0.35m start-distance from the origin, so both robots'
+# STATIC start poses were already inside the goal region -- PILOT04's
+# "TASK_COMPLETE_GOAL" fired with path_length_m=0.0 for both robots,
+# still in STARTUP_HOLD, never having moved. 0.20 requires a genuine
+# net displacement (0.35 - 0.20 = 0.15m) before the hold timer can even
+# start, while remaining achievable for two robots simultaneously
+# (0.40m-diameter region comfortably fits two points >= safety_radius_m
+# apart) per prior pilots' trajectory data. See
+# cooperative_exit_n2_comm_off_EXCLUSIONARY_PILOT04_analysis/NOTE.md.
 GOAL_CENTER_X_M=0.0
 GOAL_CENTER_Y_M=0.0
-GOAL_RADIUS_M=0.5
+GOAL_RADIUS_M=0.20
 GOAL_HOLD_TIME_S=2.0
 
 if [[ -e "$NATIVE_BAG_DIR" || -e "$FINAL_DIR" ]]; then
@@ -399,6 +409,13 @@ echo "[$(date -Iseconds)] stopping controller (relay/bag/counter/sim remain runn
 # substitute for a genuine safe-stop.
 stop_pid_group "$CONTROLLER_PID"; CONTROLLER_PID=""
 stop_pid_group "$MONITOR_PID"; MONITOR_PID=""
+# Settle window: state_publisher (a separate, still-running process) is
+# stopped only AFTER this delay, so the bag captures a bit more of the
+# robot's REAL post-stop odometry/velocity (Webots-derived, independent
+# of cmd_vel) -- this is what verify_state_velocity_settled.py checks,
+# not the raw /epuckN/cmd_vel topic (see that script's docstring for why
+# the raw cmd_vel topic's last sample is not a reliable signal here).
+sleep 1.0
 stop_pid_group "$STATE1_PID"; STATE1_PID=""
 stop_pid_group "$STATE2_PID"; STATE2_PID=""
 
@@ -441,21 +458,43 @@ if [[ ! -s "$NATIVE_BAG_DIR/metadata.yaml" ]]; then
 fi
 echo "[$(date -Iseconds)] rosbag metadata.yaml check done" | tee -a "$EXECUTION_LOG"
 
-# Post-hoc, read-only check on the now-closed bag: the last recorded
-# /epuckN/cmd_vel sample for each robot must be zero. Required so a
-# TASK_COMPLETE_GOAL (or CONTROLLER_SELF_COMPLETE) stop is verified to
-# have genuinely zeroed motion, not merely closed the bag mid-command.
+# Post-hoc, read-only checks on the now-closed bag.
+#
+# 1) /epuckN/cmd_vel's raw last sample -- INFORMATIONAL ONLY, not a
+#    DATA_VALIDITY gate. PILOT05 showed this can legitimately be
+#    non-zero even after a clean SIGINT/stop() shutdown: the frozen
+#    stop() method publishes zero 3x then immediately destroy_node()s,
+#    and those final publishes can be lost to a DDS-teardown race before
+#    the bag recorder captures them (the controller's own code comment
+#    acknowledges this: "Motion is also bounded by the driver watchdog,
+#    so cleanup must remain quiet"). Logged for traceability only.
 CMD_VEL_ZERO="true"
 if [[ -s "$NATIVE_BAG_DIR/metadata.yaml" ]]; then
   if ! python3 "$TOOLS_DIR/verify_cmd_vel_zero.py" "$NATIVE_BAG_DIR" /epuck1/cmd_vel /epuck2/cmd_vel 2>&1 | tee -a "$EXECUTION_LOG"; then
     CMD_VEL_ZERO="false"
-    DATA_VALIDITY="INVALID"
-    INVALID_REASON="${INVALID_REASON}final cmd_vel not zero for at least one robot at trial end; "
   fi
 else
   CMD_VEL_ZERO="false"
 fi
-echo "[$(date -Iseconds)] cmd_vel-zero-at-end check done (cmd_vel_zero=$CMD_VEL_ZERO)" | tee -a "$EXECUTION_LOG"
+echo "[$(date -Iseconds)] cmd_vel raw-last-sample check done, INFORMATIONAL ONLY (cmd_vel_zero=$CMD_VEL_ZERO)" | tee -a "$EXECUTION_LOG"
+
+# 2) /epuckN/state.linear_velocity_mps's last sample -- the REAL
+#    DATA_VALIDITY gate. state_publisher keeps running (and the trial
+#    keeps recording) for the 1.0s settle window above, capturing the
+#    robot's ACTUAL physical odometry-derived velocity, independent of
+#    whether a specific cmd_vel message reached the bag before the
+#    controller process exited.
+VELOCITY_SETTLED="true"
+if [[ -s "$NATIVE_BAG_DIR/metadata.yaml" ]]; then
+  if ! python3 "$TOOLS_DIR/verify_state_velocity_settled.py" "$NATIVE_BAG_DIR" /epuck1/state /epuck2/state 2>&1 | tee -a "$EXECUTION_LOG"; then
+    VELOCITY_SETTLED="false"
+    DATA_VALIDITY="INVALID"
+    INVALID_REASON="${INVALID_REASON}robot velocity not settled near zero at trial end; "
+  fi
+else
+  VELOCITY_SETTLED="false"
+fi
+echo "[$(date -Iseconds)] state-velocity-settled check done (velocity_settled=$VELOCITY_SETTLED)" | tee -a "$EXECUTION_LOG"
 
 stop_pid_group "$SIM_PID"; SIM_PID=""
 sleep 2
@@ -503,6 +542,8 @@ cat > "$DIAG_LOG_DIR/trial_verdict.json" <<EOF
   "controller_crashed": $CONTROLLER_CRASHED,
   "ended_by_max_runtime_hits": $MAX_RUNTIME_HITS,
   "cmd_vel_zero_at_end": $CMD_VEL_ZERO,
+  "cmd_vel_zero_at_end_informational_only": true,
+  "velocity_settled_at_end": $VELOCITY_SETTLED,
   "monitor_verdict_present": $MONITOR_VERDICT_PRESENT,
   "monitor_verdict_path": "$MONITOR_VERDICT",
   "queue_drained": $QUEUE_DRAINED,
