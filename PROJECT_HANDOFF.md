@@ -93,26 +93,45 @@ python3 -m pytest test/ -q
 
 ## Experiment categories (full detail: `experiments/EXPERIMENT_INDEX.md`)
 
-01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-D complete; E-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (NEW 2026-07-20, supervisor-requested task-level N-robot comm-vs-no-comm study; design + analyzer tooling complete, N2 pilots in progress, see below).
+01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-D complete; E-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (NEW 2026-07-20, supervisor-requested N2 shared-edge-exit comm-vs-no-comm study; Stage 0 preparatory validation complete, Stage 1 real-exit design in progress, see STAGE_CLASSIFICATION.md).
 
 **New 2026-07-20**: `10_cooperative_exit_navigation_20260720/` studies a
 DIFFERENT question from Objective 5's A-D (which stays frozen, unmodified,
 still the pairwise-CPA-under-communication-impairment evidence): does
-communication PRESENCE (vs none) and robot COUNT affect safety/efficiency
-of N robots reaching a common exit region. Phase 1 (read-only architecture
-audit) and Phase 2 (design doc, frozen conditions CSV, a new
-goal/exit-region task-completion analyzer, and a design-only multi-peer
-risk-ranking module) are complete — 29/29 new tests pass, 165/165 existing
-`epuck2_comm` tests still pass (nothing in the frozen controller/protocol
-was touched). The external Webots working directory was renamed to
+communication help two robots find and reach a shared exit faster/more
+safely. The supervisor's explicit direction (2026-07-20, second round)
+narrowed scope to **N2 only** (N3/N4/Condition E-G/extra parameter
+matrices all deferred, not started) and requires a **real edge/corner
+exit with asymmetric exit-discovery information** (Robot A discovers the
+exit; Robot B does not, and only COMM_ON delivers that information to
+Robot B via a new `GoalAnnouncement`/`ExitAnnouncement` message) --
+not a central rendezvous point, which cannot distinguish "communication
+helped find the exit" from "communication only affected collision
+avoidance."
+
+The project now has a 4-stage evidence chain, indexed in
+`experiments/10_cooperative_exit_navigation_20260720/STAGE_CLASSIFICATION.md`:
+- **Stage 0 (complete, frozen)**: preparatory central-rendezvous work —
+  `PREPARATORY / EXCLUSIONARY / NOT_INCLUDED_IN_FORMAL_STATISTICS`. Not
+  deleted, not rerun, not a research result — it validated the
+  task-completion monitor, the goal-hold judgment logic, the
+  TASK_COMPLETE_GOAL-replaces-max_runtime stop path, a cmd_vel
+  verification race fix, and the full OFF/ON recording+analysis chain.
+  Two real defects were found and fixed by this pilot process itself
+  (start-pose-inside-goal-region; the cmd_vel-verification race) —- see
+  STAGE_CLASSIFICATION.md for the full pilot inventory and commit list.
+- **Stage 1 (in progress)**: the real edge-exit `N2_EXIT_COMM_OFF` vs
+  `N2_EXIT_COMM_ON` study — exactly 2 exclusionary pilots, no formal
+  batch yet.
+- **Stage 2 (not started)**: formal N2 trials, Trial 01 per condition
+  manually launched/observed by the user.
+- **Stage 3 (not started)**: N3/N4 extension.
+
+The external Webots working directory was renamed to
 `2-1.仿真通信实验/working` and has now been located and verified (see
 `experiments/NAMING_CONVENTION.md`) — an earlier note in this document
-claimed it was missing; that was a self-inflicted verification error
-(a stale remembered path was tested instead of reading the orchestrator
-script's own already-correct `WORK_DIR`), now corrected. See
-`experiments/10_cooperative_exit_navigation_20260720/cooperative_exit_navigation_design_20260720.md`
-section 9 and `experiments/project_status.json`'s `blocked_items` for the
-full correction record.
+claimed it was missing; that was a self-inflicted verification error,
+now corrected.
 
 ## Formal vs. diagnostic — the distinction that matters most
 

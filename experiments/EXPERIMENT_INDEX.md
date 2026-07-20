@@ -295,51 +295,48 @@ excluded runs. Nothing here is deleted.
 - Various `cooperative_avoidance_20260716` diagnostic/invalid/interrupted/timeout runs — see `cooperative_avoidance_20260716_diagnostics_and_invalid` registry row and the experiment's own index doc
 - `communication_baseline_20260716/` — registry row `communication_baseline_20260716_stub`; contains exactly one file, an empty (0-byte) stub, no real experiment ever ran here (`artifact_missing`); unrelated to the current Objective 5 comm-baseline work despite the similar name
 
-### 10_cooperative_exit_navigation_20260720 (NEW, DESIGN + TOOLING ONLY -- no trial run yet)
+### 10_cooperative_exit_navigation_20260720 (Stage 0 complete/frozen; Stage 1 real edge-exit design in progress)
 
-Supervisor-requested new task-level study, added 2026-07-20. Does NOT
-modify, delete, or reinterpret any Objective 5 Condition A-D evidence
-(frozen, unchanged). Research question: does communication PRESENCE (vs
-none) and robot COUNT (2/3/4) affect the safety and efficiency of N
-robots cooperatively reaching a common exit/goal region -- a different,
-task-level question from A-D's pairwise-CPA-under-impairment mechanism
-study.
+Supervisor-requested new task-level study, added 2026-07-20, scope
+narrowed by the supervisor a second time (2026-07-20) to N2-only with a
+real edge/corner exit and asymmetric exit-discovery information. Does
+NOT modify, delete, or reinterpret any Objective 5 Condition A-D
+evidence (frozen, unchanged). Full evidence chain is indexed in
+`STAGE_CLASSIFICATION.md` — read that file first.
 
-- **Phase 1 (read-only architecture audit) COMPLETE**:
-  `architecture_audit_multi_robot_20260720.md`. Key finding: N2 (2 robots)
-  needs ZERO changes to the frozen `cooperative_avoider.py` (it already
-  handles exactly 1 peer, and `enable_peer_avoidance=false` already
-  provides COMM_OFF). N3/N4 (2-3 peers per robot) require a genuine
-  multi-peer controller extension that does not exist today.
-- **Phase 2 (design + minimal tooling) COMPLETE for N2**:
-  `cooperative_exit_navigation_design_20260720.md` (research framing,
-  task definition, 6-condition table, fairness rules, pre-registered
-  metrics, phased plan, paper-scope wording),
-  `cooperative_exit_navigation_conditions.csv` (frozen params; only
-  `N2_COMM_OFF`/`N2_COMM_ON` rows are `executable_now`, N3/N4 rows marked
-  `PENDING`/not designed), `tools/task_completion_analyzer.py` (new,
-  ROS-independent goal/exit-region + pairwise-safety + efficiency
-  analyzer, ALL fields unit-tested: single-frame anti-false-trigger,
-  all-robots-required, N=3/N=4 pairwise combinations, DATA_VALIDITY vs
-  TASK_OUTCOME separation, max-runtime never read as success, latched
-  FAILSAFE handling -- 20/20 tests pass), `tools/multi_peer_risk.py`
-  (design-only, NOT wired into the controller, N3/N4 conflict-ranking
-  rule with 9/9 tests pass) and
-  `multi_peer_extension_design_20260720.md` (the minimal-change design
-  required before any N3/N4 controller change, per instruction).
-- **Phase 3 (2 exclusionary pilots, N2_COMM_OFF/N2_COMM_ON) in progress**:
-  the external Webots working directory was renamed to
-  `2-1.仿真通信实验/working` and has now been located and verified (see
-  `experiments/NAMING_CONVENTION.md`) -- an earlier note here claimed it
-  was missing; that was a self-inflicted verification error (a stale
-  remembered path was tested instead of the orchestrator's own
-  already-correct `WORK_DIR`), now corrected. See `project_status.json`'s
-  `blocked_items` (kept as an honest record of the mistake and its
-  correction) and the design doc's section 9.
-- Phases 4-5 (pilot comparison; formal n=5 / N3 / N4) not started, and
-  per instruction will not auto-start even once Phase 3 is unblocked --
-  every condition's formal Trial 01 requires explicit user manual launch
-  and observation.
+**Stage 0 — preparatory shared-goal mechanism validation (COMPLETE,
+`PREPARATORY / EXCLUSIONARY / NOT_INCLUDED_IN_FORMAL_STATISTICS`)**:
+the original central-rendezvous scenario. Not a research result, not
+deleted, not rerun — it validated `task_completion_monitor.py`, the
+goal-hold judgment logic, the `TASK_COMPLETE_GOAL`-replaces-
+`max_runtime_s` stop path, and the full OFF/ON record+analyze chain, and
+surfaced/fixed two real defects (start-pose-inside-goal-region; a
+cmd_vel-verification DDS-teardown race). 8 pilot attempts total, 2 of
+which (`N2_COMM_OFF_EXCLUSIONARY_PILOT06`, `N2_COMM_ON_EXCLUSIONARY_
+PILOT02`) reached genuine, non-degenerate `TASK_OUTCOME=SUCCESS` — see
+`STAGE_CLASSIFICATION.md`'s pilot inventory table for all 8 with
+disposition and evidence links. Phase 1 (read-only architecture audit,
+`architecture_audit_multi_robot_20260720.md`) and the Phase 2 design/
+tooling that Stage 0 built on remain valid and are reused by Stage 1
+(`task_completion_analyzer.py`, `multi_peer_risk.py`/
+`multi_peer_extension_design_20260720.md` design for a future N3/N4,
+not yet needed).
+
+**Stage 1 — two-robot shared EDGE exit pilot (IN PROGRESS)**: real
+edge/corner exit (not central rendezvous), asymmetric exit-discovery
+(Robot A discovers the exit; Robot B does not, and only `N2_EXIT_
+COMM_ON` delivers that information to Robot B via a new task-specific
+message), a minimal goal-directed navigation layer (the frozen
+`cooperative_avoider.py` only holds a fixed heading, not closed-loop
+navigation), and a deterministic, OFF/ON-identical search strategy for
+Robot B before it learns the exit. See `edge_exit_design_20260720.md`.
+Exactly 2 exclusionary pilots planned (`N2_EXIT_COMM_OFF_EXCLUSIONARY_
+PILOT01`, `N2_EXIT_COMM_ON_EXCLUSIONARY_PILOT01`); N3/N4/Condition E-G/
+extra parameter matrices explicitly deferred, not started.
+
+**Stage 2 (formal N2 trials) / Stage 3 (N3/N4 extension)**: not started.
+Every condition's formal Trial 01 requires explicit user manual launch
+and observation; Trial 02-05 only after explicit authorization.
 
 ## Known open/unconfirmed items from this indexing pass
 
