@@ -1,0 +1,107 @@
+{
+  "study": "N2 shared edge-exit navigation, with/without communication",
+  "frozen_on": "2026-07-20",
+  "revision": 1,
+  "world_file": "shared_exit_n2_world.wbt",
+  "world_file_note": "NEW, additive world file. Does not modify two_epuck_head_on_clean_world.wbt (Objective 5 A-D) or two_epuck_cooperative_exit_n2_world.wbt (Stage 0).",
+  "arena_floor_size_m": [1.5, 1.5],
+  "arena_half_extent_m": 0.75,
+  "robot_radius_m": 0.037,
+  "robot_radius_m_source": "e-puck2 70mm body diameter, GCtronic spec",
+  "exit": {
+    "center_x_m": 0.50,
+    "center_y_m": 0.50,
+    "goal_hold_radius_m": 0.10,
+    "gate_posts_m": [[0.244, 0.456], [0.456, 0.244]],
+    "gate_width_m": 0.300,
+    "marker": "two non-colliding post markers (the gate) plus a non-colliding rectangular completion-zone marker behind the gate at the goal center; judgment region stays circular (task_completion_analyzer.GoalRegion, proven/tested), visual marker is rectangular"
+  },
+  "obstacle": {
+    "center_x_m": 0.15,
+    "center_y_m": -0.15,
+    "size_m": [0.08, 0.08, 0.10],
+    "collision_enabled": true,
+    "note": "Confirmed (verify_shared_exit_geometry.py) to intersect Robot B's waypoint search path (min distance 0.000m) and to clear Robot A's direct path (min distance 0.688m) -- asymmetric by design, frozen before any pilot runs."
+  },
+  "robots": {
+    "robot_a": {
+      "role": "informed -- navigates directly toward its own a-priori known exit location from t=0",
+      "start_x_m": 0.10,
+      "start_y_m": 0.55,
+      "start_yaw_rad": 0.0,
+      "straight_line_distance_to_exit_m": 0.4031
+    },
+    "robot_b": {
+      "role": "uninformed -- deterministic waypoint search until exit known (OFF: never; ON: upon receiving a valid GoalAnnouncement)",
+      "start_x_m": -0.20,
+      "start_y_m": -0.20,
+      "start_yaw_rad": 0.785,
+      "straight_line_distance_to_exit_m": 0.9899,
+      "search_waypoints_m": [
+        [-0.20, -0.20],
+        [0.05, -0.35],
+        [0.25, 0.05],
+        [0.50, 0.50]
+      ],
+      "search_waypoint_arrival_radius_m": 0.10,
+      "search_path_total_length_m": 1.2535
+    }
+  },
+  "safety_radius_m": 0.14,
+  "collision_contact_distance_m": 0.07,
+  "goal_hold_time_s": 2.0,
+  "startup_hold_s": 5.0,
+  "max_runtime_s": 55.0,
+  "max_runtime_s_computation": "robot_b_search_path_time_s(31.34 = 1.2535m / 0.04m/s) + startup_hold_s(5.0) + avoidance_detour_margin_s(~6.3, 20% of search time) + goal_hold_time_s(2.0) + shutdown_settle_buffer_s(~3.0) = ~47.6s, rounded up to 55.0s (~15% extra buffer)",
+  "nominal_speed_mps": 0.04,
+  "nominal_speed_mps_note": "Overrides cooperative_avoider.py's default 0.025 via its already-declared, mutable ROS parameter -- not one of the frozen CPA formula / safety radius / local sensor threshold items. Frozen, identical OFF/ON, set before any pilot runs, never adjusted after seeing results.",
+  "communication": {
+    "off": {
+      "peer_cpa_avoidance": false,
+      "goal_announcement_publisher_launched": false,
+      "goal_announcement_subscriber_launched": false,
+      "robot_a_navigation": "goal_navigator targets its own known exit location directly",
+      "robot_b_navigation": "goal_navigator follows the frozen waypoint sequence, final waypoint is the exit itself"
+    },
+    "on": {
+      "peer_cpa_avoidance": true,
+      "goal_announcement_publisher_launched": true,
+      "goal_announcement_subscriber_launched": true,
+      "robot_a_navigation": "same as OFF, plus publishes GoalAnnouncement at a bounded rate from trial start",
+      "robot_b_navigation": "same waypoint search as OFF until the first valid, fresh GoalAnnouncement is received, then goal_navigator switches target to the announced exit location"
+    },
+    "paper_note": "COMM_ON combines exit-information sharing AND peer CPA coordination; the reported effect is their combined effect. No ablation isolating one mechanism from the other is run in this phase."
+  },
+  "fairness": {
+    "shared_between_off_and_on": [
+      "world_file", "obstacle", "robot_a start pose", "robot_b start pose",
+      "robot_b search_waypoints_m", "exit center/radius/gate geometry",
+      "safety_radius_m", "collision_contact_distance_m", "goal_hold_time_s",
+      "startup_hold_s", "max_runtime_s", "nominal_speed_mps",
+      "local IR/ToF avoidance logic and thresholds (frozen, unmodified)"
+    ],
+    "differs_between_off_and_on": [
+      "enable_peer_avoidance", "GoalAnnouncement publisher/subscriber presence"
+    ]
+  },
+  "messages": {
+    "goal_announcement": {
+      "name": "epuck2_comm_interfaces/msg/GoalAnnouncement.msg",
+      "fields": [
+        "uint32 protocol_version", "uint32 source_robot_id", "uint32 sequence",
+        "builtin_interfaces/Time production_stamp", "string goal_id",
+        "float64 goal_x_m", "float64 goal_y_m", "bool valid"
+      ]
+    },
+    "navigation_intent": {
+      "name": "epuck2_comm_interfaces/msg/NavigationIntent.msg",
+      "fields": [
+        "uint32 protocol_version", "uint32 source_robot_id", "uint32 sequence",
+        "builtin_interfaces/Time production_stamp", "float64 desired_heading_rad",
+        "bool valid"
+      ],
+      "topic": "nav_intent (relative, own namespace only -- not cross-robot)"
+    },
+    "epuckstate_protocol_version_unaffected": true
+  }
+}

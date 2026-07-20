@@ -1,4 +1,5 @@
 {
+  "SUPERSEDED_BY": "shared_exit_frozen_params.json (Revision 1, 2026-07-20 second review round -- nominal_speed_mps corrected 0.06->0.04, max_runtime_s recomputed from verified geometry, goal geometry moved/re-verified, topic-based navigation-intent interface replaces the parameter-callback approach). This file is kept, not deleted, as the first-draft record.",
   "study": "N2 shared edge-exit navigation, with/without communication",
   "frozen_on": "2026-07-20",
   "world_file": "two_epuck_shared_exit_n2_world.wbt",

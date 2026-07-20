@@ -268,6 +268,148 @@ any collision; analyzer parameters hardcoded/mismatched against the
 frozen scene; OFF/ON scenario found to differ in anything other than
 communication access.
 
+## Revision 1 (2026-07-20, second review round)
+
+Five corrections applied before any implementation:
+
+1. **`nominal_speed_mps=0.04`** (not 0.06). Reason: local IR/ToF safety
+   behavior was primarily validated at the lower speed; raising it
+   introduces an untested safety variable, and simulation-vs-physical
+   Pi-puck consistency needs to stay in view. Frozen, identical OFF/ON,
+   never adjusted after seeing pilot results.
+2. **`max_runtime_s` computed from geometry, not guessed.** Computed by
+   `verify_shared_exit_geometry.py` (Section "Verified geometry" below):
+   Robot B's full worst-case waypoint search path is 1.2535m; at
+   0.04 m/s that is 31.34s. Adding `startup_hold_s=5.0s` (existing
+   controller default), a 20% avoidance-detour margin (~6.3s),
+   `goal_hold_time_s=2.0s`, and an orchestrator settle/shutdown buffer
+   (~3s) gives ≈47.6s; rounded up to **`max_runtime_s=55.0`** for a
+   ~15% extra buffer.
+3. **Goal-directed heading interface is a ROS2 topic, not a parameter
+   callback.** A new `goal_navigator.py` node computes
+   `desired_heading_rad` from `/epuckN/state` and the current target
+   (frozen local knowledge or a received announcement), and publishes it
+   on a topic as a strongly-typed `NavigationIntent` message (Section
+   "Navigation-intent message" below) — not raw floats, not shoved into
+   an unrelated field. `cooperative_avoider.py` gains one new,
+   **default-disabled** subscription (`enable_dynamic_heading=false`
+   preserves A-D behavior byte-for-byte); when enabled, the subscription
+   has its own freshness check (mirroring the existing `_fresh()`
+   pattern already used for own/peer state) and a well-defined fallback
+   on stale/invalid input — see Section "Controller subscription
+   design". CPA avoidance, local IR/ToF safety-stop, and stale-state
+   handling remain strictly higher priority; the navigation-intent
+   subscription can never itself stop or override them.
+4. **Geometry independently verified before any code was written** —
+   see below; goal region, gate posts, obstacle, and both start poses
+   checked against the real arena half-extent (0.75m, from
+   `RectangleArena floorSize 1.5 1.5`) and the e-puck2's documented
+   0.037m body radius (GCtronic spec, 70mm diameter). All fail-fast
+   checks pass (`verify_shared_exit_geometry.py`, script committed,
+   re-runnable, output below is exact, not hand-computed).
+5. **Metrics are trial-relative, not absolute sim-clock**, and **all
+   scene parameters are read from `shared_exit_frozen_params.json` by
+   the analyzer, never hardcoded** — both were real defects caught in
+   Stage 0 (`makespan_s` was reported as raw absolute sim time in the
+   first Stage 0 report; the scratchpad analyzer script hardcoded a
+   copy of the goal radius that drifted out of sync with the
+   orchestrator's own frozen value after PILOT04's fix). The Stage 1
+   analyzer normalizes every timestamp to each trial's own first sample
+   and loads all scene geometry from the frozen-params file at runtime.
+
+### Verified geometry (from `verify_shared_exit_geometry.py`, all checks PASS)
+
+| Quantity | Value |
+|---|---|
+| Arena half-extent | 0.75m (`RectangleArena floorSize 1.5 1.5`) |
+| Robot body radius | 0.037m (e-puck2 70mm diameter, GCtronic spec) |
+| Goal/exit region | center (0.50, 0.50), radius 0.10m |
+| Wall clearance (goal region + robot radius) | 0.113m on both +x/+y walls, 0.217m to the corner point |
+| Gate posts (visual only, non-colliding) | (0.244, 0.456) and (0.456, 0.244); gate width 0.300m ≈ 4.05× robot diameter |
+| Obstacle (real, colliding) | center (0.15, -0.15), 0.08×0.08×0.10m box |
+| Robot A start | (0.10, 0.55); 0.403m from goal center; obstacle clearance 0.688m from A's direct path |
+| Robot B start | (-0.20, -0.20); 0.990m from goal center; obstacle intersects B's waypoint path (min distance 0.000m ≤ 0.077m threshold — confirmed, not assumed) |
+| Robot B search waypoints | (-0.20,-0.20) → (0.05,-0.35) → (0.25,0.05) → (0.50,0.50); total path 1.2535m |
+
+Neither start pose is inside the goal region (0.403m and 0.990m vs.
+0.10m radius) — the exact failure mode Stage 0's PILOT04 exposed does
+not recur here, verified computationally before any pilot runs.
+
+A real Webots top-down screenshot of the built world (not this computed
+diagram) will be captured and included before Phase 3 pilots run, per
+instruction.
+
+### Navigation-intent message
+
+`epuck2_comm_interfaces/msg/NavigationIntent.msg` (new, independent of
+`EpuckState.msg` PROTOCOL_VERSION=1, which is not modified):
+
+```
+uint32 protocol_version
+uint32 source_robot_id
+uint32 sequence
+builtin_interfaces/Time production_stamp
+float64 desired_heading_rad
+bool valid
+```
+
+Published by `goal_navigator.py` at a modest, bounded rate (2 Hz) on
+each robot's own namespaced topic (e.g. `/epuck1/nav_intent`) — a
+robot's navigator publishes only for that same robot's controller to
+consume (never cross-robot; this is not a communication channel between
+the two robots, `GoalAnnouncement` is that channel).
+
+### Controller subscription design (`cooperative_avoider.py`, the one proposed code change)
+
+- New parameters: `enable_dynamic_heading` (bool, default `false`),
+  `nav_intent_timeout_s` (float, default matching the existing
+  `peer_timeout_s` pattern).
+- When `enable_dynamic_heading=false` (the default, and Objective 5 A-D
+  and Stage 0's exact configuration): no subscription is created, no
+  behavior changes — byte-for-byte identical to today.
+- When `true`: subscribes to `nav_intent` (relative topic, own
+  namespace). On each message, if `valid` and the message's own
+  `production_stamp` is fresh (same `_fresh()` freshness pattern already
+  used for own/peer `EpuckState`), updates `self.desired_heading`. If no
+  message has ever arrived, or the latest one is stale or `valid=false`,
+  the controller **falls back to the launch-time default
+  `desired_heading_rad` parameter value** (already declared today) —
+  never holds a stale heading as if it were current, and never stops
+  the robot solely because of heading staleness. CPA avoidance, local
+  IR/ToF safety-stop, and `SAFE_STOP_STALE`/`SAFE_STOP_INVALID_ODOM`
+  remain the only branches that can halt the robot; heading input is
+  advisory only, exactly as `desired_heading_rad` already is today.
+
+### Communication-condition definitions (restated precisely)
+
+**`N2_EXIT_COMM_OFF`**: Robot A navigates directly toward its known exit
+location (own local knowledge, `enable_dynamic_heading=true` fed by its
+own `goal_navigator` targeting the frozen exit coordinates — this is
+not "communication", it is Robot A's own a-priori information). Robot B
+runs the frozen deterministic waypoint search, `enable_dynamic_heading=true`
+fed by its own `goal_navigator` targeting its current waypoint, ending at
+the exit coordinates as its final waypoint. **No `GoalAnnouncement`
+publisher or subscriber is launched for either robot** — Robot B has no
+code path that could ever receive exit information, not merely an
+unused topic. **Peer CPA avoidance is disabled** (`enable_peer_avoidance=false`,
+matching Stage 0's COMM_OFF definition) — each robot uses only its own
+state and local IR/ToF avoidance.
+
+**`N2_EXIT_COMM_ON`**: Robot A additionally publishes `GoalAnnouncement`
+(own exit knowledge) at a bounded rate from the start of the trial.
+Robot B subscribes; on the first valid, fresh announcement, its
+`goal_navigator` switches its target from the current search waypoint
+to the announced exit coordinates (recorded as
+`robot_b_search_to_goal_switch_time_s`), and continues navigating with
+`enable_dynamic_heading=true`. **Peer CPA avoidance is enabled**
+(`enable_peer_avoidance=true`) for both robots. Local IR/ToF avoidance
+stays enabled in both conditions, unchanged.
+
+**Stated limitation (for the paper, not re-litigated here)**: COMM_ON
+combines two mechanisms — exit-information sharing AND peer CPA
+coordination. The reported COMM_ON vs. COMM_OFF effect is their combined
+effect; no ablation isolating one from the other is run in this phase.
+
 ## 9. Execution plan
 
 - **Phase 1 (this document + frozen params) — COMPLETE.**
