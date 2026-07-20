@@ -1,0 +1,43 @@
+{
+  "purpose": "Five pre-registered paired scenario seeds for the eventual formal n=5 OFF/ON batch (Part VII). DESIGN ONLY -- not wired into the orchestrator, not executed. seed_01 is the current, already-implemented default (used by all pilots to date). seed_02-05 are frozen here for later implementation; no formal n=5 run and no N3/N4 scope is authorized by this file.",
+  "frozen_on": "2026-07-20",
+  "rule": "OFF Trial N and ON Trial N MUST use the identical seed. A seed varies ONLY a pre-registered small start-pose offset and/or Robot B's frozen waypoint visiting order -- never the exit location, parking zones, gate geometry, safety thresholds, or nominal_speed_mps. All five seeds are frozen before any formal trial; none may be added, removed, or edited afterward without a new, explicitly-reasoned revision.",
+  "seeds": [
+    {
+      "seed_id": "seed_01",
+      "status": "CURRENT DEFAULT -- already implemented and in use for PILOT04-07",
+      "robot_a_start_offset_m": [0.0, 0.0],
+      "robot_b_start_offset_m": [0.0, 0.0],
+      "robot_b_waypoint_order": "as frozen in shared_exit_frozen_params.json robots.robot_b.search_waypoints_m (index order 0,1,2,3)"
+    },
+    {
+      "seed_id": "seed_02",
+      "status": "DESIGNED, NOT IMPLEMENTED",
+      "robot_a_start_offset_m": [0.02, 0.0],
+      "robot_b_start_offset_m": [0.0, 0.0],
+      "robot_b_waypoint_order": "unchanged (index order 0,1,2,3)"
+    },
+    {
+      "seed_id": "seed_03",
+      "status": "DESIGNED, NOT IMPLEMENTED",
+      "robot_a_start_offset_m": [0.0, 0.0],
+      "robot_b_start_offset_m": [0.0, 0.0],
+      "robot_b_waypoint_order": "interior waypoints 1 and 2 swapped (index order 0,2,1,3) -- start and final (exit) waypoint unchanged, only the two intermediate search waypoints visited in reverse order"
+    },
+    {
+      "seed_id": "seed_04",
+      "status": "DESIGNED, NOT IMPLEMENTED",
+      "robot_a_start_offset_m": [0.0, 0.0],
+      "robot_b_start_offset_m": [0.0, 0.02],
+      "robot_b_waypoint_order": "unchanged (index order 0,1,2,3)"
+    },
+    {
+      "seed_id": "seed_05",
+      "status": "DESIGNED, NOT IMPLEMENTED",
+      "robot_a_start_offset_m": [0.02, -0.02],
+      "robot_b_start_offset_m": [-0.02, 0.02],
+      "robot_b_waypoint_order": "unchanged (index order 0,1,2,3)"
+    }
+  ],
+  "current_pilot_scope": "This round of pilots (PILOT04-07) uses seed_01 only, per instruction. seed_02-05 remain a frozen design for a future, separately-authorized formal n=5 batch."
+}

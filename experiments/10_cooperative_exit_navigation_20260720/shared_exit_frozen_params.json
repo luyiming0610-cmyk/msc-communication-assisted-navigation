@@ -1,8 +1,9 @@
 {
   "study": "N2 shared edge-exit navigation, with/without communication",
   "frozen_on": "2026-07-20",
-  "revision": 2,
+  "revision": 3,
   "revision_2_note": "Obstacle confound removed from the CORE study world per the root-cause audit (root_cause_audit_dynamic_heading_20260720.md); arrival latching (ARRIVED_HOLD) and two post-exit parking zones added. world_file below is now the obstacle-free core world used for PILOT04(OFF)/PILOT01(ON) onward. diagnostic_world_file preserves the ORIGINAL obstacle-containing world, still used only by the EXCLUDED_OBSTACLE_CONFOUNDED_DIAGNOSTIC pilots (PILOT01-03), never deleted.",
+  "revision_3_note": "Analytic exit-geometry redesign after PILOT04-06 (all EXCLUDED_EXIT_GEOMETRY_DIAGNOSTIC, preserved). All visual markers moved to z=0.20m (empirically confirmed, via a one-time read-only sensor_ray_height_audit.sh smoke test, to be outside the e-puck ToF/IR sensor's detection height); parking-zone placement re-derived analytically (see parking_zones.clearance_analysis); max_runtime_s recomputed with an explicit one-local-encounter-resolution allowance. See PROJECT-level exit_geometry_audit_20260720.md for the full analysis, diagrams, and sensor-ray audit results.",
   "world_file": "shared_exit_n2_obstacle_free_world.wbt",
   "world_file_note": "NEW, additive world file, obstacle-free core study world. Does not modify two_epuck_head_on_clean_world.wbt (Objective 5 A-D), two_epuck_cooperative_exit_n2_world.wbt (Stage 0), or diagnostic_world_file below.",
   "diagnostic_world_file": "shared_exit_n2_world.wbt",
@@ -17,16 +18,36 @@
     "goal_hold_radius_m": 0.10,
     "gate_posts_m": [[0.244, 0.456], [0.456, 0.244]],
     "gate_width_m": 0.300,
-    "marker": "two non-colliding post markers (the gate) plus a non-colliding rectangular completion-zone marker behind the gate at the goal center; judgment region stays circular (task_completion_analyzer.GoalRegion, proven/tested), visual marker is rectangular",
+    "marker": "revision 3: gate posts, the completion-zone marker, and both parking-zone markers are ALL elevated to z=0.20m (Transform nodes, purely visual) -- empirically confirmed outside the e-puck ToF/IR sensor's detection height via sensor_ray_height_audit.sh, replacing the revision-1/2 low-height (z=0-0.06m) markers that PILOT04-06 proved were being genuinely, repeatedly detected as real obstacles. Judgment region stays the same circular, software-only region (task_completion_analyzer.GoalRegion / GoalHoldTracker) it always was -- markers are cosmetic and were never load-bearing for the task logic itself, only for local IR/ToF avoidance, which is exactly what made their sensor-visibility a defect.",
     "role": "single shared informational/navigation target -- both robots' current_target and Robot A's GoalAnnouncement content, common to both conditions and both robots. NOT a per-robot completion criterion as of revision 2 (see parking_zones)."
+  },
+  "sensor_ray_height_audit": {
+    "method": "sensor_ray_height_audit.sh + sensor_ray_height_audit_world.wbt (read-only, one-time smoke test, NOT a pilot -- no controller motion, no scoring, no bag evidence directory). A single stationary e-puck at the origin, a test marker placed 0.15m directly ahead at z=0.20m (height 0.02m box), state_publisher's fused front_distance_m read once settled.",
+    "result": "front_distance_m=0.7191m, matching the far arena wall distance, NOT the 0.15m-away marker -- the elevated marker produced NO detection.",
+    "conclusion": "Webots' e-puck ToF/IR DistanceSensor ray-casting IS height-selective in practice: geometry at z>=0.20m escapes detection, while low geometry (z=0-0.06m, confirmed via PILOT04-06 bag evidence: front_distance_m oscillating 0.17-1.0m+ as the robot spun in place near a gate post and separately near a parking marker, left/right staying inf) is genuinely detected. The PILOT05 hypothesis that Solid-vs-Transform node type mattered is DISPROVEN by this same evidence (ray-casting queries the rendered scene graph regardless of node type) -- height above the sensor's effective range is the actual determining factor.",
+    "other_categories_verified_by_existing_evidence_not_a_new_test": {
+      "wall": "Genuinely detected (expected/required) -- confirmed by this same smoke test (0.7191m reading matches the RectangleArena wall distance).",
+      "other_robot": "Genuinely detected (expected, by design) -- established throughout this project's controller_v4 development history (e.g. pilot_v4_b2 fusion regression, the combined box+moving-peer exclusionary pilot) and consistent with PILOT04-06's overlapping-encounter timing.",
+      "floor_marker_and_parking_marker_low_height": "Genuinely detected -- confirmed directly by PILOT05 (front_distance_m oscillation at 0.073m from a z=0.001m parking marker) and PILOT06 (0.1506m from a z=0.03m gate post)."
+    }
   },
   "parking_zones": {
     "note": "Post-exit safe zero-velocity holding points (Part V), NOT a second task goal -- the shared exit above stays the single informational target for navigation/announcement. Each robot's goal_navigator switches current_target from the shared exit to its OWN parking point once it geometrically enters the exit region (radius exit.goal_hold_radius_m around exit center); ARRIVED_HOLD latches, and individual_completion_time_s is recorded, only once a robot continuously holds inside its OWN parking region for goal_hold_time_s. task_completion_monitor.py uses the SAME two regions so its verdict cannot disagree with either robot's own navigator.",
-    "revision_2b_note": "PILOT04 (EXCLUDED, preserved as diagnostic evidence, not the core-study count) proved the original (0.64,0.50)/(0.50,0.64) placement -- 0.198m apart -- satisfied the literal >0.14m safety_radius_m spacing requirement but NOT the local IR/ToF sensor's own local_front_warn_m=0.180m/local_front_release_m=0.220m detection range: Robot B's transit leg to its own zone passed close enough to Robot A's stationary parking position to trip the frozen TURN_LEDGER_CEILING failsafe (a real, unmodified safety mechanism working as designed, not a defect). Geometry revised here to place both zones further from the shared exit center along near-opposite directions (offset along the exit-to-corner diagonal, then split by a larger perpendicular offset, mirroring the existing gate-post layout), raising true center-to-center spacing to ~0.30m -- comfortably clear of both the safety_radius_m requirement and the local sensor's detection range. Local avoidance thresholds themselves (local_front_warn_m, TURN_LEDGER_CEILING, etc.) are NOT touched.",
-    "robot_a": {"center_x_m": 0.6273, "center_y_m": 0.4151, "radius_m": 0.04},
-    "robot_b": {"center_x_m": 0.4151, "center_y_m": 0.6273, "radius_m": 0.04},
-    "center_to_center_distance_m": 0.3001,
-    "center_to_center_distance_note": "Computed as two points offset +-0.15m along the perpendicular to the exit-to-corner diagonal from a point 0.03m beyond the exit center along that diagonal -- the perpendicular offset alone gives center-to-center distance = 2*0.15 = 0.30m exactly (the along-diagonal component cancels), comfortably exceeding both the >0.14m safety_radius_m requirement and the local sensor's local_front_release_m=0.220m detection range even after accounting for each zone's own 0.04m radius and each robot's 0.037m body radius."
+    "revision_3_note": "Analytic redesign (no further trial-and-error pilots) after PILOT04-06. PILOT04/05/06 (all EXCLUDED_EXIT_GEOMETRY_DIAGNOSTIC, preserved) proved the true root cause was NOT primarily parking-zone spacing but LOW-HEIGHT visual markers (gate posts z=0-0.06m, parking/completion markers z~0.001m) being genuinely detected by the e-puck ToF/IR ray-cast regardless of Solid vs Transform node type (a disproven PILOT05 hypothesis) -- confirmed by a one-time, read-only sensor_ray_height_audit.sh smoke test: a marker elevated to z=0.20m produced NO detection (front_distance_m read the far wall, not the 0.15m-away marker), while low markers were repeatedly detected in PILOT04-06 bag evidence. Fix: ALL visual markers (gate, completion zone, both parking zones) moved to z=0.20m in shared_exit_n2_obstacle_free_world.wbt -- purely visual, outside the sensor's detection height entirely, confirmed empirically, not assumed. Parking-zone placement independently maximized within this 1.5x1.5m arena's wall constraints (offset 0.03m past the exit center along the exit-to-corner diagonal, then split +-0.185m along the perpendicular, mirroring the gate layout) -- see robot_a/robot_b below. local_obstacle_logic.py, CPA formula, IR/ToF thresholds, safety_radius_m, and DURATION_CEILING remain untouched throughout.",
+    "robot_a": {"center_x_m": 0.6520, "center_y_m": 0.3904, "radius_m": 0.04},
+    "robot_b": {"center_x_m": 0.3904, "center_y_m": 0.6520, "radius_m": 0.04},
+    "center_to_center_distance_m": 0.3700,
+    "clearance_analysis": {
+      "parked_vs_parked_requirement_m": 0.324,
+      "parked_vs_parked_requirement_formula": "local_sensor_release_m(0.220) + 2*robot_radius_m(2*0.037=0.074) + geometry_margin_m(0.03)",
+      "parked_vs_parked_achieved_m": 0.3700,
+      "parked_vs_parked_status": "SATISFIED -- both robots' final resting positions clear the requirement with a 0.046m margin.",
+      "robot_b_transit_path_vs_parked_robot_a_requirement_m": 0.324,
+      "robot_b_transit_path_vs_parked_robot_a_achieved_m": 0.2018,
+      "robot_b_transit_path_vs_parked_robot_a_status": "NOT FULLY SATISFIED -- computed from Robot B's actual, deterministic, frozen final-waypoint approach bearing (not a worst-case any-angle bound, which is geometrically infeasible in this 1.5x1.5m arena at this exit location: even the maximum wall-clearance-respecting parking offset only reaches ~0.19m from the exit center, and the exit region itself has a 0.10m radius, so no placement can guarantee the 0.324m any-angle target here). This is the maximum achievable separation without moving the exit off its current edge/corner position or altering robot start poses/waypoints. A single, bounded local-avoidance encounter near the shared exit is therefore expected and explicitly budgeted into max_runtime_s (one_local_encounter_allowance_s, sized to the frozen local_v4_max_encounter_duration_s=25.0s DURATION_CEILING) rather than assumed away.",
+      "max_feasible_offset_perp_m_wall_limited": 0.2146,
+      "chosen_offset_perp_m": 0.185
+    }
   },
   "obstacle": {
     "center_x_m": 0.15,
@@ -64,8 +85,8 @@
   "collision_contact_distance_m": 0.07,
   "goal_hold_time_s": 2.0,
   "startup_hold_s": 5.0,
-  "max_runtime_s": 68.0,
-  "max_runtime_s_computation": "revision 2b, recomputed for the obstacle-free core world + revised (wider) parking-zone handoff, frozen before any pilot run: robot_b_search_path_time_s(31.3375 = 1.2535m / 0.04m/s) + exit_to_parking_extension_time_s(3.825 = ~0.153m / 0.04m/s, the longer of the two robots' exit-region-boundary-to-own-parking-zone legs) + turning_time_allowance_s(10.0, ~4 waypoint/handoff turns at (pi/2)/turn_rate_rps=0.65rad/s ~= 2.42s/turn, rounded up) + startup_hold_s(5.0) + goal_hold_time_s(2.0) = 52.1625s core, x1.30 (>=30% margin, per pre-registered rule, not tuned to any pilot result) = 67.81s, rounded up to 68.0s (unchanged from the revision-2 value -- the wider parking-zone spacing only added ~0.3s to the core sum, absorbed by the existing margin, so no adjustment was needed after PILOT04's finding).",
+  "max_runtime_s": 102.0,
+  "max_runtime_s_computation": "revision 3, recomputed analytically after PILOT04-06 (authorized one-time revision before the formal experiment; not to be adjusted again post-hoc). Terms: startup_hold_s(5.0) + robot_b_frozen_search_path_time_s(31.3375 = 1.2535m / 0.04m/s) + pre_registered_turning_time_allowance_s(10.0, ~4 waypoint/handoff turns at (pi/2)/turn_rate_rps=0.65rad/s ~= 2.42s/turn, rounded up) + goal_hold_time_s(2.0) + parking_zone_transit_time_s(4.685 = 0.1874m exit-center-to-own-parking-zone distance / 0.04m/s, a conservative upper bound covering the whole post-switch leg) + one_local_encounter_allowance_s(25.0, sized to the frozen, unmodified local_v4_max_encounter_duration_s DURATION_CEILING -- budgets for the single bounded encounter the parking_zones.clearance_analysis documents as expected given this arena's physical constraints) = 78.0225s core, x1.30 (>=30% scheduling margin) = 101.43s, rounded up to 102.0s.",
   "nominal_speed_mps": 0.04,
   "nominal_speed_mps_note": "Overrides cooperative_avoider.py's default 0.025 via its already-declared, mutable ROS parameter -- not one of the frozen CPA formula / safety radius / local sensor threshold items. Frozen, identical OFF/ON, set before any pilot runs, never adjusted after seeing results.",
   "communication": {

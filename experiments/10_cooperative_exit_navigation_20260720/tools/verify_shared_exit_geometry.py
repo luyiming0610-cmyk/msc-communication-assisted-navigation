@@ -27,8 +27,8 @@ GOAL_RADIUS_M = 0.10
 
 GATE_POSTS = [(0.244, 0.456), (0.456, 0.244)]
 
-PARKING_A = {"center": (0.6273, 0.4151), "radius": 0.04}
-PARKING_B = {"center": (0.4151, 0.6273), "radius": 0.04}
+PARKING_A = {"center": (0.6520, 0.3904), "radius": 0.04}
+PARKING_B = {"center": (0.3904, 0.6520), "radius": 0.04}
 REQUIRED_PARKING_SEPARATION_M = 0.14  # safety_radius_m -- pre-registered minimum
 # PILOT04 (EXCLUDED diagnostic) proved 0.14m alone is not sufficient in
 # practice -- the local IR/ToF sensor's own detection range must also be
@@ -37,6 +37,9 @@ REQUIRED_PARKING_SEPARATION_M = 0.14  # safety_radius_m -- pre-registered minimu
 # frozen turn-ledger budget. Checked separately below.
 LOCAL_FRONT_RELEASE_M = 0.220
 ROBOT_DIAMETER_M = 2 * ROBOT_RADIUS_M
+GEOMETRY_MARGIN_M = 0.03
+PARKED_VS_PARKED_REQUIRED_M = LOCAL_FRONT_RELEASE_M + ROBOT_DIAMETER_M + GEOMETRY_MARGIN_M
+ROBOT_B_LAST_WAYPOINT_SEGMENT = ((0.25, 0.05), (0.50, 0.50))
 
 OBSTACLE_CENTER = (0.15, -0.15)
 OBSTACLE_HALF_SIZE_M = 0.04  # 0.08m box -> 0.04m half-extent, used as a conservative circular proxy
@@ -150,15 +153,36 @@ def main():
         boundary_clearance > 0,
         f"boundary_clearance={boundary_clearance:.5f}m",
     )
-    local_sensor_clearance = parking_separation - PARKING_A["radius"] - PARKING_B["radius"] - ROBOT_DIAMETER_M
     check(
-        "parking zones clear the local IR/ToF sensor's own detection range "
-        "(PILOT04 finding: >0.14m alone is not sufficient)",
-        parking_separation > LOCAL_FRONT_RELEASE_M + ROBOT_DIAMETER_M,
-        f"center_to_center={parking_separation:.5f}m > "
-        f"local_front_release_m({LOCAL_FRONT_RELEASE_M}) + robot_diameter({ROBOT_DIAMETER_M:.3f}) "
-        f"= {LOCAL_FRONT_RELEASE_M + ROBOT_DIAMETER_M:.5f}m "
-        f"(margin={local_sensor_clearance:.5f}m)",
+        "parked-vs-parked spacing clears local_front_release_m + robot_diameter + margin "
+        "(PILOT04 finding: >0.14m safety_radius_m alone is not sufficient)",
+        parking_separation > PARKED_VS_PARKED_REQUIRED_M,
+        f"center_to_center={parking_separation:.5f}m > required={PARKED_VS_PARKED_REQUIRED_M:.5f}m "
+        f"(= local_front_release_m {LOCAL_FRONT_RELEASE_M} + robot_diameter {ROBOT_DIAMETER_M:.3f} "
+        f"+ geometry_margin_m {GEOMETRY_MARGIN_M})",
+    )
+
+    print(
+        "\n[INFO] Robot B's real, deterministic transit-path closest approach to "
+        "Robot A's parked position (NOT a hard PASS/FAIL check -- an any-angle "
+        "worst-case bound of the same magnitude as PARKED_VS_PARKED_REQUIRED_M is "
+        "geometrically infeasible in this 1.5x1.5m arena at this exit location; "
+        "see shared_exit_frozen_params.json parking_zones.clearance_analysis for "
+        "the full reasoning and the max_runtime_s one-encounter allowance that "
+        "budgets for this):"
+    )
+    (wx0, wy0), (wx1, wy1) = ROBOT_B_LAST_WAYPOINT_SEGMENT
+    ux, uy = wx1 - wx0, wy1 - wy0
+    un = math.hypot(ux, uy)
+    ux, uy = ux / un, uy / un
+    b_entry = (GOAL_CENTER[0] - GOAL_RADIUS_M * ux, GOAL_CENTER[1] - GOAL_RADIUS_M * uy)
+    b_entry_to_a = dist(b_entry, PARKING_A["center"])
+    print(
+        f"      robot_b_entry_point≈{tuple(round(v, 4) for v in b_entry)} "
+        f"distance_to_parked_robot_a={b_entry_to_a:.5f}m "
+        f"(vs. required {PARKED_VS_PARKED_REQUIRED_M:.5f}m -- "
+        f"{'MEETS' if b_entry_to_a > PARKED_VS_PARKED_REQUIRED_M else 'below'} the ideal target, "
+        f"mitigated by max_runtime_s's one_local_encounter_allowance_s)"
     )
 
     print("\n=== Start poses outside goal region ===")
