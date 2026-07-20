@@ -55,7 +55,22 @@ def make_controller(namespace, robot_id, peer_topic, initial_heading, enable_pee
             "safety_radius_m": params["safety_radius_m"],
             "startup_hold_s": params["startup_hold_s"],
             "max_runtime_s": params["max_runtime_s"],
-            "stop_after_recovery": True,
+            # PILOT09 (EXCLUDED, preserved) proved stop_after_recovery=True --
+            # inherited from the pre-ARRIVED_HOLD design, where "a recovery
+            # maneuver just finished" was the only completion proxy available
+            # -- is now wrong for this study: it permanently stops the
+            # controller the instant ANY local-avoidance encounter resolves,
+            # even if the robot has not yet reached its own parking zone.
+            # Robot A resolved its one encounter and returned to CRUISE, but
+            # was immediately forced to COMPLETE instead of continuing toward
+            # ARRIVED_HOLD. Genuine completion is now judged by goal_navigator's
+            # own ARRIVED_HOLD latch (which drives desired_linear_speed_mps to
+            # 0 via enable_dynamic_speed) and task_completion_monitor.py's
+            # live TASK_COMPLETE_GOAL signal -- stop_after_recovery must stay
+            # False so the controller keeps navigating after a recovery
+            # instead of quitting early. max_runtime_s remains the ultimate
+            # backstop.
+            "stop_after_recovery": False,
             "post_recovery_hold_s": 0.5,
         }],
     )
