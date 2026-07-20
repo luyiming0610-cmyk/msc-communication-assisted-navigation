@@ -295,6 +295,51 @@ excluded runs. Nothing here is deleted.
 - Various `cooperative_avoidance_20260716` diagnostic/invalid/interrupted/timeout runs — see `cooperative_avoidance_20260716_diagnostics_and_invalid` registry row and the experiment's own index doc
 - `communication_baseline_20260716/` — registry row `communication_baseline_20260716_stub`; contains exactly one file, an empty (0-byte) stub, no real experiment ever ran here (`artifact_missing`); unrelated to the current Objective 5 comm-baseline work despite the similar name
 
+### 10_cooperative_exit_navigation_20260720 (NEW, DESIGN + TOOLING ONLY -- no trial run yet)
+
+Supervisor-requested new task-level study, added 2026-07-20. Does NOT
+modify, delete, or reinterpret any Objective 5 Condition A-D evidence
+(frozen, unchanged). Research question: does communication PRESENCE (vs
+none) and robot COUNT (2/3/4) affect the safety and efficiency of N
+robots cooperatively reaching a common exit/goal region -- a different,
+task-level question from A-D's pairwise-CPA-under-impairment mechanism
+study.
+
+- **Phase 1 (read-only architecture audit) COMPLETE**:
+  `architecture_audit_multi_robot_20260720.md`. Key finding: N2 (2 robots)
+  needs ZERO changes to the frozen `cooperative_avoider.py` (it already
+  handles exactly 1 peer, and `enable_peer_avoidance=false` already
+  provides COMM_OFF). N3/N4 (2-3 peers per robot) require a genuine
+  multi-peer controller extension that does not exist today.
+- **Phase 2 (design + minimal tooling) COMPLETE for N2**:
+  `cooperative_exit_navigation_design_20260720.md` (research framing,
+  task definition, 6-condition table, fairness rules, pre-registered
+  metrics, phased plan, paper-scope wording),
+  `cooperative_exit_navigation_conditions.csv` (frozen params; only
+  `N2_COMM_OFF`/`N2_COMM_ON` rows are `executable_now`, N3/N4 rows marked
+  `PENDING`/not designed), `tools/task_completion_analyzer.py` (new,
+  ROS-independent goal/exit-region + pairwise-safety + efficiency
+  analyzer, ALL fields unit-tested: single-frame anti-false-trigger,
+  all-robots-required, N=3/N=4 pairwise combinations, DATA_VALIDITY vs
+  TASK_OUTCOME separation, max-runtime never read as success, latched
+  FAILSAFE handling -- 20/20 tests pass), `tools/multi_peer_risk.py`
+  (design-only, NOT wired into the controller, N3/N4 conflict-ranking
+  rule with 9/9 tests pass) and
+  `multi_peer_extension_design_20260720.md` (the minimal-change design
+  required before any N3/N4 controller change, per instruction).
+- **Phase 3 (2 exclusionary pilots, N2_COMM_OFF/N2_COMM_ON) BLOCKED**: the
+  Webots simulation working directory every prior formal A-D trial
+  depended on (`simulation_comm_experiment_v1/working`, documented as
+  living outside this git repo) does not exist in this environment as of
+  2026-07-20. No Webots trial (old or new) can launch until this is
+  resolved. See `project_status.json`'s `blocked_items` and the design
+  doc's section 9. Full A-D raw evidence remains intact at the native WSL
+  bag path; only the ephemeral world/launch working directory is missing.
+- Phases 4-5 (pilot comparison; formal n=5 / N3 / N4) not started, and
+  per instruction will not auto-start even once Phase 3 is unblocked --
+  every condition's formal Trial 01 requires explicit user manual launch
+  and observation.
+
 ## Known open/unconfirmed items from this indexing pass
 
 - `experiments/communication_baseline_20260716/` — purpose/contents not investigated this pass beyond confirming it has no `bags/` subdirectory. Needs a follow-up read.
