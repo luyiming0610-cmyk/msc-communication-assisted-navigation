@@ -189,7 +189,17 @@ def parse_args(argv):
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
-    rclpy.init(args=[])
+    # use_sim_time=true is required so this node's ROS clock follows
+    # Webots simulation time (via /clock) instead of the wall clock --
+    # every other process in this study (state_publisher,
+    # cooperative_avoider, task_completion_monitor) is sim-time-based.
+    # Missing this made a real, confirmed bug (PILOT02): logged event
+    # timestamps (EXIT_KNOWN_AT_START etc.) were raw wall-clock Unix
+    # epoch values, incompatible with the sim-time-stamped state samples
+    # the analyzer normalizes against. Position-based navigation itself
+    # was unaffected (waypoint advancement uses only x/y, never a
+    # clock), only the logged timestamps were wrong.
+    rclpy.init(args=["--ros-args", "-p", "use_sim_time:=true"])
     node = GoalNavigator(args)
     try:
         rclpy.spin(node)
