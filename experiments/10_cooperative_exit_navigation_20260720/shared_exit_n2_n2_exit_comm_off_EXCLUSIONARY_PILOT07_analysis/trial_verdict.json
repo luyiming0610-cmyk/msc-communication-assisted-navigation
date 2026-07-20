@@ -1,0 +1,21 @@
+{
+  "comm_mode": "N2_EXIT_COMM_OFF",
+  "trial_index": 1,
+  "attempt": 1,
+  "data_validity": "INVALID",
+  "data_validity_reason": "controller stage ended without COMPLETE and without an expected shutdown signature; ",
+  "stop_reason": "MAX_RUNTIME",
+  "controller_complete_count": 0,
+  "controller_crashed": true,
+  "ended_by_max_runtime_hits": 0,
+  "cmd_vel_zero_at_end": false,
+  "cmd_vel_zero_at_end_informational_only": true,
+  "velocity_settled_at_end": true,
+  "monitor_verdict_present": false,
+  "monitor_verdict_path": "/home/eamon/epuck_comm_bags/shared_exit_n2_n2_exit_comm_off_EXCLUSIONARY_PILOT07_diag_logs/monitor_verdict.json",
+  "queue_drained": true,
+  "bag_log_clean": true,
+  "native_bag_dir": "/home/eamon/epuck_comm_bags/shared_exit_n2_n2_exit_comm_off_EXCLUSIONARY_PILOT07",
+  "native_diag_log_dir": "/home/eamon/epuck_comm_bags/shared_exit_n2_n2_exit_comm_off_EXCLUSIONARY_PILOT07_diag_logs",
+  "git_commit": "259f59bc917c9b000c1d99e8829be165481be9cb"
+}

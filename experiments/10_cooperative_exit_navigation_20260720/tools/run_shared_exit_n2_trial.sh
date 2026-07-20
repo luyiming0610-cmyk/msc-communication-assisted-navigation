@@ -392,7 +392,16 @@ N2_EXIT_COMM_MODE="$COMM_MODE" setsid stdbuf -oL -eL python3 "$TOOLS_DIR/run_sha
   >"$CONTROLLER_LOG" 2>&1 &
 CONTROLLER_PID=$!
 
-deadline=$((SECONDS + 90))
+# Watchdog deadline must exceed the controller's own max_runtime_s (plus
+# startup_hold_s and a settle buffer) -- it is a fallback safety net, not
+# the primary stop condition (TASK_COMPLETE_GOAL/CONTROLLER_SELF_COMPLETE
+# are). A fixed value here previously fell out of sync with max_runtime_s
+# after a formula-based revision (PILOT07 attempt 1: max_runtime_s raised
+# to 102.0s but this watchdog stayed hardcoded at 90s, killing the trial
+# before either the controller or a genuine completion could be reached).
+WATCHDOG_DEADLINE_S=$(python3 -c "import math; print(math.ceil($MAX_RUNTIME_S + $STARTUP_HOLD_S + 15.0))")
+echo "[$(date -Iseconds)] orchestrator watchdog deadline=${WATCHDOG_DEADLINE_S}s (max_runtime_s=$MAX_RUNTIME_S + startup_hold_s=$STARTUP_HOLD_S + 15.0s settle buffer)" | tee -a "$EXECUTION_LOG"
+deadline=$((SECONDS + WATCHDOG_DEADLINE_S))
 complete_count=0
 STOP_REASON="MAX_RUNTIME"
 while (( SECONDS < deadline )); do
