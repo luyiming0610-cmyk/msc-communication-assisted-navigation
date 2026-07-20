@@ -46,6 +46,7 @@ def make_controller(namespace, robot_id, peer_topic, initial_heading, enable_pee
             "desired_heading_rad": initial_heading,
             "enable_peer_avoidance": enable_peer_avoidance,
             "enable_dynamic_heading": True,
+            "enable_dynamic_speed": True,
             "nav_intent_timeout_s": 1.0,
             "enable_local_avoidance": True,
             "require_local_sensors": True,

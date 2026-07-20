@@ -70,16 +70,21 @@ from goal_hold_tracker import GoalHoldTracker
 
 
 class TaskCompletionMonitor(Node):
-    def __init__(self, robot_ids, state_topics, goal_center_x_m, goal_center_y_m,
-                 goal_radius_m, goal_hold_time_s, verdict_path):
+    def __init__(self, robot_ids, state_topics, goal_centers_x_m, goal_centers_y_m,
+                 goal_radii_m, goal_hold_time_s, verdict_path):
         super().__init__("task_completion_monitor")
         self.robot_ids = robot_ids
         self.verdict_path = verdict_path
         self.done = False
+        # Per-robot completion region (Part V: each robot's own parking
+        # zone, distinct and non-colliding) -- NOT a single shared point,
+        # so this monitor's completion criterion matches exactly what
+        # each robot's own goal_navigator uses for its ARRIVED_HOLD latch.
         self.trackers = {
-            rid: GoalHoldTracker(goal_center_x_m, goal_center_y_m, goal_radius_m, goal_hold_time_s)
-            for rid in robot_ids
+            rid: GoalHoldTracker(cx, cy, r, goal_hold_time_s)
+            for rid, cx, cy, r in zip(robot_ids, goal_centers_x_m, goal_centers_y_m, goal_radii_m)
         }
+        self._reported_complete = {rid: False for rid in robot_ids}
         self._subs = []
         for rid, topic in zip(robot_ids, state_topics):
             self._subs.append(
@@ -88,7 +93,7 @@ class TaskCompletionMonitor(Node):
         self.get_logger().info(
             "task_completion_monitor READY "
             f"watching={dict(zip(robot_ids, state_topics))} "
-            f"goal=(x={goal_center_x_m},y={goal_center_y_m},r={goal_radius_m}) "
+            f"goals={ {rid: (t.center_x_m, t.center_y_m, t.radius_m) for rid, t in self.trackers.items()} } "
             f"hold_time_s={goal_hold_time_s}"
         )
 
@@ -98,9 +103,19 @@ class TaskCompletionMonitor(Node):
                 return
             t_s = float(msg.stamp.sec) + float(msg.stamp.nanosec) / 1e9
             self.trackers[robot_id].update(t_s, float(msg.x_m), float(msg.y_m))
+            if self.trackers[robot_id].reached and not self._reported_complete[robot_id]:
+                self._reported_complete[robot_id] = True
+                self.get_logger().info(
+                    f"ROBOT_ARRIVED robot_id={robot_id} t={t_s:.3f} "
+                    f"completion_time_s={self.trackers[robot_id].completion_time_s:.3f}"
+                )
             if all(tracker.reached for tracker in self.trackers.values()):
                 self._on_all_complete()
         return _cb
+
+    @property
+    def per_robot_completed(self) -> dict:
+        return dict(self._reported_complete)
 
     def _on_all_complete(self):
         self.done = True
@@ -115,7 +130,9 @@ class TaskCompletionMonitor(Node):
                     {
                         "stop_reason": "TASK_COMPLETE_GOAL",
                         "all_robots_reached_goal": True,
+                        "per_robot_completed": self.per_robot_completed,
                         "completion_times_s": completion_times,
+                        "makespan_s": max(completion_times.values()),
                     },
                     f,
                     indent=2,
@@ -126,9 +143,18 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("--robot-ids", required=True, help="comma-separated, e.g. epuck1,epuck2")
     parser.add_argument("--state-topics", required=True, help="comma-separated, same order as --robot-ids")
-    parser.add_argument("--goal-center-x-m", type=float, required=True)
-    parser.add_argument("--goal-center-y-m", type=float, required=True)
-    parser.add_argument("--goal-radius-m", type=float, required=True)
+    parser.add_argument(
+        "--goal-centers-x-m", required=True,
+        help="comma-separated, same order as --robot-ids -- each robot's own completion-region center x"
+    )
+    parser.add_argument(
+        "--goal-centers-y-m", required=True,
+        help="comma-separated, same order as --robot-ids"
+    )
+    parser.add_argument(
+        "--goal-radii-m", required=True,
+        help="comma-separated, same order as --robot-ids"
+    )
     parser.add_argument("--goal-hold-time-s", type=float, required=True)
     parser.add_argument("--verdict-path", default="")
     return parser.parse_args(argv)
@@ -138,14 +164,22 @@ def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
     robot_ids = args.robot_ids.split(",")
     state_topics = args.state_topics.split(",")
-    if len(robot_ids) != len(state_topics):
-        print("robot-ids and state-topics must have equal length", file=sys.stderr)
+    goal_centers_x_m = [float(v) for v in args.goal_centers_x_m.split(",")]
+    goal_centers_y_m = [float(v) for v in args.goal_centers_y_m.split(",")]
+    goal_radii_m = [float(v) for v in args.goal_radii_m.split(",")]
+    if not (len(robot_ids) == len(state_topics) == len(goal_centers_x_m)
+            == len(goal_centers_y_m) == len(goal_radii_m)):
+        print(
+            "robot-ids, state-topics, goal-centers-x-m, goal-centers-y-m, "
+            "goal-radii-m must all have equal length",
+            file=sys.stderr,
+        )
         return 2
 
     rclpy.init(args=[])
     node = TaskCompletionMonitor(
         robot_ids, state_topics,
-        args.goal_center_x_m, args.goal_center_y_m, args.goal_radius_m, args.goal_hold_time_s,
+        goal_centers_x_m, goal_centers_y_m, goal_radii_m, args.goal_hold_time_s,
         args.verdict_path,
     )
     try:

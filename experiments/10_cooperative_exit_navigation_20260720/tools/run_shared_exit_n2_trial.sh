@@ -170,6 +170,12 @@ cat > "$DIAG_LOG_DIR/frozen_params.json" <<EOF
   "goal_center_y_m": $GOAL_CENTER_Y_M,
   "goal_radius_m": $GOAL_RADIUS_M,
   "goal_hold_time_s": $GOAL_HOLD_TIME_S,
+  "parking_a_x_m": $PARKING_A_X_M,
+  "parking_a_y_m": $PARKING_A_Y_M,
+  "parking_a_radius_m": $PARKING_A_RADIUS_M,
+  "parking_b_x_m": $PARKING_B_X_M,
+  "parking_b_y_m": $PARKING_B_Y_M,
+  "parking_b_radius_m": $PARKING_B_RADIUS_M,
   "safety_radius_m": $SAFETY_RADIUS_M,
   "collision_contact_distance_m": $COLLISION_CONTACT_DISTANCE_M,
   "max_runtime_s": $MAX_RUNTIME_S,
@@ -254,6 +260,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
+export EPUCK_WORLD_FILE="$WORLD_FILE"
 setsid bash -c "cd '$WORK_DIR' && exec python3 run_shared_exit_n2.py" >"$SIM_LOG" 2>&1 &
 SIM_PID=$!
 wait_for_topics 90 /epuck1/odom /epuck2/odom /epuck1/tof /epuck2/tof /epuck1/ps0 /epuck2/ps0
@@ -325,16 +332,22 @@ if ! kill -0 "$BAG_PID" 2>/dev/null; then
 fi
 echo "[$(date -Iseconds)] rosbag recording to NATIVE path: $NATIVE_BAG_DIR" | tee -a "$EXECUTION_LOG"
 
+# Per-robot completion regions (Part V: each robot's own post-exit
+# parking zone), NOT one shared exit point -- matches exactly what each
+# robot's own goal_navigator uses for its ARRIVED_HOLD latch, so this
+# monitor's verdict can never disagree with either robot's own state.
 setsid stdbuf -oL -eL python3 "$TOOLS_DIR/task_completion_monitor.py" \
   --robot-ids epuck1,epuck2 \
   --state-topics /epuck1/state,/epuck2/state \
-  --goal-center-x-m "$GOAL_CENTER_X_M" --goal-center-y-m "$GOAL_CENTER_Y_M" \
-  --goal-radius-m "$GOAL_RADIUS_M" --goal-hold-time-s "$GOAL_HOLD_TIME_S" \
+  --goal-centers-x-m "$PARKING_A_X_M,$PARKING_B_X_M" \
+  --goal-centers-y-m "$PARKING_A_Y_M,$PARKING_B_Y_M" \
+  --goal-radii-m "$PARKING_A_RADIUS_M,$PARKING_B_RADIUS_M" \
+  --goal-hold-time-s "$GOAL_HOLD_TIME_S" \
   --verdict-path "$MONITOR_VERDICT" \
   >"$MONITOR_LOG" 2>&1 &
 MONITOR_PID=$!
 sleep 1
-echo "[$(date -Iseconds)] task_completion_monitor launched (read-only, watching /epuck1/state,/epuck2/state, exit region center=($GOAL_CENTER_X_M,$GOAL_CENTER_Y_M) radius=$GOAL_RADIUS_M)" | tee -a "$EXECUTION_LOG"
+echo "[$(date -Iseconds)] task_completion_monitor launched (read-only, watching /epuck1/state,/epuck2/state, parking regions A=($PARKING_A_X_M,$PARKING_A_Y_M,r=$PARKING_A_RADIUS_M) B=($PARKING_B_X_M,$PARKING_B_Y_M,r=$PARKING_B_RADIUS_M))" | tee -a "$EXECUTION_LOG"
 
 # Robot A ("informed"): navigates directly to the exit from t=0. In
 # COMM_ON, ALSO announces it at a bounded rate. This is Robot A's own
@@ -345,7 +358,11 @@ echo "[$(date -Iseconds)] task_completion_monitor launched (read-only, watching 
 # another option flag rather than the current option's value. This was
 # a real bug (PILOT01, --waypoints "-0.2:-0.2,...", fixed here).
 NAV_A_ARGS=(--robot-id=1 --state-topic=/epuck1/state --nav-intent-topic=/epuck1/nav_intent
-            --mode=informed "--target-x=$GOAL_CENTER_X_M" "--target-y=$GOAL_CENTER_Y_M" --rate-hz=2.0)
+            --mode=informed "--target-x=$GOAL_CENTER_X_M" "--target-y=$GOAL_CENTER_Y_M" --rate-hz=2.0
+            "--nominal-speed-mps=$NOMINAL_SPEED_MPS"
+            "--exit-center-x=$GOAL_CENTER_X_M" "--exit-center-y=$GOAL_CENTER_Y_M" "--exit-radius=$GOAL_RADIUS_M"
+            "--parking-x=$PARKING_A_X_M" "--parking-y=$PARKING_A_Y_M" "--parking-radius=$PARKING_A_RADIUS_M"
+            "--goal-hold-time-s=$GOAL_HOLD_TIME_S")
 if [[ "$COMM_MODE" == "N2_EXIT_COMM_ON" ]]; then
   NAV_A_ARGS+=(--announce --announce-topic=/epuck1/goal_announcement "--goal-id=$GOAL_ID")
 fi
@@ -358,7 +375,11 @@ NAV_A_PID=$!
 # which exit information could ever reach it.
 NAV_B_ARGS=(--robot-id=2 --state-topic=/epuck2/state --nav-intent-topic=/epuck2/nav_intent
             --mode=search "--waypoints=$ROBOT_B_WAYPOINTS"
-            "--waypoint-arrival-radius=$ROBOT_B_WAYPOINT_ARRIVAL_RADIUS_M" --rate-hz=2.0)
+            "--waypoint-arrival-radius=$ROBOT_B_WAYPOINT_ARRIVAL_RADIUS_M" --rate-hz=2.0
+            "--nominal-speed-mps=$NOMINAL_SPEED_MPS"
+            "--exit-center-x=$GOAL_CENTER_X_M" "--exit-center-y=$GOAL_CENTER_Y_M" "--exit-radius=$GOAL_RADIUS_M"
+            "--parking-x=$PARKING_B_X_M" "--parking-y=$PARKING_B_Y_M" "--parking-radius=$PARKING_B_RADIUS_M"
+            "--goal-hold-time-s=$GOAL_HOLD_TIME_S")
 if [[ "$COMM_MODE" == "N2_EXIT_COMM_ON" ]]; then
   NAV_B_ARGS+=(--goal-announcement-topic=/epuck1/goal_announcement)
 fi

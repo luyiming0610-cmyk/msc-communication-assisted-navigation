@@ -1,9 +1,12 @@
 {
   "study": "N2 shared edge-exit navigation, with/without communication",
   "frozen_on": "2026-07-20",
-  "revision": 1,
-  "world_file": "shared_exit_n2_world.wbt",
-  "world_file_note": "NEW, additive world file. Does not modify two_epuck_head_on_clean_world.wbt (Objective 5 A-D) or two_epuck_cooperative_exit_n2_world.wbt (Stage 0).",
+  "revision": 2,
+  "revision_2_note": "Obstacle confound removed from the CORE study world per the root-cause audit (root_cause_audit_dynamic_heading_20260720.md); arrival latching (ARRIVED_HOLD) and two post-exit parking zones added. world_file below is now the obstacle-free core world used for PILOT04(OFF)/PILOT01(ON) onward. diagnostic_world_file preserves the ORIGINAL obstacle-containing world, still used only by the EXCLUDED_OBSTACLE_CONFOUNDED_DIAGNOSTIC pilots (PILOT01-03), never deleted.",
+  "world_file": "shared_exit_n2_obstacle_free_world.wbt",
+  "world_file_note": "NEW, additive world file, obstacle-free core study world. Does not modify two_epuck_head_on_clean_world.wbt (Objective 5 A-D), two_epuck_cooperative_exit_n2_world.wbt (Stage 0), or diagnostic_world_file below.",
+  "diagnostic_world_file": "shared_exit_n2_world.wbt",
+  "diagnostic_world_file_note": "ORIGINAL world file with the obstacle confound, revision-1 geometry. Preserved for EXCLUDED_OBSTACLE_CONFOUNDED_DIAGNOSTIC pilots only; not used by the core OFF/ON study from revision 2 onward.",
   "arena_floor_size_m": [1.5, 1.5],
   "arena_half_extent_m": 0.75,
   "robot_radius_m": 0.037,
@@ -14,14 +17,23 @@
     "goal_hold_radius_m": 0.10,
     "gate_posts_m": [[0.244, 0.456], [0.456, 0.244]],
     "gate_width_m": 0.300,
-    "marker": "two non-colliding post markers (the gate) plus a non-colliding rectangular completion-zone marker behind the gate at the goal center; judgment region stays circular (task_completion_analyzer.GoalRegion, proven/tested), visual marker is rectangular"
+    "marker": "two non-colliding post markers (the gate) plus a non-colliding rectangular completion-zone marker behind the gate at the goal center; judgment region stays circular (task_completion_analyzer.GoalRegion, proven/tested), visual marker is rectangular",
+    "role": "single shared informational/navigation target -- both robots' current_target and Robot A's GoalAnnouncement content, common to both conditions and both robots. NOT a per-robot completion criterion as of revision 2 (see parking_zones)."
+  },
+  "parking_zones": {
+    "note": "Post-exit safe zero-velocity holding points (Part V), NOT a second task goal -- the shared exit above stays the single informational target for navigation/announcement. Each robot's goal_navigator switches current_target from the shared exit to its OWN parking point once it geometrically enters the exit region (radius exit.goal_hold_radius_m around exit center); ARRIVED_HOLD latches, and individual_completion_time_s is recorded, only once a robot continuously holds inside its OWN parking region for goal_hold_time_s. task_completion_monitor.py uses the SAME two regions so its verdict cannot disagree with either robot's own navigator.",
+    "robot_a": {"center_x_m": 0.64, "center_y_m": 0.50, "radius_m": 0.04},
+    "robot_b": {"center_x_m": 0.50, "center_y_m": 0.64, "radius_m": 0.04},
+    "center_to_center_distance_m": 0.19799,
+    "center_to_center_distance_note": "sqrt(0.14^2+0.14^2)=0.19799m, exceeds the required >0.14m (safety_radius_m) spacing by a comfortable margin even after each zone's own 0.04m radius is subtracted (0.19799 - 2*0.04 = 0.11799m of pure clearance between the two zone boundaries, still non-overlapping and non-colliding)."
   },
   "obstacle": {
     "center_x_m": 0.15,
     "center_y_m": -0.15,
     "size_m": [0.08, 0.08, 0.10],
     "collision_enabled": true,
-    "note": "Confirmed (verify_shared_exit_geometry.py) to intersect Robot B's waypoint search path (min distance 0.000m) and to clear Robot A's direct path (min distance 0.688m) -- asymmetric by design, frozen before any pilot runs."
+    "excluded_from_core_world": true,
+    "note": "Confirmed (verify_shared_exit_geometry.py) to intersect Robot B's waypoint search path (min distance 0.000m) and to clear Robot A's direct path (min distance 0.688m) -- asymmetric by design. Present ONLY in diagnostic_world_file (shared_exit_n2_world.wbt); removed from the core obstacle-free world (world_file) per the root-cause audit's isolation of the primary research variable (communication effect on a shared-exit task), not to force a PASS."
   },
   "robots": {
     "robot_a": {
@@ -51,8 +63,8 @@
   "collision_contact_distance_m": 0.07,
   "goal_hold_time_s": 2.0,
   "startup_hold_s": 5.0,
-  "max_runtime_s": 55.0,
-  "max_runtime_s_computation": "robot_b_search_path_time_s(31.34 = 1.2535m / 0.04m/s) + startup_hold_s(5.0) + avoidance_detour_margin_s(~6.3, 20% of search time) + goal_hold_time_s(2.0) + shutdown_settle_buffer_s(~3.0) = ~47.6s, rounded up to 55.0s (~15% extra buffer)",
+  "max_runtime_s": 68.0,
+  "max_runtime_s_computation": "revision 2, recomputed for the obstacle-free core world + parking-zone handoff, frozen before any pilot run: robot_b_search_path_time_s(31.3375 = 1.2535m / 0.04m/s) + exit_to_parking_extension_time_s(3.5 = 0.14m / 0.04m/s, the longer of the two robots' exit-to-own-parking-zone legs, both 0.14m) + turning_time_allowance_s(10.0, ~4 waypoint/handoff turns at (pi/2)/turn_rate_rps=0.65rad/s ~= 2.42s/turn, rounded up) + startup_hold_s(5.0) + goal_hold_time_s(2.0) = 51.8375s core, x1.30 (>=30% margin, per pre-registered rule, not tuned to any pilot result) = 67.39s, rounded up to 68.0s (final margin ratio 31.2%).",
   "nominal_speed_mps": 0.04,
   "nominal_speed_mps_note": "Overrides cooperative_avoider.py's default 0.025 via its already-declared, mutable ROS parameter -- not one of the frozen CPA formula / safety radius / local sensor threshold items. Frozen, identical OFF/ON, set before any pilot runs, never adjusted after seeing results.",
   "communication": {
@@ -74,8 +86,8 @@
   },
   "fairness": {
     "shared_between_off_and_on": [
-      "world_file", "obstacle", "robot_a start pose", "robot_b start pose",
-      "robot_b search_waypoints_m", "exit center/radius/gate geometry",
+      "world_file (obstacle-free core world, revision 2)", "robot_a start pose", "robot_b start pose",
+      "robot_b search_waypoints_m", "exit center/radius/gate geometry", "parking_zones (both robots' own zone identical across conditions)",
       "safety_radius_m", "collision_contact_distance_m", "goal_hold_time_s",
       "startup_hold_s", "max_runtime_s", "nominal_speed_mps",
       "local IR/ToF avoidance logic and thresholds (frozen, unmodified)"
@@ -98,8 +110,9 @@
       "fields": [
         "uint32 protocol_version", "uint32 source_robot_id", "uint32 sequence",
         "builtin_interfaces/Time production_stamp", "float64 desired_heading_rad",
-        "bool valid"
+        "float64 desired_linear_speed_mps", "string navigation_phase", "bool valid"
       ],
+      "navigation_phase_values": ["SEARCH", "GO_TO_EXIT", "ARRIVED_HOLD"],
       "topic": "nav_intent (relative, own namespace only -- not cross-robot)"
     },
     "epuckstate_protocol_version_unaffected": true

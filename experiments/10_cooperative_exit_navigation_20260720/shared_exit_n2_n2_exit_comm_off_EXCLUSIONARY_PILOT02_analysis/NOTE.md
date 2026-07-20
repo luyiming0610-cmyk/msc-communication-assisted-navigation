@@ -2,6 +2,17 @@
 
 **EXCLUSIONARY_DIAGNOSTIC. Not counted toward any formal or pilot statistic.**
 
+## CLASSIFICATION: EXCLUDED_OBSTACLE_CONFOUNDED_DIAGNOSTIC (added retroactively, revision 2)
+
+Ran on the original obstacle-containing world (`shared_exit_n2_world.wbt`).
+The obstacle is confirmed (below, and in the root-cause audit) to be a
+genuine contributing factor in Robot B's difficulty here. Per the
+user's explicit instruction, this pilot is excluded from the core
+OFF/ON comparison and is not rerun -- it remains valuable evidence of
+the obstacle-confound finding itself, preserved unmodified. The core
+study from PILOT04 onward uses the obstacle-free world
+(`shared_exit_n2_obstacle_free_world.wbt`).
+
 ## REVISION NOTE (adds context, does not withdraw anything below)
 
 A full read-only root-cause audit (see `experiments/10_

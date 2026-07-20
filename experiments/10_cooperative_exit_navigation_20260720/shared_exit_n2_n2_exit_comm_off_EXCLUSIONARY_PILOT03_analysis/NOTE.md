@@ -2,6 +2,17 @@
 
 **EXCLUSIONARY_DIAGNOSTIC. Not counted toward any formal or pilot statistic.**
 
+## CLASSIFICATION: EXCLUDED_OBSTACLE_CONFOUNDED_DIAGNOSTIC (added retroactively, revision 2)
+
+Ran on the original obstacle-containing world (`shared_exit_n2_world.wbt`).
+This pilot's `DURATION_CEILING` failsafe was later shown (see the
+REVISION NOTE above) to have latched on Robot A via the arrival-lock
+gap, not the obstacle -- but the scene itself still contains the
+obstacle confound, so per the user's explicit instruction this pilot
+is excluded from the core OFF/ON comparison and not rerun. The core
+study from PILOT04 onward uses the obstacle-free world
+(`shared_exit_n2_obstacle_free_world.wbt`).
+
 ## REVISION NOTE (superseding the original attribution below, not deleting it)
 
 The original text below attributed the `DURATION_CEILING` failsafe to

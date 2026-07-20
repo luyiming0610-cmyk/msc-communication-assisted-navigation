@@ -55,6 +55,16 @@ class CooperativeAvoider(Node):
         # an advisory direction, never a command, and never itself stops
         # or starts motion.
         self.declare_parameter("enable_dynamic_heading", False)
+        # shared_exit_navigation: OFF by default, same byte-for-byte
+        # preservation guarantee as enable_dynamic_heading. Unlike heading
+        # (which falls back to the launch-time default when the
+        # NavigationIntent is stale/invalid), speed falls back to ZERO --
+        # a robot must never keep cruising forward at nominal_speed_mps on
+        # stale/missing navigation input. Driven by the SAME NavigationIntent
+        # message and the SAME freshness timestamp as dynamic heading (both
+        # fields are read from one message in _nav_intent_callback), so the
+        # two can never disagree about whether the input is current.
+        self.declare_parameter("enable_dynamic_speed", False)
         self.declare_parameter("nav_intent_timeout_s", 1.0)
         self.declare_parameter("nominal_speed_mps", 0.025)
         self.declare_parameter("avoidance_speed_mps", 0.012)
@@ -113,10 +123,14 @@ class CooperativeAvoider(Node):
         self.enable_dynamic_heading = bool(
             self.get_parameter("enable_dynamic_heading").value
         )
+        self.enable_dynamic_speed = bool(
+            self.get_parameter("enable_dynamic_speed").value
+        )
         self.nav_intent_timeout = float(
             self.get_parameter("nav_intent_timeout_s").value
         )
         self.nav_intent_received_at = None
+        self.desired_linear_speed = 0.0
         self.nominal_speed = float(self.get_parameter("nominal_speed_mps").value)
         self.avoidance_speed = float(self.get_parameter("avoidance_speed_mps").value)
         self.turn_rate = float(self.get_parameter("turn_rate_rps").value)
@@ -278,7 +292,7 @@ class CooperativeAvoider(Node):
             self.create_subscription(
                 EpuckState, self.peer_topic, self._peer_callback, 20
             )
-        if self.enable_dynamic_heading:
+        if self.enable_dynamic_heading or self.enable_dynamic_speed:
             self.create_subscription(
                 NavigationIntent, "nav_intent", self._nav_intent_callback, 10
             )
@@ -337,6 +351,11 @@ class CooperativeAvoider(Node):
                 f"dynamic heading ENABLED: nav_intent_timeout={self.nav_intent_timeout:.2f}s, "
                 f"default fallback heading={self._default_desired_heading:.3f}rad"
             )
+        if self.enable_dynamic_speed:
+            self.get_logger().info(
+                f"dynamic speed ENABLED: nav_intent_timeout={self.nav_intent_timeout:.2f}s, "
+                "stale/invalid fallback=0.0 m/s (NOT nominal_speed_mps)"
+            )
 
     def _own_callback(self, message: EpuckState) -> None:
         self.own_state = message
@@ -355,6 +374,7 @@ class CooperativeAvoider(Node):
         if not message.valid:
             return
         self.desired_heading = float(message.desired_heading_rad)
+        self.desired_linear_speed = float(message.desired_linear_speed_mps)
         self.nav_intent_received_at = self._now_s()
 
     def _publish(
@@ -716,9 +736,10 @@ class CooperativeAvoider(Node):
             self._log(now, metrics, 0.0, 0.0)
             return
 
-        if self.enable_dynamic_heading and not self._fresh(
+        nav_intent_fresh = self._fresh(
             self.nav_intent_received_at, now, self.nav_intent_timeout
-        ):
+        )
+        if self.enable_dynamic_heading and not nav_intent_fresh:
             # shared_exit_navigation: never hold a stale heading as if it
             # were current. Falls back to the launch-time default rather
             # than stopping -- heading staleness alone is not a safety
@@ -819,7 +840,14 @@ class CooperativeAvoider(Node):
             )
         else:
             self.mode = "CRUISE"
-            linear = self.nominal_speed
+            if self.enable_dynamic_speed:
+                # shared_exit_navigation: asymmetric vs. heading's fallback
+                # -- a stale/never-received/invalid NavigationIntent must
+                # zero linear velocity, never fall back to nominal_speed
+                # and keep driving forward on no current input.
+                linear = self.desired_linear_speed if nav_intent_fresh else 0.0
+            else:
+                linear = self.nominal_speed
             angular = clamp(1.0 * heading_error, -0.25, 0.25)
 
         # controller_v4_full_sensor_bypass_20260717: whenever the target

@@ -27,6 +27,10 @@ GOAL_RADIUS_M = 0.10
 
 GATE_POSTS = [(0.244, 0.456), (0.456, 0.244)]
 
+PARKING_A = {"center": (0.64, 0.50), "radius": 0.04}
+PARKING_B = {"center": (0.50, 0.64), "radius": 0.04}
+REQUIRED_PARKING_SEPARATION_M = 0.14  # safety_radius_m -- pre-registered minimum
+
 OBSTACLE_CENTER = (0.15, -0.15)
 OBSTACLE_HALF_SIZE_M = 0.04  # 0.08m box -> 0.04m half-extent, used as a conservative circular proxy
 
@@ -107,6 +111,37 @@ def main():
         gate_width > 4 * (2 * ROBOT_RADIUS_M),
         f"gate_width={gate_width:.4f}m vs robot_diameter={2 * ROBOT_RADIUS_M:.4f}m "
         f"(ratio={gate_width / (2 * ROBOT_RADIUS_M):.2f}x)",
+    )
+
+    print("\n=== Post-exit parking zones (Part V) ===")
+    for name, zone in (("robot_a", PARKING_A), ("robot_b", PARKING_B)):
+        cx, cy = zone["center"]
+        for axis, coord in (("x", cx), ("y", cy)):
+            clearance = ARENA_HALF_EXTENT_M - coord - zone["radius"] - ROBOT_RADIUS_M
+            check(
+                f"{name} parking zone + robot radius clears +{axis} wall",
+                clearance > 0,
+                f"clearance={clearance:.4f}m (center_{axis}={coord}, "
+                f"radius={zone['radius']}, robot_radius={ROBOT_RADIUS_M})",
+            )
+        d_to_exit_center = dist(zone["center"], GOAL_CENTER)
+        check(
+            f"{name} parking zone center is outside the exit goal region",
+            d_to_exit_center > GOAL_RADIUS_M,
+            f"distance_to_exit_center={d_to_exit_center:.4f}m > goal_radius={GOAL_RADIUS_M}",
+        )
+    parking_separation = dist(PARKING_A["center"], PARKING_B["center"])
+    boundary_clearance = parking_separation - PARKING_A["radius"] - PARKING_B["radius"]
+    check(
+        "parking zones are non-colliding (center spacing exceeds safety_radius_m)",
+        parking_separation > REQUIRED_PARKING_SEPARATION_M,
+        f"center_to_center={parking_separation:.5f}m > required={REQUIRED_PARKING_SEPARATION_M}m "
+        f"(boundary-to-boundary clearance={boundary_clearance:.5f}m)",
+    )
+    check(
+        "parking zone boundaries do not overlap each other",
+        boundary_clearance > 0,
+        f"boundary_clearance={boundary_clearance:.5f}m",
     )
 
     print("\n=== Start poses outside goal region ===")

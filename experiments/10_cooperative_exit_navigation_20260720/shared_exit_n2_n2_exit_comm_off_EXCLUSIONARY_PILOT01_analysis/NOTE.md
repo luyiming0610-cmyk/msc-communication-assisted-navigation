@@ -2,6 +2,17 @@
 
 **EXCLUSIONARY_DIAGNOSTIC. Not counted toward any formal or pilot statistic.**
 
+## CLASSIFICATION: EXCLUDED_OBSTACLE_CONFOUNDED_DIAGNOSTIC (added retroactively, revision 2)
+
+Ran on the original obstacle-containing world (`shared_exit_n2_world.wbt`).
+This particular pilot's own failure (argparse rejecting a negative
+waypoint token) is unrelated to the obstacle, but it shares the same
+scene geometry as PILOT02/03 -- relabeled alongside them, per the
+user's explicit instruction after the root-cause audit, so all three
+pre-revision-2 pilots are identifiable as having run on the
+obstacle-confounded world, not the current core obstacle-free world
+(`shared_exit_n2_obstacle_free_world.wbt`) used from PILOT04 onward.
+
 ## What happened
 
 Orchestrator-level checks looked clean: `DATA_VALIDITY=VALID`, no crash,
