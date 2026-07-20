@@ -1,0 +1,54 @@
+{
+  "trial_id": "shared_exit_n2_n2_exit_comm_off_EXCLUSIONARY_PILOT06",
+  "comm_mode": "N2_EXIT_COMM_OFF",
+  "trial_epoch_s_absolute": 11.92,
+  "sample_counts": {
+    "robot_a_epuck1": 704,
+    "robot_b_epuck2": 711
+  },
+  "path_length_m": {
+    "robot_a_epuck1": 0.9549388225999417,
+    "robot_b_epuck2": 1.6946254458264298
+  },
+  "cumulative_heading_change_rad": {
+    "robot_a_epuck1": 3.9484380036592484,
+    "robot_b_epuck2": 8.746118634939194
+  },
+  "stop_duration_s": {
+    "robot_a_epuck1": 18.540000000000006,
+    "robot_b_epuck2": 27.28
+  },
+  "individual_completion_time_s": {
+    "robot_a_epuck1": null,
+    "robot_b_epuck2": null
+  },
+  "completion_region_source": "per_robot_parking_zone",
+  "makespan_s": null,
+  "exit_discovery_time_s": 4.08,
+  "communication": {
+    "exit_announcement_tx_time_s": "NOT_APPLICABLE",
+    "exit_announcement_rx_time_s": "NOT_APPLICABLE",
+    "robot_b_search_to_goal_switch_time_s": "NOT_APPLICABLE",
+    "message_count": "NOT_APPLICABLE",
+    "missing_count": "NOT_APPLICABLE",
+    "duplicate_count": "NOT_APPLICABLE",
+    "out_of_order_count": "NOT_APPLICABLE",
+    "mean_age_s": "NOT_APPLICABLE",
+    "max_age_s": "NOT_APPLICABLE",
+    "off_leak_check_message_count": 0,
+    "off_leak_detected": false
+  },
+  "verdict": {
+    "data_validity": "VALID",
+    "task_outcome": "TASK_FAILURE",
+    "task_outcome_reason": "a latched FAILSAFE occurred during the trial",
+    "all_robots_reached_goal": false,
+    "completed_robot_count": 0,
+    "total_robot_count": 2,
+    "minimum_pairwise_distance_m": 0.20555106500441772,
+    "safety_margin_m": 0.06555106500441771,
+    "collision_count": 0
+  },
+  "ended_by_max_runtime": true,
+  "latched_failsafe": true
+}
