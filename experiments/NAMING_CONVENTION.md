@@ -24,3 +24,9 @@
 - 历史 rosbag、日志和分析快照中的原始路径不回写；它们记录的是实验发生时的真实环境。需要定位时使用上表映射。
 - 任何后续目录改名都必须同步更新启动脚本、`experiment_registry.csv`、`path_manifest.csv`、`EXPERIMENT_INDEX.md` 和 `PROJECT_HANDOFF.md`，并在提交前运行测试。
 
+## 已知陷阱：WSL 构建镜像与 Windows 仓库的路径漂移（2026-07-20）
+
+`~/epuck_ws/src/` 是 `src/` 在 WSL 原生文件系统下的**构建镜像副本**（colcon 只在原生 ext4 路径下编译/测试，不直接对 `/mnt/c/...` 编译），与 Windows 仓库的 git 检出是两份独立文件。2026-07-19 的目录改名只更新了 Windows 仓库（git 跟踪的源），没有同步刷新这份镜像；`test_analyze_static_v4_task.py` 在镜像中残留 2026-07-17 的旧版本（仍引用 `controller_v4_full_sensor_bypass_20260717/...`），导致 `colcon test` 在镜像里跑出 4 项"路径不存在"失败——但 Windows 仓库里的同一份文件当时已经是正确的 `3-3.全传感器避障实验/...`路径（含两级候选路径回退逻辑），不需要再次修改。
+
+根因确认后用 `rsync -av`（不带 `--delete`）把 `src/` 重新同步进 `~/epuck_ws/src/`，重建 `epuck2_comm_interfaces`/`epuck2_comm`，194 项测试（165 现有 + 29 N2 新增）全部通过。**规则：任何目录改名后，除了上面第 25 条列出的文档/脚本，还必须重新同步 `~/epuck_ws/src/`，否则 WSL 侧的测试会针对一份过期镜像运行。**
+
