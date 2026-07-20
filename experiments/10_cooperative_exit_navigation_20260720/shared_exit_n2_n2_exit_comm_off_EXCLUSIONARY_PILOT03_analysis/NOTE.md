@@ -2,6 +2,37 @@
 
 **EXCLUSIONARY_DIAGNOSTIC. Not counted toward any formal or pilot statistic.**
 
+## REVISION NOTE (superseding the original attribution below, not deleting it)
+
+The original text below attributed the `DURATION_CEILING` failsafe to
+"Robot B's encounter with the pre-registered search-path obstacle."
+That attribution is **withdrawn** after a full read-only root-cause
+audit (see `experiments/10_cooperative_exit_navigation_20260720/
+root_cause_audit_dynamic_heading_20260720.md`):
+
+- The failsafe actually latched on **Robot A** (`cooperative_avoider-1`),
+  not Robot B.
+- It triggered **after** Robot A had already individually reached and
+  held the goal (`t≈32.3s`) -- while `goal_navigator` continued to
+  recompute and publish a fresh `atan2`-based heading toward the same
+  fixed target every 0.5s, forever, with no arrival/hold logic.
+- Bag evidence: Robot A's position is frozen at (0.542, 0.496) from
+  `t≈33.8s` onward while its yaw sweeps continuously through many
+  radians (a classic go-to-goal heading singularity at near-zero
+  distance-to-target), and `front_distance_m` cycles between 0.17-0.31m
+  in direct correlation with that spin -- consistent with detecting the
+  nearby visual gate-post markers as the robot rotates in place, not
+  the pre-registered obstacle (which Robot A never approaches).
+- The pre-registered obstacle's causal role in *Robot B's* difficulty
+  is genuinely supported by separate sensor evidence (PILOT02, a
+  monotonically closing `front_distance_m` consistent with the
+  obstacle's real position) -- that part of the original diagnosis was
+  not wrong, only its application to Robot A's failsafe.
+
+**Do not cite the original "Robot B / obstacle" attribution below for
+Robot A's failsafe.** The original text is preserved unmodified beneath
+this note for traceability, not because it remains correct.
+
 ## Sim-time fix confirmed working
 
 `exit_discovery_time_s=4.08` (trial-relative, sensible) -- the PILOT02

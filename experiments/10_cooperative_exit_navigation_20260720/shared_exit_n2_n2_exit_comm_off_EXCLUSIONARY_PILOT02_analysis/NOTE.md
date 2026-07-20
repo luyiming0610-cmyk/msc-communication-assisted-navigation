@@ -2,6 +2,26 @@
 
 **EXCLUSIONARY_DIAGNOSTIC. Not counted toward any formal or pilot statistic.**
 
+## REVISION NOTE (adds context, does not withdraw anything below)
+
+A full read-only root-cause audit (see `experiments/10_
+cooperative_exit_navigation_20260720/root_cause_audit_dynamic_
+heading_20260720.md`) additionally examined this pilot's sensor data.
+Robot B's first `LOCAL_FRONT_WARN` encounter here (`t≈33.1s`) IS
+supported by genuine sensor evidence of the pre-registered obstacle
+(a monotonically closing `front_distance_m` as Robot B turns toward
+and past it, both `left`/`right` staying `inf` throughout -- a real
+front-only detection, not a phantom trigger). The obstacle's role in
+Robot B's difficulty is not being withdrawn here. However, the
+DOMINANT, confirmed root cause found across both PILOT02 and PILOT03 is
+a separate mechanism unrelated to this obstacle: `goal_navigator`'s
+informed-mode target never stops updating after a robot individually
+arrives, causing a go-to-goal heading singularity and continuous
+in-place spin (see PILOT03's NOTE.md revision and the audit doc for the
+full mechanism). Both robots in both pilots show the same repeating
+encounter pattern; the obstacle alone does not explain Robot A's
+identical behavior far from it.
+
 ## Two separate findings
 
 ### 1. Genuine task-level finding: Robot B did not complete its search within `max_runtime_s`
