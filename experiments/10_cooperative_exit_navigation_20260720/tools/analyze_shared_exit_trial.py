@@ -103,6 +103,27 @@ def main(argv=None):
         center_y_m=params["exit"]["center_y_m"],
         radius_m=params["exit"]["goal_hold_radius_m"],
     )
+    # Part V (revision 2+): arrival/hold is judged at each robot's OWN
+    # post-exit parking zone, not the single shared exit point -- must
+    # match exactly what goal_navigator.py's ARRIVED_HOLD latch and
+    # task_completion_monitor.py's live verdict use, or this post-hoc
+    # analysis could disagree with the actual trial outcome. Falls back
+    # to the single shared `goal` above (unchanged) for any frozen_params
+    # file that predates parking_zones (Stage 0 / revision 1 pilots).
+    per_robot_goals = None
+    if "parking_zones" in params:
+        per_robot_goals = {
+            "robot_a_epuck1": GoalRegion(
+                center_x_m=params["parking_zones"]["robot_a"]["center_x_m"],
+                center_y_m=params["parking_zones"]["robot_a"]["center_y_m"],
+                radius_m=params["parking_zones"]["robot_a"]["radius_m"],
+            ),
+            "robot_b_epuck2": GoalRegion(
+                center_x_m=params["parking_zones"]["robot_b"]["center_x_m"],
+                center_y_m=params["parking_zones"]["robot_b"]["center_y_m"],
+                radius_m=params["parking_zones"]["robot_b"]["radius_m"],
+            ),
+        }
     hold_time_s = params["goal_hold_time_s"]
     safety_radius_m = params["safety_radius_m"]
     collision_contact_distance_m = params["collision_contact_distance_m"]
@@ -128,11 +149,13 @@ def main(argv=None):
         safety_radius_m=safety_radius_m, collision_contact_distance_m=collision_contact_distance_m,
         data_validity_reasons=[],
         latched_failsafe=latched_failsafe, ended_by_max_runtime=max_runtime_hit,
+        per_robot_goals=per_robot_goals,
     )
 
     individual_completion_time_s = {}
     for name, samples in per_robot.items():
-        t_abs, _reason = robot_goal_completion_time(samples, goal, hold_time_s)
+        robot_goal = (per_robot_goals or {}).get(name, goal)
+        t_abs, _reason = robot_goal_completion_time(samples, robot_goal, hold_time_s)
         individual_completion_time_s[name] = (
             normalize_trial_relative(t_abs, trial_epoch_s) if t_abs is not None else None
         )
@@ -179,6 +202,7 @@ def main(argv=None):
         "cumulative_heading_change_rad": {name: cumulative_absolute_heading_change_rad(s) for name, s in per_robot.items()},
         "stop_duration_s": {name: stop_duration_s(s) for name, s in per_robot.items()},
         "individual_completion_time_s": individual_completion_time_s,
+        "completion_region_source": "per_robot_parking_zone" if per_robot_goals else "shared_exit_region",
         "makespan_s": makespan_trial_relative_s,
         "exit_discovery_time_s": exit_discovery_time_s,
         "communication": communication,

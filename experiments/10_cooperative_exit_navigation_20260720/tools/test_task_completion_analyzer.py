@@ -21,6 +21,28 @@ from task_completion_analyzer import (
 GOAL = GoalRegion(center_x_m=2.0, center_y_m=0.0, radius_m=0.3)
 
 
+def test_per_robot_goals_override_shared_goal_backward_compatible():
+    """Part V: per_robot_goals lets each robot be judged against its own
+    region (e.g. its own parking zone) while the shared `goal` parameter
+    keeps working unmodified for callers that never pass the override --
+    a robot without an entry in per_robot_goals still uses `goal`."""
+    zone_a = GoalRegion(center_x_m=10.0, center_y_m=10.0, radius_m=0.05)
+    robot_a_samples = [(0.0, 10.0, 10.0, 0.0, 0.0), (2.0, 10.0, 10.0, 0.0, 0.0)]
+    # robot_b never gets near zone_a OR the far-away shared GOAL constant,
+    # but DOES sit inside GOAL (the fallback for robots with no override).
+    robot_b_samples = [(0.0, 2.0, 0.0, 0.0, 0.0), (2.0, 2.0, 0.0, 0.0, 0.0)]
+
+    results = all_robots_goal_results(
+        {"robot_a": robot_a_samples, "robot_b": robot_b_samples},
+        GOAL,
+        hold_time_s=1.0,
+        per_robot_goals={"robot_a": zone_a},
+    )
+    by_id = {r.robot_id: r for r in results}
+    assert by_id["robot_a"].reached is True   # judged against zone_a, not GOAL
+    assert by_id["robot_b"].reached is True   # judged against the shared GOAL fallback
+
+
 # --- required test 1: goal判定不能被单帧进入误触发 ---
 def test_single_frame_dip_into_goal_does_not_trigger_success():
     hold_s = 1.0

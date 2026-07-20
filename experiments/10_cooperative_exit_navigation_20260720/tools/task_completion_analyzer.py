@@ -70,11 +70,20 @@ class RobotGoalResult:
 
 
 def all_robots_goal_results(
-    per_robot_samples: dict[str, list[Sample]], goal: GoalRegion, hold_time_s: float
+    per_robot_samples: dict[str, list[Sample]],
+    goal: GoalRegion,
+    hold_time_s: float,
+    per_robot_goals: dict[str, GoalRegion] | None = None,
 ) -> list[RobotGoalResult]:
+    """`goal` is the shared/default region used for every robot unless
+    `per_robot_goals` supplies a robot-specific override (Part V: each
+    robot's own, distinct, non-colliding post-exit parking zone) --
+    existing callers that never pass `per_robot_goals` are unaffected,
+    byte-for-byte, by this addition."""
     results = []
     for robot_id, samples in per_robot_samples.items():
-        completion_time, reason = robot_goal_completion_time(samples, goal, hold_time_s)
+        robot_goal = (per_robot_goals or {}).get(robot_id, goal)
+        completion_time, reason = robot_goal_completion_time(samples, robot_goal, hold_time_s)
         results.append(
             RobotGoalResult(robot_id, completion_time is not None, completion_time, reason)
         )
@@ -208,6 +217,7 @@ def build_task_verdict(
     data_validity_reasons: list[str],
     latched_failsafe: bool,
     ended_by_max_runtime: bool,
+    per_robot_goals: dict[str, GoalRegion] | None = None,
 ) -> TaskVerdict:
     """Assembles the final verdict. `latched_failsafe` and
     `ended_by_max_runtime` are supplied by the caller from the controller
@@ -218,7 +228,7 @@ def build_task_verdict(
     """
     data_validity = "VALID" if not data_validity_reasons else "INVALID"
 
-    results = all_robots_goal_results(per_robot_samples, goal, hold_time_s)
+    results = all_robots_goal_results(per_robot_samples, goal, hold_time_s, per_robot_goals)
     reached = all_robots_reached_goal(results)
     completed_count = sum(1 for r in results if r.reached)
 

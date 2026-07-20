@@ -27,9 +27,16 @@ GOAL_RADIUS_M = 0.10
 
 GATE_POSTS = [(0.244, 0.456), (0.456, 0.244)]
 
-PARKING_A = {"center": (0.64, 0.50), "radius": 0.04}
-PARKING_B = {"center": (0.50, 0.64), "radius": 0.04}
+PARKING_A = {"center": (0.6273, 0.4151), "radius": 0.04}
+PARKING_B = {"center": (0.4151, 0.6273), "radius": 0.04}
 REQUIRED_PARKING_SEPARATION_M = 0.14  # safety_radius_m -- pre-registered minimum
+# PILOT04 (EXCLUDED diagnostic) proved 0.14m alone is not sufficient in
+# practice -- the local IR/ToF sensor's own detection range must also be
+# cleared, or a robot transiting to its own zone repeatedly detects the
+# other robot parked nearby and cannot resolve the encounter within the
+# frozen turn-ledger budget. Checked separately below.
+LOCAL_FRONT_RELEASE_M = 0.220
+ROBOT_DIAMETER_M = 2 * ROBOT_RADIUS_M
 
 OBSTACLE_CENTER = (0.15, -0.15)
 OBSTACLE_HALF_SIZE_M = 0.04  # 0.08m box -> 0.04m half-extent, used as a conservative circular proxy
@@ -142,6 +149,16 @@ def main():
         "parking zone boundaries do not overlap each other",
         boundary_clearance > 0,
         f"boundary_clearance={boundary_clearance:.5f}m",
+    )
+    local_sensor_clearance = parking_separation - PARKING_A["radius"] - PARKING_B["radius"] - ROBOT_DIAMETER_M
+    check(
+        "parking zones clear the local IR/ToF sensor's own detection range "
+        "(PILOT04 finding: >0.14m alone is not sufficient)",
+        parking_separation > LOCAL_FRONT_RELEASE_M + ROBOT_DIAMETER_M,
+        f"center_to_center={parking_separation:.5f}m > "
+        f"local_front_release_m({LOCAL_FRONT_RELEASE_M}) + robot_diameter({ROBOT_DIAMETER_M:.3f}) "
+        f"= {LOCAL_FRONT_RELEASE_M + ROBOT_DIAMETER_M:.5f}m "
+        f"(margin={local_sensor_clearance:.5f}m)",
     )
 
     print("\n=== Start poses outside goal region ===")
