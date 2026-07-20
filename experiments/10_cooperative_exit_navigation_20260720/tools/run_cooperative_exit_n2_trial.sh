@@ -6,9 +6,17 @@ set -eo pipefail
 # run_objective5_impairment_matrix_trial.sh (same interop check, residual
 # check, setsid + stop_pid_group process-group discipline, native-WSL bag
 # path, queue-drain-before-relay-stop rule). Reuses, UNMODIFIED:
-#   - two_epuck_head_on_clean_world.wbt / run_dual_head_on_clean.py /
-#     dual_namespaced_launch.py (the Webots working directory, located at
-#     2-1.仿真通信实验/working after the 2026-07-19 folder rename)
+#   - dual_namespaced_launch.py, epuck_namespaced.urdf, epuckN_ros2_control.yml
+#     (the Webots working directory, located at 2-1.仿真通信实验/working after
+#     the 2026-07-19 folder rename)
+# NOT reused for this experiment category: two_epuck_head_on_clean_world.wbt
+# (the shared, frozen Objective 5 A-D world) has no visible common
+# exit/goal-region marker. Rather than modify that shared file, this
+# category uses its own additive copy, two_epuck_cooperative_exit_n2_world.wbt
+# (identical geometry/robot poses, plus one purely visual, non-colliding
+# marker Solid at the goal region), launched via its own additive entry
+# script run_dual_head_on_clean_n2_exit.py. Neither the original world file
+# nor run_dual_head_on_clean.py is ever read, written, or referenced here.
 #   - epuck2_comm state_publisher, network_impairment_relay,
 #     sequence_counter (COMM_ON only), cooperative_avoider (frozen)
 # New for this experiment category: run_n2_controllers.py (this dir) --
@@ -73,6 +81,8 @@ RELAY_SHA256="$(sha256sum "$REPO/src/epuck2_comm/epuck2_comm/network_impairment_
 IMPAIRMENT_SHA256="$(sha256sum "$REPO/src/epuck2_comm/epuck2_comm/network_impairment.py" | awk '{print $1}')"
 SEQCOUNTER_SHA256="$(sha256sum "$REPO/src/epuck2_comm/epuck2_comm/sequence_counter.py" | awk '{print $1}')"
 COOPAVOIDER_SHA256="$(sha256sum "$REPO/src/epuck2_comm/epuck2_comm/cooperative_avoider.py" | awk '{print $1}')"
+WORLD_SHA256="$(sha256sum "$WORK_DIR/two_epuck_cooperative_exit_n2_world.wbt" | awk '{print $1}')"
+LAUNCH_ENTRY_SHA256="$(sha256sum "$WORK_DIR/run_dual_head_on_clean_n2_exit.py" | awk '{print $1}')"
 GIT_COMMIT="$(cd "$REPO" && git rev-parse HEAD)"
 
 if [[ "$CHECK_ONLY" == "true" ]]; then
@@ -82,8 +92,8 @@ if [[ "$CHECK_ONLY" == "true" ]]; then
     exit 1
   fi
   echo "INTEROP_OK"
-  for f in "$WORK_DIR/run_dual_head_on_clean.py" "$WORK_DIR/dual_namespaced_launch.py" \
-           "$WORK_DIR/two_epuck_head_on_clean_world.wbt" "$WORK_DIR/epuck_namespaced.urdf" \
+  for f in "$WORK_DIR/run_dual_head_on_clean_n2_exit.py" "$WORK_DIR/dual_namespaced_launch.py" \
+           "$WORK_DIR/two_epuck_cooperative_exit_n2_world.wbt" "$WORK_DIR/epuck_namespaced.urdf" \
            "$WORK_DIR/epuck1_ros2_control.yml" "$WORK_DIR/epuck2_ros2_control.yml"; do
     if [[ -f "$f" ]]; then echo "OK    present: $f"; else echo "FAIL  missing: $f" >&2; exit 1; fi
   done
@@ -93,9 +103,11 @@ if [[ "$CHECK_ONLY" == "true" ]]; then
   echo "network_impairment.py_sha256=$IMPAIRMENT_SHA256"
   echo "sequence_counter.py_sha256=$SEQCOUNTER_SHA256"
   echo "cooperative_avoider.py_sha256=$COOPAVOIDER_SHA256 (frozen, must equal Condition A-D's own recorded value)"
+  echo "two_epuck_cooperative_exit_n2_world.wbt_sha256=$WORLD_SHA256 (new, additive world copy + visual goal marker; A-D's own world file untouched)"
+  echo "run_dual_head_on_clean_n2_exit.py_sha256=$LAUNCH_ENTRY_SHA256"
   echo "git_commit=$GIT_COMMIT"
   echo "comm_mode=$COMM_MODE trial_index=$TRIAL_INDEX pilot_label=${PILOT_LABEL:-<none>}"
-  RESIDUAL="$(pgrep -af 'webots-bin|cooperative_avoider|state_publisher|ros2 bag record|network_impairment_relay|sequence_counter' 2>/dev/null | grep -v 'bash -lc' || true)"
+  RESIDUAL="$(pgrep -af 'webots-bin|cooperative_avoider|state_publisher|ros2 bag record|network_impairment_relay|sequence_counter|task_completion_monitor' 2>/dev/null | grep -v 'bash -lc' || true)"
   if [[ -n "$RESIDUAL" ]]; then
     echo "FAIL  residual processes found:" >&2
     echo "$RESIDUAL" >&2
@@ -123,6 +135,16 @@ STATE2_LOG="$DIAG_LOG_DIR/state_epuck2.log"
 RELAY_COUNTER_LOG="$DIAG_LOG_DIR/relay_counter.log"
 BAG_RECORD_LOG="$DIAG_LOG_DIR/bag_record.log"
 EXECUTION_LOG="$DIAG_LOG_DIR/execution.log"
+MONITOR_LOG="$DIAG_LOG_DIR/task_completion_monitor.log"
+MONITOR_VERDICT="$DIAG_LOG_DIR/monitor_verdict.json"
+
+# Frozen goal/exit-region parameters (also written into frozen_params.json
+# below) -- single source of truth shared by the orchestrator's own wait
+# loop and the independent task_completion_monitor.py it launches.
+GOAL_CENTER_X_M=0.0
+GOAL_CENTER_Y_M=0.0
+GOAL_RADIUS_M=0.5
+GOAL_HOLD_TIME_S=2.0
 
 if [[ -e "$NATIVE_BAG_DIR" || -e "$FINAL_DIR" ]]; then
   echo "Refusing to overwrite existing trial: $NATIVE_BAG_DIR or $FINAL_DIR" >&2
@@ -136,7 +158,7 @@ if ! /mnt/c/Windows/System32/cmd.exe /c echo WSL_INTEROP_OK 2>/dev/null | grep -
 fi
 echo "[$(date -Iseconds)] WSL interop confirmed OK" | tee -a "$EXECUTION_LOG"
 
-RESIDUAL="$(pgrep -af 'webots-bin|cooperative_avoider|state_publisher|ros2 bag record|network_impairment_relay|sequence_counter' 2>/dev/null | grep -v 'bash -lc' || true)"
+RESIDUAL="$(pgrep -af 'webots-bin|cooperative_avoider|state_publisher|ros2 bag record|network_impairment_relay|sequence_counter|task_completion_monitor' 2>/dev/null | grep -v 'bash -lc' || true)"
 if [[ -n "$RESIDUAL" ]]; then
   echo "RESIDUAL_PROCESSES_FOUND:" >&2
   echo "$RESIDUAL" >&2
@@ -155,14 +177,16 @@ cat > "$DIAG_LOG_DIR/frozen_params.json" <<EOF
   "trial_index": $TRIAL_INDEX,
   "attempt": $ATTEMPT,
   "pilot_label": "${PILOT_LABEL:-}",
-  "goal_center_x_m": 0.0,
-  "goal_center_y_m": 0.0,
-  "goal_radius_m": 0.5,
-  "goal_hold_time_s": 2.0,
+  "goal_center_x_m": $GOAL_CENTER_X_M,
+  "goal_center_y_m": $GOAL_CENTER_Y_M,
+  "goal_radius_m": $GOAL_RADIUS_M,
+  "goal_hold_time_s": $GOAL_HOLD_TIME_S,
   "safety_radius_m": 0.14,
   "collision_contact_distance_m": 0.07,
   "max_runtime_s": 28.0,
-  "world_file": "two_epuck_head_on_clean_world.wbt",
+  "world_file": "two_epuck_cooperative_exit_n2_world.wbt",
+  "world_file_sha256": "$WORLD_SHA256",
+  "launch_entry_sha256": "$LAUNCH_ENTRY_SHA256",
   "git_commit": "$GIT_COMMIT",
   "orchestrator_sha256": "$ORCH_SHA256",
   "run_n2_controllers_py_sha256": "$CONTROLLER_LAUNCH_SHA256",
@@ -224,20 +248,21 @@ wait_for_topics() {
   return 1
 }
 
-SIM_PID=""; STATE1_PID=""; STATE2_PID=""; RELAY_COUNTER_PID=""; CONTROLLER_PID=""; BAG_PID=""
+SIM_PID=""; STATE1_PID=""; STATE2_PID=""; RELAY_COUNTER_PID=""; CONTROLLER_PID=""; BAG_PID=""; MONITOR_PID=""
 DATA_VALIDITY="VALID"; INVALID_REASON=""; QUEUE_DRAINED="true"; BAG_LOG_CLEAN="true"
 
 cleanup() {
   stop_pid_group "$STATE1_PID" || true
   stop_pid_group "$STATE2_PID" || true
   stop_pid_group "$CONTROLLER_PID" || true
+  stop_pid_group "$MONITOR_PID" || true
   stop_pid_group "$RELAY_COUNTER_PID" || true
   stop_pid "$BAG_PID" || true
   stop_pid_group "$SIM_PID" || true
 }
 trap cleanup EXIT
 
-setsid bash -c "cd '$WORK_DIR' && exec python3 run_dual_head_on_clean.py" >"$SIM_LOG" 2>&1 &
+setsid bash -c "cd '$WORK_DIR' && exec python3 run_dual_head_on_clean_n2_exit.py" >"$SIM_LOG" 2>&1 &
 SIM_PID=$!
 wait_for_topics 90 /epuck1/odom /epuck2/odom /epuck1/tof /epuck2/tof /epuck1/ps0 /epuck2/ps0
 echo "[$(date -Iseconds)] odometry and local sensors ready" | tee -a "$EXECUTION_LOG"
@@ -318,25 +343,62 @@ if ! kill -0 "$BAG_PID" 2>/dev/null; then
 fi
 echo "[$(date -Iseconds)] rosbag recording to NATIVE path: $NATIVE_BAG_DIR" | tee -a "$EXECUTION_LOG"
 
+# task_completion_monitor.py: independent, read-only observer. Subscribes
+# only to /epuck1/state and /epuck2/state (the SAME already-published
+# topic each robot's own controller reads its own state from -- unchanged
+# in both COMM_OFF and COMM_ON). Never publishes cmd_vel or a nav target,
+# never touches Supervisor, never feeds data back into either controller.
+# It only writes TASK_COMPLETE_GOAL to its own log once BOTH robots have
+# held the frozen goal region for >= goal_hold_time_s -- the wait loop
+# below watches for that line so the trial can stop on genuine task
+# completion instead of only ever via the controller's own recovery-based
+# self-completion or max_runtime_s.
+setsid stdbuf -oL -eL python3 "$TOOLS_DIR/task_completion_monitor.py" \
+  --robot-ids epuck1,epuck2 \
+  --state-topics /epuck1/state,/epuck2/state \
+  --goal-center-x-m "$GOAL_CENTER_X_M" --goal-center-y-m "$GOAL_CENTER_Y_M" \
+  --goal-radius-m "$GOAL_RADIUS_M" --goal-hold-time-s "$GOAL_HOLD_TIME_S" \
+  --verdict-path "$MONITOR_VERDICT" \
+  >"$MONITOR_LOG" 2>&1 &
+MONITOR_PID=$!
+sleep 1
+echo "[$(date -Iseconds)] task_completion_monitor launched (read-only, watching /epuck1/state,/epuck2/state)" | tee -a "$EXECUTION_LOG"
+
 N2_COMM_MODE="$COMM_MODE" setsid stdbuf -oL -eL python3 "$TOOLS_DIR/run_n2_controllers.py" \
   >"$CONTROLLER_LOG" 2>&1 &
 CONTROLLER_PID=$!
 
 deadline=$((SECONDS + 75))
 complete_count=0
+STOP_REASON="MAX_RUNTIME"
 while (( SECONDS < deadline )); do
   complete_count="$(grep -c 'COMPLETE:' "$CONTROLLER_LOG" 2>/dev/null || true)"
-  if (( complete_count >= 2 )); then break; fi
-  if ! kill -0 "$CONTROLLER_PID" 2>/dev/null; then
-    echo "[$(date -Iseconds)] controller exited (complete_count=$complete_count)" | tee -a "$EXECUTION_LOG"
+  if grep -q 'TASK_COMPLETE_GOAL' "$MONITOR_LOG" 2>/dev/null; then
+    STOP_REASON="TASK_COMPLETE_GOAL"
+    echo "[$(date -Iseconds)] task_completion_monitor reports TASK_COMPLETE_GOAL -- stopping trial now, not waiting for max_runtime" | tee -a "$EXECUTION_LOG"
     break
   fi
-  sleep 0.5
+  if (( complete_count >= 2 )); then
+    STOP_REASON="CONTROLLER_SELF_COMPLETE"
+    break
+  fi
+  if ! kill -0 "$CONTROLLER_PID" 2>/dev/null; then
+    echo "[$(date -Iseconds)] controller exited (complete_count=$complete_count)" | tee -a "$EXECUTION_LOG"
+    STOP_REASON="CONTROLLER_EXITED_EARLY"
+    break
+  fi
+  sleep 0.2
 done
-echo "[$(date -Iseconds)] controller stage finished (complete_count=$complete_count)" | tee -a "$EXECUTION_LOG"
+echo "[$(date -Iseconds)] controller stage finished (complete_count=$complete_count stop_reason=$STOP_REASON)" | tee -a "$EXECUTION_LOG"
 
 echo "[$(date -Iseconds)] stopping controller (relay/bag/counter/sim remain running for drain)" | tee -a "$EXECUTION_LOG"
+# SIGINT via stop_pid_group -- the SAME safe-stop path used at every other
+# end-of-trial point. This is what triggers cooperative_avoider.py's own,
+# unmodified stop() method (publishes a zero Twist 3x from its
+# SIGINT/KeyboardInterrupt handler) -- reused, never a pkill/hard-kill
+# substitute for a genuine safe-stop.
 stop_pid_group "$CONTROLLER_PID"; CONTROLLER_PID=""
+stop_pid_group "$MONITOR_PID"; MONITOR_PID=""
 stop_pid_group "$STATE1_PID"; STATE1_PID=""
 stop_pid_group "$STATE2_PID"; STATE2_PID=""
 
@@ -379,6 +441,22 @@ if [[ ! -s "$NATIVE_BAG_DIR/metadata.yaml" ]]; then
 fi
 echo "[$(date -Iseconds)] rosbag metadata.yaml check done" | tee -a "$EXECUTION_LOG"
 
+# Post-hoc, read-only check on the now-closed bag: the last recorded
+# /epuckN/cmd_vel sample for each robot must be zero. Required so a
+# TASK_COMPLETE_GOAL (or CONTROLLER_SELF_COMPLETE) stop is verified to
+# have genuinely zeroed motion, not merely closed the bag mid-command.
+CMD_VEL_ZERO="true"
+if [[ -s "$NATIVE_BAG_DIR/metadata.yaml" ]]; then
+  if ! python3 "$TOOLS_DIR/verify_cmd_vel_zero.py" "$NATIVE_BAG_DIR" /epuck1/cmd_vel /epuck2/cmd_vel 2>&1 | tee -a "$EXECUTION_LOG"; then
+    CMD_VEL_ZERO="false"
+    DATA_VALIDITY="INVALID"
+    INVALID_REASON="${INVALID_REASON}final cmd_vel not zero for at least one robot at trial end; "
+  fi
+else
+  CMD_VEL_ZERO="false"
+fi
+echo "[$(date -Iseconds)] cmd_vel-zero-at-end check done (cmd_vel_zero=$CMD_VEL_ZERO)" | tee -a "$EXECUTION_LOG"
+
 stop_pid_group "$SIM_PID"; SIM_PID=""
 sleep 2
 
@@ -391,7 +469,12 @@ if [[ "$BAG_WARN_LINES" != "0" ]]; then
 fi
 
 CONTROLLER_CRASHED="false"
-if ! grep -q 'COMPLETE:' "$CONTROLLER_LOG" 2>/dev/null && (( complete_count < 2 )); then
+# STOP_REASON=TASK_COMPLETE_GOAL means the orchestrator deliberately
+# SIGINT'd a still-healthy controller before it reached its own internal
+# _complete() -- that controller.log therefore legitimately shows neither
+# "COMPLETE:" nor a Traceback/ExternalShutdownException signature. This is
+# the expected shape of a genuine early stop, not a crash.
+if [[ "$STOP_REASON" != "TASK_COMPLETE_GOAL" ]] && ! grep -q 'COMPLETE:' "$CONTROLLER_LOG" 2>/dev/null && (( complete_count < 2 )); then
   if ! grep -qE 'Traceback|rclpy\.executors\.ExternalShutdownException' "$CONTROLLER_LOG" 2>/dev/null; then
     CONTROLLER_CRASHED="true"
     DATA_VALIDITY="INVALID"
@@ -405,6 +488,9 @@ fi
 MAX_RUNTIME_HITS="$(grep -c 'maximum runtime reached' "$CONTROLLER_LOG" 2>/dev/null || true)"
 MAX_RUNTIME_HITS="${MAX_RUNTIME_HITS:-0}"
 
+MONITOR_VERDICT_PRESENT="false"
+[[ -s "$MONITOR_VERDICT" ]] && MONITOR_VERDICT_PRESENT="true"
+
 cat > "$DIAG_LOG_DIR/trial_verdict.json" <<EOF
 {
   "comm_mode": "$COMM_MODE",
@@ -412,9 +498,13 @@ cat > "$DIAG_LOG_DIR/trial_verdict.json" <<EOF
   "attempt": $ATTEMPT,
   "data_validity": "$DATA_VALIDITY",
   "data_validity_reason": "$INVALID_REASON",
+  "stop_reason": "$STOP_REASON",
   "controller_complete_count": $complete_count,
   "controller_crashed": $CONTROLLER_CRASHED,
   "ended_by_max_runtime_hits": $MAX_RUNTIME_HITS,
+  "cmd_vel_zero_at_end": $CMD_VEL_ZERO,
+  "monitor_verdict_present": $MONITOR_VERDICT_PRESENT,
+  "monitor_verdict_path": "$MONITOR_VERDICT",
   "queue_drained": $QUEUE_DRAINED,
   "bag_log_clean": $BAG_LOG_CLEAN,
   "native_bag_dir": "$NATIVE_BAG_DIR",
@@ -422,7 +512,7 @@ cat > "$DIAG_LOG_DIR/trial_verdict.json" <<EOF
   "git_commit": "$GIT_COMMIT"
 }
 EOF
-echo "[$(date -Iseconds)] $STEM RECORDING_COMPLETE data_validity=$DATA_VALIDITY complete_count=$complete_count" | tee -a "$EXECUTION_LOG"
+echo "[$(date -Iseconds)] $STEM RECORDING_COMPLETE data_validity=$DATA_VALIDITY stop_reason=$STOP_REASON complete_count=$complete_count" | tee -a "$EXECUTION_LOG"
 cat "$DIAG_LOG_DIR/trial_verdict.json"
 echo "native bag dir: $NATIVE_BAG_DIR"
 echo "diag log dir: $DIAG_LOG_DIR"
