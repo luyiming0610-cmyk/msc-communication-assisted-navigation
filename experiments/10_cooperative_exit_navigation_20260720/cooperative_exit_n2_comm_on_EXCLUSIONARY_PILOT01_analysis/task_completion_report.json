@@ -1,0 +1,64 @@
+{
+  "trial_id": "cooperative_exit_n2_comm_on_EXCLUSIONARY_PILOT01",
+  "sample_counts": {
+    "epuck1": 282,
+    "epuck2": 306
+  },
+  "final_positions": {
+    "epuck1": {
+      "x_m": -0.004991521593183279,
+      "y_m": -0.07849882543087006
+    },
+    "epuck2": {
+      "x_m": 0.004290922544896603,
+      "y_m": 0.07812929153442383
+    }
+  },
+  "ended_by_max_runtime": true,
+  "latched_failsafe": false,
+  "failsafe_causes_seen": [
+    "NONE"
+  ],
+  "path_length_m": {
+    "epuck1": 0.36298294935413417,
+    "epuck2": 0.3635482925021449
+  },
+  "cumulative_heading_change_rad": {
+    "epuck1": 0.5823392570018768,
+    "epuck2": 0.5316054821014404
+  },
+  "stop_duration_s": {
+    "epuck1": 7.539999999999999,
+    "epuck2": 10.259999999999998
+  },
+  "edge_based_mode_entry_counts": {
+    "epuck1": {
+      "SAFE_STOP_STALE": 1,
+      "STARTUP_HOLD": 1,
+      "CRUISE": 1,
+      "AVOID_TURN": 1,
+      "AVOID_PASS": 1,
+      "COMPLETE": 1
+    },
+    "epuck2": {
+      "SAFE_STOP_STALE": 1,
+      "STARTUP_HOLD": 1,
+      "CRUISE": 1,
+      "AVOID_TURN": 1,
+      "AVOID_PASS": 1,
+      "COMPLETE": 1
+    }
+  },
+  "verdict": {
+    "data_validity": "VALID",
+    "task_outcome": "TASK_FAILURE",
+    "task_outcome_reason": "trial ended via max_runtime_s, not genuine task completion -- never read as success",
+    "all_robots_reached_goal": true,
+    "completed_robot_count": 2,
+    "total_robot_count": 2,
+    "makespan_s": 17.04,
+    "minimum_pairwise_distance_m": 0.14507410520685557,
+    "safety_margin_m": 0.005074105206855556,
+    "collision_count": 0
+  }
+}

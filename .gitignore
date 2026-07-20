@@ -37,3 +37,4 @@ Thumbs.db
 # frozen_params.json) remains version-controlled as normal in the
 # sibling *_analysis/ directory.
 /experiments/05_objective5_impairment_matrix/bags/
+/experiments/10_cooperative_exit_navigation_20260720/bags/

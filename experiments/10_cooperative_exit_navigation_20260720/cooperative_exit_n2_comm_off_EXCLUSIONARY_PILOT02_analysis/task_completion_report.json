@@ -1,0 +1,56 @@
+{
+  "trial_id": "cooperative_exit_n2_comm_off_EXCLUSIONARY_PILOT02",
+  "sample_counts": {
+    "epuck1": 312,
+    "epuck2": 320
+  },
+  "final_positions": {
+    "epuck1": {
+      "x_m": -0.3499999940395355,
+      "y_m": 0.0
+    },
+    "epuck2": {
+      "x_m": 0.3499999940395355,
+      "y_m": 0.0
+    }
+  },
+  "ended_by_max_runtime": true,
+  "latched_failsafe": false,
+  "failsafe_causes_seen": [
+    "NONE"
+  ],
+  "path_length_m": {
+    "epuck1": 0.0,
+    "epuck2": 0.0
+  },
+  "cumulative_heading_change_rad": {
+    "epuck1": 0.0,
+    "epuck2": 0.0
+  },
+  "stop_duration_s": {
+    "epuck1": 33.940000000000005,
+    "epuck2": 34.800000000000004
+  },
+  "edge_based_mode_entry_counts": {
+    "epuck1": {
+      "SAFE_STOP_STALE": 1,
+      "COMPLETE": 1
+    },
+    "epuck2": {
+      "SAFE_STOP_STALE": 1,
+      "COMPLETE": 1
+    }
+  },
+  "verdict": {
+    "data_validity": "VALID",
+    "task_outcome": "TASK_FAILURE",
+    "task_outcome_reason": "trial ended via max_runtime_s, not genuine task completion -- never read as success",
+    "all_robots_reached_goal": true,
+    "completed_robot_count": 2,
+    "total_robot_count": 2,
+    "makespan_s": 17.119999999999997,
+    "minimum_pairwise_distance_m": 0.699999988079071,
+    "safety_margin_m": 0.559999988079071,
+    "collision_count": 0
+  }
+}
