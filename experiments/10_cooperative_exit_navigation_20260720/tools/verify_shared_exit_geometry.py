@@ -22,13 +22,13 @@ import math
 ARENA_HALF_EXTENT_M = 0.75  # RectangleArena floorSize 1.5 x 1.5
 ROBOT_RADIUS_M = 0.037  # e-puck2 body diameter 70mm (GCtronic spec) + small margin
 
-GOAL_CENTER = (0.50, 0.50)
+GOAL_CENTER = (0.25, 0.25)
 GOAL_RADIUS_M = 0.10
 
-GATE_POSTS = [(0.244, 0.456), (0.456, 0.244)]
+GATE_POSTS = [(0.3561, 0.1439), (0.1439, 0.3561)]
 
-PARKING_A = {"center": (0.6520, 0.3904), "radius": 0.04}
-PARKING_B = {"center": (0.3904, 0.6520), "radius": 0.04}
+PARKING_A = {"center": (0.3914, 0.1510), "radius": 0.04}
+PARKING_B = {"center": (0.1510, 0.3914), "radius": 0.04}
 REQUIRED_PARKING_SEPARATION_M = 0.14  # safety_radius_m -- pre-registered minimum
 # PILOT04 (EXCLUDED diagnostic) proved 0.14m alone is not sufficient in
 # practice -- the local IR/ToF sensor's own detection range must also be
@@ -39,7 +39,13 @@ LOCAL_FRONT_RELEASE_M = 0.220
 ROBOT_DIAMETER_M = 2 * ROBOT_RADIUS_M
 GEOMETRY_MARGIN_M = 0.03
 PARKED_VS_PARKED_REQUIRED_M = LOCAL_FRONT_RELEASE_M + ROBOT_DIAMETER_M + GEOMETRY_MARGIN_M
-ROBOT_B_LAST_WAYPOINT_SEGMENT = ((0.25, 0.05), (0.50, 0.50))
+# PILOT08 (EXCLUDED diagnostic) proved a SEPARATE wall-clearance requirement
+# is also needed: physical/CPA-style clearance (parking_radius+robot_radius)
+# is not enough to stop the local sensor detecting the WALL itself -- a
+# wall can never be "passed" the way a discrete object can, so this
+# produces an unresolvable, not merely slow, repeating encounter.
+PARKED_VS_WALL_REQUIRED_M = LOCAL_FRONT_RELEASE_M + ROBOT_RADIUS_M + GEOMETRY_MARGIN_M
+ROBOT_B_LAST_WAYPOINT_SEGMENT = ((0.25, 0.05), (0.25, 0.25))
 
 OBSTACLE_CENTER = (0.15, -0.15)
 OBSTACLE_HALF_SIZE_M = 0.04  # 0.08m box -> 0.04m half-extent, used as a conservative circular proxy
@@ -50,7 +56,7 @@ ROBOT_B_WAYPOINTS = [
     (-0.20, -0.20),
     (0.05, -0.35),
     (0.25, 0.05),
-    (0.50, 0.50),
+    (0.25, 0.25),
 ]
 
 NOMINAL_SPEED_MPS = 0.04
@@ -129,10 +135,19 @@ def main():
         for axis, coord in (("x", cx), ("y", cy)):
             clearance = ARENA_HALF_EXTENT_M - coord - zone["radius"] - ROBOT_RADIUS_M
             check(
-                f"{name} parking zone + robot radius clears +{axis} wall",
+                f"{name} parking zone + robot radius clears +{axis} wall (physical/CPA-style)",
                 clearance > 0,
                 f"clearance={clearance:.4f}m (center_{axis}={coord}, "
                 f"radius={zone['radius']}, robot_radius={ROBOT_RADIUS_M})",
+            )
+            wall_release_clearance = ARENA_HALF_EXTENT_M - coord - PARKED_VS_WALL_REQUIRED_M
+            check(
+                f"{name} parking zone clears +{axis} wall by local_front_release_m + robot_radius_m + margin "
+                "(PILOT08 finding: physical/CPA-style clearance alone is not sufficient)",
+                wall_release_clearance > 0,
+                f"clearance={wall_release_clearance:.4f}m (center_{axis}={coord}, "
+                f"required={PARKED_VS_WALL_REQUIRED_M:.4f}m = local_front_release_m {LOCAL_FRONT_RELEASE_M} "
+                f"+ robot_radius_m {ROBOT_RADIUS_M} + geometry_margin_m {GEOMETRY_MARGIN_M})",
             )
         d_to_exit_center = dist(zone["center"], GOAL_CENTER)
         check(

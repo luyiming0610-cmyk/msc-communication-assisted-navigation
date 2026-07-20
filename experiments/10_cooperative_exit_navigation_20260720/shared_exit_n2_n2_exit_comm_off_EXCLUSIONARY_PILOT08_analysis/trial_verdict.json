@@ -1,0 +1,21 @@
+{
+  "comm_mode": "N2_EXIT_COMM_OFF",
+  "trial_index": 1,
+  "attempt": 1,
+  "data_validity": "VALID",
+  "data_validity_reason": "",
+  "stop_reason": "CONTROLLER_SELF_COMPLETE",
+  "controller_complete_count": 2,
+  "controller_crashed": false,
+  "ended_by_max_runtime_hits": 2,
+  "cmd_vel_zero_at_end": true,
+  "cmd_vel_zero_at_end_informational_only": true,
+  "velocity_settled_at_end": true,
+  "monitor_verdict_present": false,
+  "monitor_verdict_path": "/home/eamon/epuck_comm_bags/shared_exit_n2_n2_exit_comm_off_EXCLUSIONARY_PILOT08_diag_logs/monitor_verdict.json",
+  "queue_drained": true,
+  "bag_log_clean": true,
+  "native_bag_dir": "/home/eamon/epuck_comm_bags/shared_exit_n2_n2_exit_comm_off_EXCLUSIONARY_PILOT08",
+  "native_diag_log_dir": "/home/eamon/epuck_comm_bags/shared_exit_n2_n2_exit_comm_off_EXCLUSIONARY_PILOT08_diag_logs",
+  "git_commit": "7cd3629cc600c93c3140db6b19d5473041619743"
+}
