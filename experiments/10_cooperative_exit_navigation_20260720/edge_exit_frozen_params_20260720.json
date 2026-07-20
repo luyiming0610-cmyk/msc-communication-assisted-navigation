@@ -1,0 +1,72 @@
+{
+  "study": "N2 shared edge-exit navigation, with/without communication",
+  "frozen_on": "2026-07-20",
+  "world_file": "two_epuck_shared_exit_n2_world.wbt",
+  "world_file_note": "NEW, additive world file. Does not modify two_epuck_head_on_clean_world.wbt (Objective 5 A-D) or two_epuck_cooperative_exit_n2_world.wbt (Stage 0).",
+  "arena_floor_size_m": [1.5, 1.5],
+  "exit": {
+    "center_x_m": 0.55,
+    "center_y_m": 0.55,
+    "goal_hold_radius_m": 0.15,
+    "marker": "two non-colliding post markers at (0.45,0.65) and (0.65,0.45) plus a green non-colliding rectangle/disc marker at the exit center"
+  },
+  "obstacle": {
+    "center_x_m": 0.15,
+    "center_y_m": 0.15,
+    "size_m": [0.08, 0.08, 0.10],
+    "collision_enabled": true,
+    "note": "Intersects Robot B's direct diagonal path to the exit; does not intersect Robot A's roughly-horizontal path. Frozen before any pilot runs, never adjusted post-hoc."
+  },
+  "robots": {
+    "robot_a": {
+      "role": "informed (discovers exit early)",
+      "start_x_m": 0.10,
+      "start_y_m": 0.55,
+      "start_yaw_rad": 0.0,
+      "straight_line_distance_to_exit_m": 0.45
+    },
+    "robot_b": {
+      "role": "uninformed (deterministic search until exit known)",
+      "start_x_m": -0.20,
+      "start_y_m": -0.20,
+      "start_yaw_rad": 0.785,
+      "straight_line_distance_to_exit_m": 1.06,
+      "search_waypoints_m": [
+        [-0.20, -0.20],
+        [0.10, -0.35],
+        [0.30, 0.10],
+        [0.55, 0.55]
+      ],
+      "search_waypoint_arrival_radius_m": 0.10
+    }
+  },
+  "safety_radius_m": 0.14,
+  "collision_contact_distance_m": 0.07,
+  "goal_hold_time_s": 2.0,
+  "max_runtime_s": 60.0,
+  "nominal_speed_mps": 0.06,
+  "nominal_speed_mps_note": "Overrides cooperative_avoider.py's default 0.025 via its already-declared, mutable ROS parameter -- not one of the frozen CPA formula / safety radius / local sensor threshold items. Frozen, identical OFF/ON, set before any pilot runs.",
+  "fairness": {
+    "shared_between_off_and_on": [
+      "world_file", "obstacle", "robot_a start pose", "robot_b start pose",
+      "robot_b search_waypoints_m", "exit center/radius",
+      "safety_radius_m", "collision_contact_distance_m", "goal_hold_time_s",
+      "max_runtime_s", "nominal_speed_mps", "local IR/ToF avoidance logic and thresholds (frozen, unmodified)"
+    ],
+    "only_difference": "whether GoalAnnouncement is published by Robot A / subscribed to by Robot B. COMM_OFF launches no publisher or subscriber for this topic at all."
+  },
+  "message_definition": {
+    "name": "epuck2_comm_interfaces/msg/GoalAnnouncement.msg",
+    "fields": [
+      "uint32 protocol_version",
+      "uint32 source_robot_id",
+      "uint32 sequence",
+      "builtin_interfaces/Time production_stamp",
+      "string goal_id",
+      "float64 goal_x_m",
+      "float64 goal_y_m",
+      "bool valid"
+    ],
+    "epuckstate_protocol_version_unaffected": true
+  }
+}
