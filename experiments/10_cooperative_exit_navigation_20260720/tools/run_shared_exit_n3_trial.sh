@@ -49,7 +49,16 @@ GIT_COMMIT="$(cd "$REPO" && git rev-parse HEAD)"
 ORCH_SHA256="$(sha256sum "$0" | awk '{print $1}')"
 
 residuals() {
-  pgrep -af 'webots-bin|cooperative_avoider|state_publisher|ros2 bag record|task_completion_monitor|goal_navigator|multi_peer_selector' 2>/dev/null | grep -v 'bash -lc' || true
+  pgrep -af 'webots-bin|webots_ros2_driver/driver|cooperative_avoider|state_publisher|ros2 bag record|task_completion_monitor|goal_navigator|multi_peer_selector' 2>/dev/null | grep -v 'bash -lc' || true
+}
+
+stop_trial_drivers() {
+  local pids
+  pids="$(pgrep -f 'webots_ros2_driver/driver.*__ns:=/epuck[123]' 2>/dev/null || true)"
+  [[ -n "$pids" ]] || return 0
+  for pid in $pids; do kill -INT "$pid" 2>/dev/null || true; done
+  sleep 1
+  for pid in $pids; do kill -0 "$pid" 2>/dev/null && kill -TERM "$pid" 2>/dev/null || true; done
 }
 
 if [[ "$CHECK_ONLY" == true ]]; then
@@ -101,6 +110,7 @@ stop_group() {
 cleanup() {
   for pid in "${PIDS[@]:-}"; do stop_group "$pid" || true; done
   if [[ -n "$BAG_PID" ]] && kill -0 "$BAG_PID" 2>/dev/null; then kill -INT "$BAG_PID" 2>/dev/null || true; wait "$BAG_PID" 2>/dev/null || true; fi
+  stop_trial_drivers
 }
 trap cleanup EXIT
 
@@ -185,6 +195,7 @@ for pid in "${PIDS[@]}"; do [[ "$pid" == "$SIM_PID" ]] || stop_group "$pid" || t
 PIDS=("$SIM_PID")
 kill -INT "$BAG_PID" 2>/dev/null || true; wait "$BAG_PID" 2>/dev/null || true; BAG_PID=""
 stop_group "$SIM_PID" || true; PIDS=()
+stop_trial_drivers
 
 DATA_VALIDITY=VALID; TASK_OUTCOME=FAIL; REASON="monitor did not confirm all three parking holds"
 [[ -s "$BAG_DIR/metadata.yaml" ]] || DATA_VALIDITY=INVALID

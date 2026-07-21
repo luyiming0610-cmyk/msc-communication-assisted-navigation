@@ -40,5 +40,14 @@ check(0.75 < exit_region["center_x_m"] < 0.95, "exit centre lies in physical nec
 check(-0.05 < exit_region["center_y_m"] < 0.55, "exit centre lies within wall opening")
 check(p["max_runtime_s"] >= 170.0, "pilot runtime accommodates longest frozen search")
 
+for robot_name in ("robot_b", "robot_c"):
+    for index, (x_m, y_m) in enumerate(p["robots"][robot_name]["search_waypoints_m"]):
+        if index == len(p["robots"][robot_name]["search_waypoints_m"]) - 1:
+            continue
+        check(
+            -0.75 + 0.287 < x_m < 0.75 - 0.287 and -0.75 + 0.287 < y_m < 0.75 - 0.287,
+            f"{robot_name} waypoint {index + 1} clears main-arena walls by sensor-aware distance",
+        )
+
 print(f"overall_check={'PASS' if not errors else 'FAIL'}")
 raise SystemExit(1 if errors else 0)
