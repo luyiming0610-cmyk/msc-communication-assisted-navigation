@@ -210,6 +210,12 @@ row per experiment/batch — `status`, `evidence_level`,
 7. No CPU/memory overhead measurement exists yet (would need a live psutil-style sampling companion).
 8. No physical-hardware clock-sync procedure exists yet (`verify_clock_sync()` intentionally raises `NotImplementedError` until Objective 6 begins).
 
+## Shared-exit N2 formal paired batch (complete)
+
+The supervisor-requested asymmetric exit-discovery study is complete (`FINAL_BATCH_PASS`, `FORMAL_SIM`). Five paired `COMM_OFF`/`COMM_ON` trials all succeeded (10/10 runs, zero observed collisions). Communication reduced Robot B's mean completion time from 94.184s to 88.184s; mean paired makespan saving was 6.000s (6.345%), with improvement in all 5/5 pairs. Five communication-enabled event chains independently confirmed `EXIT_DISCOVERED -> ANNOUNCEMENT_TX_FIRST -> SEARCH_TO_GOAL_SWITCH`. Derived evidence is under `experiments/10_cooperative_exit_navigation_20260720/shared_exit_formal_batch_summary/`; native raw evidence remains under `/home/eamon/epuck_comm_bags/`, with a 175/175 SHA-256-verified, gitignored Windows copy under the experiment's `bags/shared_exit_formal_20260721/` directory. Frozen execution commit: `049dcc496de7fd7a1c881eff221c701eef2cc564`. Stage 0 remains preparatory/exclusionary and is not pooled with this formal batch.
+
+This completed batch is not the next task. Objective 5 Conditions E-G and physical ground-motion/dual-robot or hardware-in-the-loop reality-gap validation remain unfinished.
+
 ## Current single next step
 
 Conditions A-D are complete. A and B are 5/5 successful. C is complete with

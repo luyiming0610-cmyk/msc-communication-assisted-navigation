@@ -295,7 +295,7 @@ excluded runs. Nothing here is deleted.
 - Various `cooperative_avoidance_20260716` diagnostic/invalid/interrupted/timeout runs — see `cooperative_avoidance_20260716_diagnostics_and_invalid` registry row and the experiment's own index doc
 - `communication_baseline_20260716/` — registry row `communication_baseline_20260716_stub`; contains exactly one file, an empty (0-byte) stub, no real experiment ever ran here (`artifact_missing`); unrelated to the current Objective 5 comm-baseline work despite the similar name
 
-### 10_cooperative_exit_navigation_20260720 (Stage 0 complete/frozen; Stage 1 real edge-exit design in progress)
+### 10_cooperative_exit_navigation_20260720 (Stage 0 retained; Stage 1 formal paired batch complete)
 
 Supervisor-requested new task-level study, added 2026-07-20, scope
 narrowed by the supervisor a second time (2026-07-20) to N2-only with a
@@ -322,21 +322,12 @@ tooling that Stage 0 built on remain valid and are reused by Stage 1
 `multi_peer_extension_design_20260720.md` design for a future N3/N4,
 not yet needed).
 
-**Stage 1 — two-robot shared EDGE exit pilot (IN PROGRESS)**: real
-edge/corner exit (not central rendezvous), asymmetric exit-discovery
-(Robot A discovers the exit; Robot B does not, and only `N2_EXIT_
-COMM_ON` delivers that information to Robot B via a new task-specific
-message), a minimal goal-directed navigation layer (the frozen
-`cooperative_avoider.py` only holds a fixed heading, not closed-loop
-navigation), and a deterministic, OFF/ON-identical search strategy for
-Robot B before it learns the exit. See `edge_exit_design_20260720.md`.
-Exactly 2 exclusionary pilots planned (`N2_EXIT_COMM_OFF_EXCLUSIONARY_
-PILOT01`, `N2_EXIT_COMM_ON_EXCLUSIONARY_PILOT01`); N3/N4/Condition E-G/
-extra parameter matrices explicitly deferred, not started.
+**Stage 1 — two-robot shared edge-exit study (FORMAL BATCH COMPLETE, `FINAL_BATCH_PASS`)**:
+a real east-wall opening, asymmetric exit knowledge, and a deterministic Robot-B search route were held identical across five paired `N2_EXIT_COMM_OFF`/`N2_EXIT_COMM_ON` trials. All 10 runs completed successfully, settled in their assigned parking regions, and had zero observed collisions. Robot B's mean completion time fell from 94.184 +/- 3.029s to 88.184 +/- 2.298s. The mean paired makespan saving was 6.000 +/- 1.709s (6.345%), and all 5/5 pairs improved. These are descriptive n=5 simulation results, not broad statistical generalisation.
 
-**Stage 2 (formal N2 trials) / Stage 3 (N3/N4 extension)**: not started.
-Every condition's formal Trial 01 requires explicit user manual launch
-and observation; Trial 02-05 only after explicit authorization.
+Mechanism audit passed in all five communication-enabled trials: Robot A physically entered/discovered the exit, then transmitted its first `GoalAnnouncement`, then Robot B changed from deterministic search to direct exit navigation. No premature switch was found. Authoritative derived evidence: `shared_exit_formal_batch_summary/batch_summary.json` and `shared_exit_formal_batch_summary/summary.md`. Raw evidence remains at `/home/eamon/epuck_comm_bags/` with a gitignored Windows copy at `bags/shared_exit_formal_20260721/`; all 175/175 copied files matched by SHA-256. Frozen execution commit: `049dcc496de7fd7a1c881eff221c701eef2cc564`.
+
+Stage 1 is complete and must not be rerun merely to improve the result. A future N3/N4 extension remains separate and not started; it requires explicit authorization and the already documented multi-peer design work.
 
 ## Known open/unconfirmed items from this indexing pass
 
