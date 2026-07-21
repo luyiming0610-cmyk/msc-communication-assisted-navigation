@@ -352,6 +352,8 @@ setsid stdbuf -oL -eL python3 "$TOOLS_DIR/task_completion_monitor.py" \
   --goal-centers-y-m "$PARKING_A_Y_M,$PARKING_B_Y_M" \
   --goal-radii-m "$PARKING_A_RADIUS_M,$PARKING_B_RADIUS_M" \
   --goal-hold-time-s "$GOAL_HOLD_TIME_S" \
+  --max-linear-speed-mps "$COMPLETION_MAX_LINEAR_SPEED_MPS" \
+  --max-angular-speed-rps "$COMPLETION_MAX_ANGULAR_SPEED_RPS" \
   --verdict-path "$MONITOR_VERDICT" \
   >"$MONITOR_LOG" 2>&1 &
 MONITOR_PID=$!
@@ -373,7 +375,8 @@ NAV_A_ARGS=(--robot-id=1 --state-topic=/epuck1/state --nav-intent-topic=/epuck1/
             "--parking-x=$PARKING_A_X_M" "--parking-y=$PARKING_A_Y_M" "--parking-radius=$PARKING_A_RADIUS_M"
             "--goal-hold-time-s=$GOAL_HOLD_TIME_S")
 if [[ "$COMM_MODE" == "N2_EXIT_COMM_ON" ]]; then
-  NAV_A_ARGS+=(--announce --announce-topic=/epuck1/goal_announcement "--goal-id=$GOAL_ID")
+  NAV_A_ARGS+=(--announce --announce-after-exit-entry \
+               --announce-topic=/epuck1/goal_announcement "--goal-id=$GOAL_ID")
 fi
 setsid stdbuf -oL -eL python3 "$TOOLS_DIR/goal_navigator.py" "${NAV_A_ARGS[@]}" >"$NAV_LOG_A" 2>&1 &
 NAV_A_PID=$!

@@ -17,6 +17,8 @@ def main():
         "GOAL_CENTER_Y_M": p["exit"]["center_y_m"],
         "GOAL_RADIUS_M": p["exit"]["goal_hold_radius_m"],
         "GOAL_HOLD_TIME_S": p["goal_hold_time_s"],
+        "COMPLETION_MAX_LINEAR_SPEED_MPS": p["completion_max_linear_speed_mps"],
+        "COMPLETION_MAX_ANGULAR_SPEED_RPS": p["completion_max_angular_speed_rps"],
         "PARKING_A_X_M": p["parking_zones"]["robot_a"]["center_x_m"],
         "PARKING_A_Y_M": p["parking_zones"]["robot_a"]["center_y_m"],
         "PARKING_A_RADIUS_M": p["parking_zones"]["robot_a"]["radius_m"],

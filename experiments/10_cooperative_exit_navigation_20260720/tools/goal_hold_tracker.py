@@ -22,10 +22,10 @@ class GoalHoldTracker:
         self.entry_time_s: float | None = None
         self.completion_time_s: float | None = None
 
-    def update(self, t_s: float, x_m: float, y_m: float) -> None:
+    def update(self, t_s: float, x_m: float, y_m: float, eligible: bool = True) -> None:
         if self.completion_time_s is not None:
             return
-        inside = math.hypot(x_m - self.center_x_m, y_m - self.center_y_m) <= self.radius_m
+        inside = eligible and math.hypot(x_m - self.center_x_m, y_m - self.center_y_m) <= self.radius_m
         if inside:
             if self.entry_time_s is None:
                 self.entry_time_s = t_s

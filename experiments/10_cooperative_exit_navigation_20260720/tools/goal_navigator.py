@@ -62,6 +62,8 @@ class GoalNavigator(Node):
         self.nav_seq = 0
         self.announce_seq = 0
         self.exit_known_logged = False
+        self.announcement_enabled = bool(args.announce and not args.announce_after_exit_entry)
+        self.announced_exit_m = (args.exit_center_x, args.exit_center_y)
 
         # The shared exit stays the single navigation/announcement target
         # (informational identity, common to both robots). Each robot's
@@ -155,6 +157,13 @@ class GoalNavigator(Node):
                     f"EXIT_TO_PARKING_SWITCH robot_id={self.args.robot_id} t={t_s:.3f} "
                     f"parking_target=({px:.4f},{py:.4f})"
                 )
+                if self.announce_pub is not None and not self.announcement_enabled:
+                    self.announcement_enabled = True
+                    self.get_logger().info(
+                        f"EXIT_DISCOVERED_ANNOUNCEMENT_ENABLED robot_id={self.args.robot_id} "
+                        f"t={t_s:.3f} exit=({self.announced_exit_m[0]:.4f},"
+                        f"{self.announced_exit_m[1]:.4f})"
+                    )
             self.goal_hold_tracker.update(t_s, x, y)
             if self.goal_hold_tracker.reached:
                 heading_at_latch = self.target_state.desired_heading_rad(x, y)
@@ -204,9 +213,13 @@ class GoalNavigator(Node):
             nav_msg.valid = True
             self.nav_pub.publish(nav_msg)
 
-        if self.announce_pub is not None:
+        if self.announce_pub is not None and self.announcement_enabled:
             self.announce_seq += 1
-            tx, ty = self.target_state.current_target
+            # The cross-robot message always describes the shared exit.
+            # After discovery, Robot A's own current_target switches to
+            # its private parking region; that private target must never
+            # leak into GoalAnnouncement.
+            tx, ty = self.announced_exit_m
             ann_msg = GoalAnnouncement()
             ann_msg.protocol_version = GoalAnnouncement.PROTOCOL_VERSION
             ann_msg.source_robot_id = self.args.robot_id
@@ -237,6 +250,7 @@ def parse_args(argv):
     parser.add_argument("--waypoint-arrival-radius", type=float, default=0.10)
     parser.add_argument("--goal-announcement-topic", default="")
     parser.add_argument("--announce", action="store_true")
+    parser.add_argument("--announce-after-exit-entry", action="store_true")
     parser.add_argument("--announce-topic", default="")
     parser.add_argument("--goal-id", default="shared_exit")
     parser.add_argument("--rate-hz", type=float, default=2.0)

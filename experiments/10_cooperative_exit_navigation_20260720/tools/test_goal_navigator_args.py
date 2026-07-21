@@ -33,6 +33,12 @@ def test_full_args_parse_succeeds():
     assert args.exit_center_x == 0.50
     assert args.parking_x == 0.64
     assert args.goal_hold_time_s == 2.0
+    assert args.announce_after_exit_entry is False
+
+
+def test_discovery_gated_announcement_flag_parses():
+    args = parse_args(BASE_ARGS + REQUIRED_GEOMETRY_FLAGS + ["--announce-after-exit-entry"])
+    assert args.announce_after_exit_entry is True
 
 
 @pytest.mark.parametrize("missing_flag", REQUIRED_GEOMETRY_FLAGS)

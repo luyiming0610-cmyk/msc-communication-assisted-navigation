@@ -47,13 +47,11 @@ Design constraints (binding):
     zero Twist three times from its SIGINT/KeyboardInterrupt handler in
     main()'s finally block) -- reused, not duplicated.
 
-Per-robot goal judgment mirrors task_completion_analyzer.robot_goal_
-completion_time()'s exact per-sample state machine (anti-single-frame
-trigger; any sample outside the goal region resets the continuous-entry
-clock), just evaluated incrementally as messages arrive instead of over
-a batch of samples after the fact, so a live verdict is provably
-identical to what the existing, already-tested post-hoc analyzer would
-compute from the same data.
+Per-robot goal judgment uses the same anti-single-frame continuous hold
+state machine as the post-hoc analyzer, strengthened for formal task
+completion by requiring both measured linear and angular velocity to
+remain below frozen thresholds throughout the hold. Leaving the region
+or exceeding either motion threshold resets the hold clock.
 """
 from __future__ import annotations
 
@@ -71,11 +69,14 @@ from goal_hold_tracker import GoalHoldTracker
 
 class TaskCompletionMonitor(Node):
     def __init__(self, robot_ids, state_topics, goal_centers_x_m, goal_centers_y_m,
-                 goal_radii_m, goal_hold_time_s, verdict_path):
+                 goal_radii_m, goal_hold_time_s, max_linear_speed_mps,
+                 max_angular_speed_rps, verdict_path):
         super().__init__("task_completion_monitor")
         self.robot_ids = robot_ids
         self.verdict_path = verdict_path
         self.done = False
+        self.max_linear_speed_mps = max_linear_speed_mps
+        self.max_angular_speed_rps = max_angular_speed_rps
         # Per-robot completion region (Part V: each robot's own parking
         # zone, distinct and non-colliding) -- NOT a single shared point,
         # so this monitor's completion criterion matches exactly what
@@ -94,7 +95,9 @@ class TaskCompletionMonitor(Node):
             "task_completion_monitor READY "
             f"watching={dict(zip(robot_ids, state_topics))} "
             f"goals={ {rid: (t.center_x_m, t.center_y_m, t.radius_m) for rid, t in self.trackers.items()} } "
-            f"hold_time_s={goal_hold_time_s}"
+            f"hold_time_s={goal_hold_time_s} "
+            f"max_linear_speed_mps={max_linear_speed_mps} "
+            f"max_angular_speed_rps={max_angular_speed_rps}"
         )
 
     def _make_cb(self, robot_id):
@@ -102,12 +105,20 @@ class TaskCompletionMonitor(Node):
             if self.done:
                 return
             t_s = float(msg.stamp.sec) + float(msg.stamp.nanosec) / 1e9
-            self.trackers[robot_id].update(t_s, float(msg.x_m), float(msg.y_m))
+            motion_settled = (
+                abs(float(msg.linear_velocity_mps)) <= self.max_linear_speed_mps
+                and abs(float(msg.angular_velocity_rps)) <= self.max_angular_speed_rps
+            )
+            self.trackers[robot_id].update(
+                t_s, float(msg.x_m), float(msg.y_m), eligible=motion_settled
+            )
             if self.trackers[robot_id].reached and not self._reported_complete[robot_id]:
                 self._reported_complete[robot_id] = True
                 self.get_logger().info(
                     f"ROBOT_ARRIVED robot_id={robot_id} t={t_s:.3f} "
-                    f"completion_time_s={self.trackers[robot_id].completion_time_s:.3f}"
+                    f"completion_time_s={self.trackers[robot_id].completion_time_s:.3f} "
+                    f"linear_velocity_mps={float(msg.linear_velocity_mps):.6f} "
+                    f"angular_velocity_rps={float(msg.angular_velocity_rps):.6f}"
                 )
             if all(tracker.reached for tracker in self.trackers.values()):
                 self._on_all_complete()
@@ -133,6 +144,8 @@ class TaskCompletionMonitor(Node):
                         "per_robot_completed": self.per_robot_completed,
                         "completion_times_s": completion_times,
                         "makespan_s": max(completion_times.values()),
+                        "completion_max_linear_speed_mps": self.max_linear_speed_mps,
+                        "completion_max_angular_speed_rps": self.max_angular_speed_rps,
                     },
                     f,
                     indent=2,
@@ -156,6 +169,8 @@ def parse_args(argv):
         help="comma-separated, same order as --robot-ids"
     )
     parser.add_argument("--goal-hold-time-s", type=float, required=True)
+    parser.add_argument("--max-linear-speed-mps", type=float, required=True)
+    parser.add_argument("--max-angular-speed-rps", type=float, required=True)
     parser.add_argument("--verdict-path", default="")
     return parser.parse_args(argv)
 
@@ -180,6 +195,7 @@ def main(argv=None):
     node = TaskCompletionMonitor(
         robot_ids, state_topics,
         goal_centers_x_m, goal_centers_y_m, goal_radii_m, args.goal_hold_time_s,
+        args.max_linear_speed_mps, args.max_angular_speed_rps,
         args.verdict_path,
     )
     try:

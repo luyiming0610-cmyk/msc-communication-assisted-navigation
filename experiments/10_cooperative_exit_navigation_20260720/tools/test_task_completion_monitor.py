@@ -19,6 +19,8 @@ def _state(x, y, t_s):
     msg.stamp.nanosec = int((t_s - int(t_s)) * 1e9)
     msg.x_m = float(x)
     msg.y_m = float(y)
+    msg.linear_velocity_mps = 0.0
+    msg.angular_velocity_rps = 0.0
     return msg
 
 
@@ -31,6 +33,8 @@ def _make_node(verdict_path):
         goal_centers_y_m=[0.50, 0.64],
         goal_radii_m=[0.04, 0.04],
         goal_hold_time_s=2.0,
+        max_linear_speed_mps=0.005,
+        max_angular_speed_rps=0.05,
         verdict_path=verdict_path,
     )
 
@@ -74,6 +78,26 @@ def test_both_completed_produces_makespan_and_stop_reason():
             # (2.0s), not the sample timestamp that first observed `reached` --
             # robot B entered its zone at t=5.0, so its completion_time_s=7.0.
             assert verdict["makespan_s"] == 7.0  # max of the two completion times
+            assert verdict["completion_max_angular_speed_rps"] == 0.05
+        finally:
+            node.destroy_node()
+            rclpy.shutdown()
+
+
+def test_motion_resets_hold_even_when_position_stays_inside_region():
+    with tempfile.TemporaryDirectory() as tmp:
+        node = _make_node(os.path.join(tmp, "verdict.json"))
+        try:
+            cb_a = node._make_cb("epuck1")
+            first = _state(0.64, 0.50, 0.0)
+            cb_a(first)
+            moving = _state(0.64, 0.50, 1.5)
+            moving.angular_velocity_rps = 0.20
+            cb_a(moving)
+            cb_a(_state(0.64, 0.50, 2.0))
+            assert node.per_robot_completed["epuck1"] is False
+            cb_a(_state(0.64, 0.50, 4.0))
+            assert node.per_robot_completed["epuck1"] is True
         finally:
             node.destroy_node()
             rclpy.shutdown()

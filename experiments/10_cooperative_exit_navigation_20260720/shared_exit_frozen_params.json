@@ -76,6 +76,8 @@
   "safety_radius_m": 0.14,
   "collision_contact_distance_m": 0.07,
   "goal_hold_time_s": 2.0,
+  "completion_max_linear_speed_mps": 0.005,
+  "completion_max_angular_speed_rps": 0.05,
   "startup_hold_s": 5.0,
   "max_runtime_s": 150.0,
   "max_runtime_s_note": "Expanded observation ceiling for the longer real-exit route. Reaching this ceiling is a task failure, never successful completion.",
@@ -93,8 +95,8 @@
       "peer_cpa_avoidance": true,
       "goal_announcement_publisher_launched": true,
       "goal_announcement_subscriber_launched": true,
-      "robot_a_navigation": "same direct route plus bounded GoalAnnouncement publication",
-      "robot_b_navigation": "same search until receipt of a valid GoalAnnouncement, then direct to the opening"
+      "robot_a_navigation": "same direct route; begins bounded GoalAnnouncement publication only after physically entering the green opening",
+      "robot_b_navigation": "same search until receipt of the first valid post-discovery GoalAnnouncement, then direct to the opening"
     }
   },
   "fairness": {
