@@ -1,0 +1,233 @@
+{
+  "condition_id": "E",
+  "batch_id": "objective5_condition_E_formal_batch_20260721",
+  "batch_label": "FORMAL_SIM",
+  "status": "FINAL_BATCH_PASS",
+  "n_trials": 5,
+  "pass_count": 5,
+  "failed_count": 0,
+  "configuration": {
+    "delay_s": 0.0,
+    "jitter_s": 0.0,
+    "drop_probability": 0.15,
+    "outage_period_s": 0.0,
+    "outage_duration_s": 0.0,
+    "seeds_epuck1_to_epuck2": [
+      4001,
+      4002,
+      4003,
+      4004,
+      4005
+    ],
+    "seeds_epuck2_to_epuck1": [
+      14001,
+      14002,
+      14003,
+      14004,
+      14005
+    ]
+  },
+  "execution_identity": {
+    "git_commit": "540ad98cbeb3bbf79c3782ec6fe349d071d6f19a",
+    "orchestrator_sha256": "94bfede6726f712d98ed91ebebb103cdf59ed5c372b653f59443454994851244",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "trials": [
+    {
+      "trial_index": 1,
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial01_attempt01",
+      "verdict": "PASS",
+      "manual_observation_status": "CONFIRMED",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 433,
+        "relay_forwarded_count": 369,
+        "independent_drop_count": 64,
+        "observed_drop_fraction": 0.14780600461893764,
+        "relay_delivery_ratio": 0.8521939953810623,
+        "sequence_window_boundary_censored": false
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 440,
+        "relay_forwarded_count": 365,
+        "independent_drop_count": 75,
+        "observed_drop_fraction": 0.17045454545454544,
+        "relay_delivery_ratio": 0.8295454545454546,
+        "sequence_window_boundary_censored": false
+      },
+      "min_interrobot_distance_m": 0.14662650300062452,
+      "safety_margin_m": 0.006626503000624506,
+      "preload_realtime_factor": 1.021,
+      "full_load_realtime_factor": 0.961,
+      "first_trigger_reason": "PREDICTED_CPA",
+      "local_layer_engaged": false,
+      "verified_raw_file_count": 14
+    },
+    {
+      "trial_index": 2,
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial02_attempt01",
+      "verdict": "PASS",
+      "manual_observation_status": "NOT_INDIVIDUALLY_OBSERVED",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 449,
+        "relay_forwarded_count": 383,
+        "independent_drop_count": 66,
+        "observed_drop_fraction": 0.14699331848552338,
+        "relay_delivery_ratio": 0.8530066815144766,
+        "sequence_window_boundary_censored": false
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 457,
+        "relay_forwarded_count": 383,
+        "independent_drop_count": 74,
+        "observed_drop_fraction": 0.16192560175054704,
+        "relay_delivery_ratio": 0.838074398249453,
+        "sequence_window_boundary_censored": true
+      },
+      "min_interrobot_distance_m": 0.1476825875632454,
+      "safety_margin_m": 0.0076825875632453855,
+      "preload_realtime_factor": 0.949,
+      "full_load_realtime_factor": 1.049,
+      "first_trigger_reason": "PREDICTED_CPA",
+      "local_layer_engaged": false,
+      "verified_raw_file_count": 14
+    },
+    {
+      "trial_index": 3,
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial03_attempt01",
+      "verdict": "PASS",
+      "manual_observation_status": "NOT_INDIVIDUALLY_OBSERVED",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 418,
+        "relay_forwarded_count": 364,
+        "independent_drop_count": 54,
+        "observed_drop_fraction": 0.1291866028708134,
+        "relay_delivery_ratio": 0.8708133971291866,
+        "sequence_window_boundary_censored": false
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 435,
+        "relay_forwarded_count": 387,
+        "independent_drop_count": 48,
+        "observed_drop_fraction": 0.1103448275862069,
+        "relay_delivery_ratio": 0.8896551724137931,
+        "sequence_window_boundary_censored": false
+      },
+      "min_interrobot_distance_m": 0.14953894800279266,
+      "safety_margin_m": 0.009538948002792647,
+      "preload_realtime_factor": 0.955,
+      "full_load_realtime_factor": 0.969,
+      "first_trigger_reason": "PREDICTED_CPA",
+      "local_layer_engaged": false,
+      "verified_raw_file_count": 14
+    },
+    {
+      "trial_index": 4,
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial04_attempt01",
+      "verdict": "PASS",
+      "manual_observation_status": "NOT_INDIVIDUALLY_OBSERVED",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 431,
+        "relay_forwarded_count": 363,
+        "independent_drop_count": 68,
+        "observed_drop_fraction": 0.15777262180974477,
+        "relay_delivery_ratio": 0.8422273781902552,
+        "sequence_window_boundary_censored": true
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 439,
+        "relay_forwarded_count": 379,
+        "independent_drop_count": 60,
+        "observed_drop_fraction": 0.1366742596810934,
+        "relay_delivery_ratio": 0.8633257403189066,
+        "sequence_window_boundary_censored": true
+      },
+      "min_interrobot_distance_m": 0.14769971325561143,
+      "safety_margin_m": 0.007699713255611418,
+      "preload_realtime_factor": 0.972,
+      "full_load_realtime_factor": 0.957,
+      "first_trigger_reason": "PREDICTED_CPA",
+      "local_layer_engaged": false,
+      "verified_raw_file_count": 14
+    },
+    {
+      "trial_index": 5,
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial05_attempt01",
+      "verdict": "PASS",
+      "manual_observation_status": "NOT_INDIVIDUALLY_OBSERVED",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 425,
+        "relay_forwarded_count": 350,
+        "independent_drop_count": 75,
+        "observed_drop_fraction": 0.17647058823529413,
+        "relay_delivery_ratio": 0.8235294117647058,
+        "sequence_window_boundary_censored": false
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 434,
+        "relay_forwarded_count": 364,
+        "independent_drop_count": 70,
+        "observed_drop_fraction": 0.16129032258064516,
+        "relay_delivery_ratio": 0.8387096774193549,
+        "sequence_window_boundary_censored": false
+      },
+      "min_interrobot_distance_m": 0.14473378798227735,
+      "safety_margin_m": 0.004733787982277332,
+      "preload_realtime_factor": 0.967,
+      "full_load_realtime_factor": 0.943,
+      "first_trigger_reason": "PREDICTED_CPA",
+      "local_layer_engaged": false,
+      "verified_raw_file_count": 14
+    }
+  ],
+  "aggregate": {
+    "epuck1_to_epuck2_drop_fraction": {
+      "mean": 0.15164582720406267,
+      "sample_sd": 0.01728158850417475,
+      "minimum": 0.1291866028708134,
+      "maximum": 0.17647058823529413
+    },
+    "epuck2_to_epuck1_drop_fraction": {
+      "mean": 0.1481379114106076,
+      "sample_sd": 0.024601072006523443,
+      "minimum": 0.1103448275862069,
+      "maximum": 0.17045454545454544
+    },
+    "epuck1_to_epuck2_pooled_drop_fraction": 0.15166975881261596,
+    "epuck2_to_epuck1_pooled_drop_fraction": 0.14829931972789115,
+    "min_interrobot_distance_m": {
+      "mean": 0.14725630796091027,
+      "sample_sd": 0.0017570237225307775,
+      "minimum": 0.14473378798227735,
+      "maximum": 0.14953894800279266
+    },
+    "safety_margin_m": {
+      "mean": 0.007256307960910258,
+      "sample_sd": 0.0017570237225307775,
+      "minimum": 0.004733787982277332,
+      "maximum": 0.009538948002792647
+    },
+    "all_task_success": true,
+    "all_positive_safety_margin": true,
+    "all_pure_communication_cpa_avoidance": true,
+    "all_process_cleanup_clean": true,
+    "raw_evidence_sha256_verified_files": 70,
+    "raw_evidence_sha256_mismatches": 0
+  },
+  "measurement_method": {
+    "authoritative_total_loss": "relay received/forwarded/independent_drop counters",
+    "sequence_gap_scope": "consumer-visible sequence-window interior only; leading/trailing drops are boundary-censored",
+    "reason": "relay counters cover every message received by the impairment relay, whereas an observer cannot infer drops outside its first-to-last visible sequence window"
+  },
+  "manual_observation": {
+    "trial01": "CONFIRMED: successful avoidance, no collision, oscillation, stalling, or other anomaly; both robots completed and stopped; sub-second startup offset visually noted",
+    "trial02_to_trial05": "NOT_INDIVIDUALLY_OBSERVED; automated continuation was authorized after Trial 01 passed all formal gates"
+  },
+  "limitations": [
+    "n=5 formal Webots trials; results are descriptive and are not broad statistical generalisation",
+    "independent Bernoulli loss with fixed seeds is one finite sample of a stochastic impairment",
+    "sequence-window missing counts are boundary-censored and are not used as authoritative total-loss counts",
+    "simulation evidence does not replace physical dual-robot validation"
+  ]
+}

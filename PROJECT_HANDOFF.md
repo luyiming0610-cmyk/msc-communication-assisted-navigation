@@ -35,7 +35,7 @@ Pi-puck, reality gap).
 - **Objective 2** (Protocol Design): `EpuckState.msg` implemented and **frozen as PROTOCOL_VERSION=1** (commit `b5a0351`).
 - **Objective 3** (Library Implementation): `epuck2_comm` library implemented — `state_publisher`, `cooperative_avoider`, `network_impairment_relay`, analyzers. 165/165 package tests passing at the Condition D closeout.
 - **Objective 4** (Task-Specific Validation): controller v1→v4 defect chain resolved; **Phase 4 formal batch SEALED, 5/5 PASS** (commit `e32560e`). Avoidance-scenario scope is now intentionally frozen.
-- **Objective 5** (Performance Analysis): impairment matrix Conditions A-D are complete. A and B are 5/5 successful; C is a valid completed condition with 4/5 SUCCESS plus one retained unsafe failure; D is complete with 5/5 included trials (D01/D02/D03/D05/D06) and D04 transparently retained as an excluded rosbag-only measurement-chain attempt. Conditions E-G remain. See `experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_{A,B,C,D}_formal_batch_summary.md`.
+- **Objective 5** (Performance Analysis): impairment matrix Conditions A-E are complete. A and B are 5/5 successful; C is a valid completed condition with 4/5 SUCCESS plus one retained unsafe failure; D is complete with 5/5 included trials and one transparently retained rosbag-only excluded attempt; E is FINAL_BATCH_PASS (5/5) under independent p=0.15 loss. Conditions F-G remain. See the Condition A-D batch summaries and `experiments/05_objective5_impairment_matrix/objective5_condition_E_formal_batch_summary.md`.
 - **Objective 6/7** (physical validation, reality gap): bridge/driver bringup verified (see Objective 1 above). **First formal physical result now exists**: `physical_single_device_zero_impairment_baseline_v1` (stationary, no ground motion, no controller, single e-puck2 #5809, expanded Pi-TCP-WSL bridge + `EpuckState.msg`) is **FINAL_BATCH_PASS (5/5 FINAL_PASS)** — see `experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/batch_summary.md` and the per-trial `physical_single_device_zero_impairment_baseline_v1_trial0N_attemptNN_analysis/` directories. All 5 trials are one continuous driver/Pi-expanded-server/WSL-bridge session (not 5 independent cold starts). Tier A delivery ratio 1.0/5 trials (application-level, not IP/TCP loss; `duplicate_count` NOT_MEASURABLE, never 0); Tier B bag-capture ratio 1.0 at ~8.88-8.94 Hz actual; Tier C raw sensors ~9.2 Hz, no PDR claimed; RTT tail ~20-25% >50/100ms, 0% >200ms recurring across all 5 windows with **no root-cause attribution**; one-way Pi-to-WSL latency **NOT reported/measured** (no clock-sync verified); `trial01/02_attempt01_short_window` are excluded diagnostic evidence (window-timing defect, since fixed), not part of this n=5. This is a stationary, comm-layer-only result — no ground-motion or controller-driven physical trial has run yet, and reality-gap comparison (Objective 7) has not started.
 
 ## Key paths
@@ -93,15 +93,15 @@ python3 -m pytest test/ -q
 
 ## Experiment categories (full detail: `experiments/EXPERIMENT_INDEX.md`)
 
-01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-D complete; E-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (NEW 2026-07-20, supervisor-requested N2 shared-edge-exit comm-vs-no-comm study; Stage 0 preparatory validation complete, Stage 1 real-exit design in progress, see STAGE_CLASSIFICATION.md).
+01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-E complete; F-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (NEW 2026-07-20, supervisor-requested N2 shared-edge-exit comm-vs-no-comm study; Stage 0 preparatory validation retained, Stage 1 formal paired batch complete, see STAGE_CLASSIFICATION.md).
 
 **New 2026-07-20**: `10_cooperative_exit_navigation_20260720/` studies a
-DIFFERENT question from Objective 5's A-D (which stays frozen, unmodified,
+DIFFERENT question from Objective 5's A-E impairment evidence (which stays frozen and unmodified,
 still the pairwise-CPA-under-communication-impairment evidence): does
 communication help two robots find and reach a shared exit faster/more
 safely. The supervisor's explicit direction (2026-07-20, second round)
-narrowed scope to **N2 only** (N3/N4/Condition E-G/extra parameter
-matrices all deferred, not started) and requires a **real edge/corner
+narrowed the shared-exit scope to **N2 only** (N3/N4 and extra shared-exit parameter
+matrices deferred). Condition E was later completed separately in the Objective 5 impairment matrix. The shared-exit design requires a **real edge/corner
 exit with asymmetric exit-discovery information** (Robot A discovers the
 exit; Robot B does not, and only COMM_ON delivers that information to
 Robot B via a new `GoalAnnouncement`/`ExitAnnouncement` message) --
@@ -214,39 +214,22 @@ row per experiment/batch — `status`, `evidence_level`,
 
 The supervisor-requested asymmetric exit-discovery study is complete (`FINAL_BATCH_PASS`, `FORMAL_SIM`). Five paired `COMM_OFF`/`COMM_ON` trials all succeeded (10/10 runs, zero observed collisions). Communication reduced Robot B's mean completion time from 94.184s to 88.184s; mean paired makespan saving was 6.000s (6.345%), with improvement in all 5/5 pairs. Five communication-enabled event chains independently confirmed `EXIT_DISCOVERED -> ANNOUNCEMENT_TX_FIRST -> SEARCH_TO_GOAL_SWITCH`. Derived evidence is under `experiments/10_cooperative_exit_navigation_20260720/shared_exit_formal_batch_summary/`; native raw evidence remains under `/home/eamon/epuck_comm_bags/`, with a 175/175 SHA-256-verified, gitignored Windows copy under the experiment's `bags/shared_exit_formal_20260721/` directory. Frozen execution commit: `049dcc496de7fd7a1c881eff221c701eef2cc564`. Stage 0 remains preparatory/exclusionary and is not pooled with this formal batch.
 
-This completed batch is not the next task. Objective 5 Conditions E-G and physical ground-motion/dual-robot or hardware-in-the-loop reality-gap validation remain unfinished.
+This completed batch is not the next task. Objective 5 Conditions F-G and physical ground-motion/dual-robot or hardware-in-the-loop reality-gap validation remain unfinished.
+
+
+### Objective 5 Condition E formal batch (2026-07-21)
+
+Condition E is `FINAL_BATCH_PASS`: five independent-loss trials (`drop_probability=0.15`) produced 5/5 valid successful tasks with positive safety margins. Relay-authoritative mean drop fractions were 0.151646 (epuck1→epuck2) and 0.148138 (epuck2→epuck1); the tightest margin was 4.734mm. All five trials were `PREDICTED_CPA` with no local-layer engagement. Trial 01 was manually observed; Trials 02–05 were authorized automated continuations. Native-to-Windows evidence verification matched 70/70 files. Use `experiments/05_objective5_impairment_matrix/objective5_condition_E_formal_batch_summary.{json,md}` as the batch entry point. Total loss uses relay counters; sequence gaps are boundary-censored diagnostics only.
 
 ## Current single next step
 
-Conditions A-D are complete. A and B are 5/5 successful. C is complete with
-the scientifically valid result `4/5 SUCCESS + 1/5 UNSAFE_FAILURE`; C05 is
-retained and must never be rerun or relabelled as a pass. D is complete with
-five included trials (D01/D02/D03/D05/D06). D06 is the sole authorized
-replacement for D04; D04 remains fully preserved and explicitly excluded as
-`EXCLUDED_MEASUREMENT_CHAIN_ATTEMPT` because rosbag alone missed one message
-that the relay forwarded and the online counter received. D03's +0.170mm
-margin is a razor-thin threshold pass, not robust safety. The next executable
-matrix condition is E (moderate independent loss); do not auto-start it
-without explicit authorization. Condition F still requires the mandatory
-outage-window/startup-offset audit before any formal run. Conditions E-G and
-physical ground-motion/reality-gap validation remain unfinished.
+Conditions A-E are complete. Condition E is `FINAL_BATCH_PASS` (5/5 valid task successes) under independent `p=0.15` message loss; relay-authoritative mean drop fractions were 0.151646 and 0.148138, and every trial retained a positive safety margin. Its evidence entry points are `experiments/05_objective5_impairment_matrix/objective5_condition_E_formal_batch_summary.{json,md}` and the five per-trial analysis directories. Do not rerun it.
 
-Running D01 surfaced a **sequence-accounting bug**: `sequence_counter.py`'s
-adjacent-delta missing/expected accounting is wrong under reordering (it
-reported bogus `missing=189/192` and an impossible `capture_ratio=1.00233`
-for D01). It is corrected by a new offline, versioned, set-based analyzer
-`experiments/05_objective5_impairment_matrix/tools/reorder_safe_delivery_analyzer.py`
-(13 unit tests). Its output fields are named
-`aligned_window_forwarded_to_bag_capture_ratio` and
-`relay_received_to_forwarded_ratio` (renamed 2026-07-19 for accuracy, no
-value change). For Conditions D and the jitter component of G, use
-`reordering_delivery_audit.json`, NOT `matrix_analysis.json`'s
-`sequence.missing_count/capture_ratio` (annotated METHOD_INVALID). The frozen
-`sequence_counter.py` itself was NOT modified (it stays correct for the
-in-order streams of A/B/C/E). Conditions E-G have not started; Condition F
-additionally remains blocked by the mandatory outage-window/startup-offset
-audit in `experiments/project_status.json`. Use the same frozen orchestrator;
-the CSV remains the only parameter source.
+The next Objective 5 task is **Condition F's mandatory outage-window/startup-offset audit**. Formal F Trial 01 must not start until that audit reconstructs the global outage schedule against each robot's `TIMEBASE_INIT`, `CRUISE`, and `AVOID_TURN` times. Condition G and physical ground-motion/dual-robot or hardware-in-the-loop reality-gap validation remain unfinished.
+
+
+The earlier Condition D sequence-accounting finding still applies: the live `sequence_counter.py` adjacent-delta method is invalid under reordering, so Conditions D/G use the reorder-safe set-based offline analyzer. Condition E is in order, but a distinct boundary issue remains: an observer's first-to-last visible sequence window cannot infer leading or trailing losses. Therefore Condition E's total-loss result is derived from the relay's received/forwarded/independent-drop counters; sequence gaps are retained only as interior-window diagnostics.
+
 ## What to read first, in order
 
 1. **This file.**

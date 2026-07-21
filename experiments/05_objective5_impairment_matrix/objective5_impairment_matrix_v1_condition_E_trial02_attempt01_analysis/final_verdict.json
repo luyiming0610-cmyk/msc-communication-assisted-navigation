@@ -1,0 +1,125 @@
+{
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "E",
+  "trial_index": 2,
+  "attempt": 1,
+  "trial_id": "objective5_impairment_matrix_v1_condition_E_trial02_attempt01",
+  "batch_status": "FINAL_BATCH_PASS",
+  "data_validity": "VALID",
+  "task_outcome": "SUCCESS",
+  "measurement_validity": "VALID",
+  "legacy_replay": false,
+  "safety": {
+    "min_interrobot_distance_m": 0.1476825875632454,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.0076825875632453855
+  },
+  "manual_observation": {
+    "status": "NOT_INDIVIDUALLY_OBSERVED",
+    "note": "Not individually observed; automated continuation authorized after Trial 01 passed all formal gates."
+  },
+  "process_cleanup_check": {
+    "result": "CLEAN",
+    "checked_after_run_completion": true
+  },
+  "bag_integrity_check": {
+    "ros2_bag_info_succeeded": true,
+    "message_count": 3125,
+    "topic_count": 8,
+    "duration_s": 54.213397825
+  },
+  "raw_data_preservation": {
+    "native_wsl_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_E_trial02_attempt01",
+    "native_wsl_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_E_trial02_attempt01_diag_logs",
+    "windows_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_E_trial02_attempt01/",
+    "windows_copy_committed_to_git": false,
+    "sha256_verified_native_vs_windows_copy": true,
+    "verified_file_count": 14
+  },
+  "run_identity": {
+    "git_commit": "540ad98cbeb3bbf79c3782ec6fe349d071d6f19a",
+    "orchestrator_sha256": "94bfede6726f712d98ed91ebebb103cdf59ed5c372b653f59443454994851244",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "communication_metrics": {
+    "epuck1_to_epuck2": {
+      "relay_received_count": 449,
+      "relay_forwarded_count": 383,
+      "independent_drop_count": 66,
+      "observed_drop_fraction": 0.14699331848552338,
+      "relay_delivery_ratio": 0.8530066815144766,
+      "interior_sequence_gap_count": 66,
+      "sequence_window_expected_count": 449,
+      "sequence_window_boundary_censored": false,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "capture_ratio": 0.8530066815144766,
+      "mean_message_age_s": 0.01634464750652616,
+      "p99_message_age_s": 0.020000000000003126,
+      "latency_measurement_status": "RESOLUTION_LIMITED",
+      "mean_bandwidth_bytes_per_s": 614.6553456302081
+    },
+    "epuck2_to_epuck1": {
+      "relay_received_count": 457,
+      "relay_forwarded_count": 383,
+      "independent_drop_count": 74,
+      "observed_drop_fraction": 0.16192560175054704,
+      "relay_delivery_ratio": 0.838074398249453,
+      "interior_sequence_gap_count": 72,
+      "sequence_window_expected_count": 455,
+      "sequence_window_boundary_censored": true,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "capture_ratio": 0.8417582417582418,
+      "mean_message_age_s": 0.017597911214097865,
+      "p99_message_age_s": 0.020000000000003126,
+      "latency_measurement_status": "RESOLUTION_LIMITED",
+      "mean_bandwidth_bytes_per_s": 601.3212543170029
+    }
+  },
+  "loss_measurement_method": {
+    "authoritative_total_loss_source": "relay received/forwarded/independent_drop counters",
+    "sequence_gap_scope": "interior consumer-visible sequence window only; leading/trailing drops are boundary-censored"
+  },
+  "queue_drain": {
+    "drain_duration_s": 0.2302,
+    "queue_drained": true
+  },
+  "realtime_factor": {
+    "preload_realtime_factor": 0.949,
+    "full_load_realtime_factor": 1.049,
+    "realtime_factor_ok": true
+  },
+  "trigger_mechanism": {
+    "audit_type": "OFFLINE_MECHANISM_AUDIT",
+    "webots_run_for_this_audit": false,
+    "trial_id": "objective5_impairment_matrix_v1_condition_E_trial02_attempt01",
+    "event_counts": {
+      "AVOID_TURN": 8,
+      "AVOID_PASS": 86,
+      "RECOVER": 10,
+      "LOCAL_FRONT_DANGER": 0,
+      "LOCAL_FRONT_WARN": 0,
+      "LOCAL_LEFT_SIDE": 0,
+      "LOCAL_RIGHT_SIDE": 0,
+      "LOCAL_NARROW": 0,
+      "LOCAL_RECOVER": 0,
+      "LOCAL_RECOVERY_READY": 0,
+      "LOCAL_SENSOR_INVALID": 0,
+      "SAFE_STOP_STALE": 4,
+      "SAFE_STOP_INVALID_ODOM": 0,
+      "SAFE_STOP_LOCAL_SENSORS": 0,
+      "LOCAL_SIDE_TRACK": 0,
+      "LOCAL_SIDE_TRACK_HOLD": 0,
+      "LOCAL_SIDE_TRACK_CREEP": 0
+    },
+    "first_trigger_reason": "PREDICTED_CPA",
+    "local_layer_engaged": false,
+    "safe_stop_stale_startup_only": true,
+    "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE"
+  },
+  "trial_verdict": "PASS",
+  "trial_verdict_reason": "All strict automated criteria satisfied; authoritative relay counters confirm independent loss and safety margin remained positive."
+}

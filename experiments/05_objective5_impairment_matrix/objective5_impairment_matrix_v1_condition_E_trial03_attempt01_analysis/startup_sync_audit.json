@@ -1,0 +1,20 @@
+{
+  "trial_id": "objective5_impairment_matrix_v1_condition_E_trial03_attempt01",
+  "audit_type": "OFFLINE_LOG_TIMESTAMP_AUDIT",
+  "cruise_start_ros_time_s": {
+    "epuck1": 27.76,
+    "epuck2": 27.9
+  },
+  "cruise_start_delta_epuck1_minus_epuck2_s": -0.13999999999999702,
+  "avoid_turn_ros_time_s": {
+    "epuck1": 35.06,
+    "epuck2": 35.06
+  },
+  "avoid_turn_delta_epuck1_minus_epuck2_s": 0.0,
+  "recover_ros_time_s": {
+    "epuck1": 56.5,
+    "epuck2": 56.5
+  },
+  "recover_delta_epuck1_minus_epuck2_s": 0.0,
+  "used_as_exclusion_criterion": false
+}

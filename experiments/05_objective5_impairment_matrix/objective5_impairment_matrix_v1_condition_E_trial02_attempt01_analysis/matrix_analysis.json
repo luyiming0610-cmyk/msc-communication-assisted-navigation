@@ -1,0 +1,105 @@
+{
+  "condition_id": "E",
+  "trial_index": 2,
+  "measurement_validity": "VALID",
+  "legacy_replay": false,
+  "directions": [
+    {
+      "direction": "epuck1_to_epuck2",
+      "relay": {
+        "received_count": 449,
+        "forwarded_count": 383,
+        "dropped_count": 66,
+        "independent_drop_count": 66,
+        "outage_drop_count": 0
+      },
+      "sequence": {
+        "received_count": 383,
+        "unique_sequence_count": 383,
+        "expected_count": 449,
+        "missing_count": 66,
+        "duplicate_count": 0,
+        "out_of_order_count": 0,
+        "capture_ratio": 0.8530066815144766
+      },
+      "latency": {
+        "sample_count": 383,
+        "mean_message_age_s": 0.01634464750652616,
+        "median_message_age_s": 0.01999999999999602,
+        "p95_message_age_s": 0.020000000000003126,
+        "p99_message_age_s": 0.020000000000003126,
+        "max_message_age_s": 0.03999999999999915,
+        "negative_age_sample_count": 0,
+        "anomalous_age_sample_count": 0,
+        "configured_delay_s": 0.0,
+        "configured_jitter_s": 0.0,
+        "latency_measurement_status": "RESOLUTION_LIMITED",
+        "clock_domain_evidence": "state_publisher, network_impairment_relay, and sequence_counter are all launched with use_sim_time=true and read the same /clock topic; message_age_s = consumer_callback_ros_time (sequence_counter's own get_clock().now() at message receipt) - EpuckState.stamp (state_publisher's get_clock().now() at publish time). Never the rosbag recorder's wall-clock time.",
+        "schema_problems": []
+      },
+      "relay_forwarded_matches_consumer_received": true,
+      "throughput": {
+        "mean_bandwidth_bytes_per_s": 614.6553456302081,
+        "total_bytes": 26800,
+        "duration_s": 43.60167074203491,
+        "actual_rate_hz": 7.66025691942125
+      }
+    },
+    {
+      "direction": "epuck2_to_epuck1",
+      "relay": {
+        "received_count": 457,
+        "forwarded_count": 383,
+        "dropped_count": 74,
+        "independent_drop_count": 74,
+        "outage_drop_count": 0
+      },
+      "sequence": {
+        "received_count": 383,
+        "unique_sequence_count": 383,
+        "expected_count": 455,
+        "missing_count": 72,
+        "duplicate_count": 0,
+        "out_of_order_count": 0,
+        "capture_ratio": 0.8417582417582418
+      },
+      "latency": {
+        "sample_count": 383,
+        "mean_message_age_s": 0.017597911214097865,
+        "median_message_age_s": 0.01999999999999602,
+        "p95_message_age_s": 0.020000000000003126,
+        "p99_message_age_s": 0.020000000000003126,
+        "max_message_age_s": 0.02000000100000321,
+        "negative_age_sample_count": 0,
+        "anomalous_age_sample_count": 0,
+        "configured_delay_s": 0.0,
+        "configured_jitter_s": 0.0,
+        "latency_measurement_status": "RESOLUTION_LIMITED",
+        "clock_domain_evidence": "state_publisher, network_impairment_relay, and sequence_counter are all launched with use_sim_time=true and read the same /clock topic; message_age_s = consumer_callback_ros_time (sequence_counter's own get_clock().now() at message receipt) - EpuckState.stamp (state_publisher's get_clock().now() at publish time). Never the rosbag recorder's wall-clock time.",
+        "schema_problems": []
+      },
+      "relay_forwarded_matches_consumer_received": true,
+      "throughput": {
+        "mean_bandwidth_bytes_per_s": 601.3212543170029,
+        "total_bytes": 26560,
+        "duration_s": 44.1694016456604,
+        "actual_rate_hz": 7.4938755714957805
+      }
+    }
+  ],
+  "queue_drain": {
+    "drain_duration_s": 0.2302,
+    "queue_drained": true
+  },
+  "realtime_factor": {
+    "preload_realtime_factor": 0.949,
+    "full_load_realtime_factor": 1.049,
+    "realtime_factor_ok": true
+  },
+  "task_outcome_inputs": {
+    "complete_count": 2,
+    "expected_complete_count": 2,
+    "controller_crashed": false
+  },
+  "errors": []
+}

@@ -1,0 +1,28 @@
+{
+  "audit_type": "OFFLINE_MECHANISM_AUDIT",
+  "webots_run_for_this_audit": false,
+  "trial_id": "objective5_impairment_matrix_v1_condition_E_trial04_attempt01",
+  "event_counts": {
+    "AVOID_TURN": 6,
+    "AVOID_PASS": 88,
+    "RECOVER": 10,
+    "LOCAL_FRONT_DANGER": 0,
+    "LOCAL_FRONT_WARN": 0,
+    "LOCAL_LEFT_SIDE": 0,
+    "LOCAL_RIGHT_SIDE": 0,
+    "LOCAL_NARROW": 0,
+    "LOCAL_RECOVER": 0,
+    "LOCAL_RECOVERY_READY": 0,
+    "LOCAL_SENSOR_INVALID": 0,
+    "SAFE_STOP_STALE": 4,
+    "SAFE_STOP_INVALID_ODOM": 0,
+    "SAFE_STOP_LOCAL_SENSORS": 0,
+    "LOCAL_SIDE_TRACK": 0,
+    "LOCAL_SIDE_TRACK_HOLD": 0,
+    "LOCAL_SIDE_TRACK_CREEP": 0
+  },
+  "first_trigger_reason": "PREDICTED_CPA",
+  "local_layer_engaged": false,
+  "safe_stop_stale_startup_only": true,
+  "interpretation": "PURE_COMMUNICATION_CPA_AVOIDANCE"
+}

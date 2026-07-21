@@ -239,6 +239,8 @@ it runs.**
     `objective5_impairment_matrix_v1_condition_D_formal_batch_summary.{json,md}`.
     Evidence per trial:
     `objective5_impairment_matrix_v1_condition_D_trial0{1..6}_attempt01_analysis/`.
+- **Condition E independent-loss formal batch: `FINAL_BATCH_PASS` (5/5).**
+  Five Webots trials used independent Bernoulli loss (`drop_probability=0.15`), zero delay/jitter, and fixed seeds. All datasets were `VALID`; all tasks were `SUCCESS`; all safety margins were positive (tightest 4.734mm); all first triggers were `PREDICTED_CPA` with `LOCAL_*` zero. Relay-authoritative mean drop fractions were 0.151646 (epuck1→epuck2) and 0.148138 (epuck2→epuck1). Total loss is taken from relay received/forwarded/drop counters; sequence gaps are explicitly boundary-censored and are not treated as total loss. Trial 01 was manually confirmed; Trials 02–05 were authorized automated continuations. Raw evidence: 70/70 files SHA-256 matched, 0 mismatch. Summary: `objective5_condition_E_formal_batch_summary.{json,md}`; per-trial evidence: `objective5_impairment_matrix_v1_condition_E_trial0{1..5}_attempt01_analysis/`. Execution commit: `540ad98cbeb3bbf79c3782ec6fe349d071d6f19a`.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,
@@ -255,10 +257,15 @@ it runs.**
   `objective5_impairment_matrix_v1_condition_B_trial04_attempt01`,
   `objective5_impairment_matrix_v1_condition_B_trial05_attempt01`,
   `objective5_impairment_matrix_v1_condition_C_trial01_attempt01`,
-  `objective5_impairment_matrix_v1_condition_C_trial02_attempt01`,
-  `objective5_impairment_matrix_v1_condition_C_trial03_attempt01`,
-  `objective5_impairment_matrix_v1_condition_C_trial04_attempt01`,
-  `objective5_impairment_matrix_v1_condition_C_trial05_attempt01`.
+  `objective5_impairment_matrix_v1_condition_C_trial02_attempt01`,   `objective5_impairment_matrix_v1_condition_C_trial03_attempt01`,
+   `objective5_impairment_matrix_v1_condition_C_trial04_attempt01`,
+   `objective5_impairment_matrix_v1_condition_C_trial05_attempt01`,
+   `objective5_impairment_matrix_v1_condition_E_trial01_attempt01`,
+   `objective5_impairment_matrix_v1_condition_E_trial02_attempt01`,
+   `objective5_impairment_matrix_v1_condition_E_trial03_attempt01`,
+   `objective5_impairment_matrix_v1_condition_E_trial04_attempt01`,
+   `objective5_impairment_matrix_v1_condition_E_trial05_attempt01`,
+   `objective5_condition_E_formal_batch_20260721`.
 
 ### 06_physical_pipuck
 Two physical e-puck2/Pi-puck units, Wi-Fi validation, disconnect/recovery,
