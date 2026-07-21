@@ -38,3 +38,4 @@ Thumbs.db
 # sibling *_analysis/ directory.
 /experiments/05_objective5_impairment_matrix/bags/
 /experiments/10_cooperative_exit_navigation_20260720/bags/
+/experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_formal_20260721/

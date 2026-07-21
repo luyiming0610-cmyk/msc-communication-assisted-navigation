@@ -1,0 +1,102 @@
+﻿{
+    "study":  "Two-robot shared-exit navigation with and without communication",
+    "classification":  "FORMAL_SIM",
+    "status":  "FINAL_BATCH_PASS",
+    "date":  "2026-07-21",
+    "frozen_git_commit":  "049dcc496de7fd7a1c881eff221c701eef2cc564",
+    "repository_head_when_summarised":  "049dcc496de7fd7a1c881eff221c701eef2cc564",
+    "n_paired_trials":  5,
+    "off_pass_count":  5,
+    "on_pass_count":  5,
+    "collision_count":  0,
+    "timeout_count":  0,
+    "settled_count":  10,
+    "all_five_pairs_improved":  true,
+    "paired_results":  [
+                           {
+                               "on_b_s":  86.76,
+                               "improvement_pct":  7.129,
+                               "on_a_s":  70.98,
+                               "off_a_s":  68.9,
+                               "saving_s":  6.66,
+                               "trial":  1,
+                               "off_b_s":  93.42
+                           },
+                           {
+                               "on_b_s":  91.76,
+                               "improvement_pct":  7.612,
+                               "on_a_s":  74.66,
+                               "off_a_s":  75.54,
+                               "saving_s":  7.56,
+                               "trial":  2,
+                               "off_b_s":  99.32
+                           },
+                           {
+                               "on_b_s":  85.76,
+                               "improvement_pct":  7.765,
+                               "on_a_s":  69.9,
+                               "off_a_s":  71.54,
+                               "saving_s":  7.22,
+                               "trial":  3,
+                               "off_b_s":  92.98
+                           },
+                           {
+                               "on_b_s":  88.76,
+                               "improvement_pct":  5.454,
+                               "on_a_s":  72.98,
+                               "off_a_s":  70.88,
+                               "saving_s":  5.12,
+                               "trial":  4,
+                               "off_b_s":  93.88
+                           },
+                           {
+                               "on_b_s":  87.88,
+                               "improvement_pct":  3.767,
+                               "on_a_s":  71.76,
+                               "off_a_s":  69.9,
+                               "saving_s":  3.44,
+                               "trial":  5,
+                               "off_b_s":  91.32
+                           }
+                       ],
+    "descriptive_statistics":  {
+                                   "off_b_mean_s":  94.184,
+                                   "off_b_sd_s":  3.029,
+                                   "on_b_mean_s":  88.184,
+                                   "on_b_sd_s":  2.298,
+                                   "paired_saving_mean_s":  6,
+                                   "paired_saving_sd_s":  1.709,
+                                   "paired_saving_min_s":  3.44,
+                                   "paired_saving_max_s":  7.56,
+                                   "paired_improvement_mean_pct":  6.345,
+                                   "paired_improvement_sd_pct":  1.709,
+                                   "paired_improvement_min_pct":  3.767,
+                                   "paired_improvement_max_pct":  7.765
+                               },
+    "communication_mechanism_audit":  {
+                                          "trials_passed":  5,
+                                          "required_order":  [
+                                                                 "EXIT_DISCOVERED_ANNOUNCEMENT_ENABLED",
+                                                                 "ANNOUNCEMENT_TX_FIRST",
+                                                                 "SEARCH_TO_GOAL_SWITCH"
+                                                             ],
+                                          "premature_goal_switch_count":  0
+                                      },
+    "completion_requirements":  {
+                                    "parking_hold_s":  2,
+                                    "max_linear_speed_mps":  0.005,
+                                    "max_angular_speed_rps":  0.05
+                                },
+    "evidence":  {
+                     "native_wsl_root":  "/home/eamon/epuck_comm_bags",
+                     "windows_copy":  "experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_formal_20260721",
+                     "copied_file_count":  175,
+                     "sha256_matched_file_count":  175,
+                     "sha256_mismatch_count":  0,
+                     "frozen_params_sha256":  "65c291132f3698ee4cfd5aa849a2bb7a22f4f83f51e31215f9f6eb39242d059f",
+                     "communication_event_audit_sha256":  "b3ad91bde4c62c5c77bf9cf0d7ce8e870edd77c105841e2a6f5bb1a0a00c6f13",
+                     "raw_evidence_manifest_sha256":  "edbd2e91c9459b9abdbeb486853d6c3f9f5d81aee91a8259a2b18b960dda6057"
+                 },
+    "interpretation":  "Communication reduced the uninformed robot\u0027s completion time and overall makespan in all five paired trials without reducing task success or observed safety.",
+    "limitation":  "The batch contains five paired simulation trials. Results are descriptive and should not be presented as broad statistical generalisation."
+}

@@ -1,0 +1,36 @@
+﻿{
+    "experiment_id":  "shared_exit_n2_formal_paired_batch_20260721",
+    "classification":  "FORMAL_SIM",
+    "status":  "FINAL_BATCH_PASS",
+    "execution_date":  "2026-07-21",
+    "frozen_git_commit":  "049dcc496de7fd7a1c881eff221c701eef2cc564",
+    "orchestrator_sha256":  "92a788a96d72dccf175acf44a060386d744d4482fd40b7368b94bfe1d02fdaf4",
+    "cooperative_avoider_sha256":  "a54c86752e57e409c02acdf6a2cd7ef954b6401c9fc9c9a40501c555ae966ee2",
+    "frozen_params_sha256":  "65c291132f3698ee4cfd5aa849a2bb7a22f4f83f51e31215f9f6eb39242d059f",
+    "conditions":  [
+                       "N2_EXIT_COMM_OFF",
+                       "N2_EXIT_COMM_ON"
+                   ],
+    "paired_trial_count":  5,
+    "total_run_count":  10,
+    "execution_order":  [
+                            "Trial01 OFF then ON",
+                            "Trial02 ON then OFF",
+                            "Trial03 OFF then ON",
+                            "Trial04 ON then OFF",
+                            "Trial05 OFF then ON"
+                        ],
+    "native_wsl_evidence_root":  "/home/eamon/epuck_comm_bags",
+    "windows_raw_copy":  "experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_formal_20260721",
+    "windows_summary":  "experiments/10_cooperative_exit_navigation_20260720/shared_exit_formal_batch_summary",
+    "copied_file_count":  175,
+    "sha256_match_count":  175,
+    "sha256_mismatch_count":  0,
+    "raw_data_committed_to_git":  false,
+    "notes":  [
+                  "All ten trials stopped through TASK_COMPLETE_GOAL.",
+                  "All robots satisfied parking hold and settled-speed criteria.",
+                  "Five of five paired trials showed reduced Robot B completion time under communication.",
+                  "Goal announcement occurred only after Robot A physically entered the exit region."
+              ]
+}
