@@ -41,14 +41,25 @@ ultimate backstop.
 breached). This is the pre-registered `build_task_verdict()` logic
 working exactly as designed, not a defect in the analyzer.
 
-This is NOT yet root-caused. It may be a downstream artifact of
-Finding 1 (Robot A's incomplete, interrupted trajectory under the
-buggy `stop_after_recovery=True` configuration put it in an atypical
-position when the close approach occurred) or an independent effect of
-the relocated exit bringing both robots' parking corridors closer
-together. Reported here, not silently retried -- the corrected
-`stop_after_recovery=False` configuration will show whether this
-persists.
+The stored bag has now been decoded independently on Windows and the
+minimum-distance sample has been reconstructed exactly. At 74.42s after
+the first state, Robot B was already near its parking point at
+`(0.182372, 0.372461)` while Robot A was still approaching the exit at
+`(0.089470, 0.417701)`. Their centre distance was `0.103331776m`.
+Both robots reported `OBSTACLE_CLEAR` and valid local sensors at this
+instant. The event occurred well before Robot A's later recovery and
+early-stop event, so it is independent of `stop_after_recovery=True`.
+
+Root cause: revision 4 checked Robot B's route against parked Robot A,
+but did not check the symmetric case of Robot A's route against parked
+Robot B. Robot B's old parking point lay directly beside Robot A's
+ingress corridor. Revision 5 therefore adds hard, symmetric checks for
+both ingress routes and both post-exit legs, in addition to the existing
+wall and parked-vs-parked checks. The revised holding points are
+`(-0.20, 0.40)` and `(0.40, -0.20)`; the smallest of the five checked
+transit clearances is `0.42426m`, above the local-sensor-aware
+requirement of `0.324m`. No controller, CPA or sensor threshold is
+changed.
 
 ## Disposition
 

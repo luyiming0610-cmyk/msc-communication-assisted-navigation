@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Read-only, dependency-free plain-SVG top-down GEOMETRY diagram for the
-shared edge-exit study's revision-3 design -- static scene layout only
+shared edge-exit study's current design -- static scene layout only
 (arena, exit region + gate posts, both parking zones, both robots'
 start poses, Robot B's frozen waypoints), NOT a trial trajectory (see
 render_shared_exit_trajectory.py for that). Reads every coordinate
@@ -56,7 +56,7 @@ def main(argv=None):
     here = os.path.dirname(os.path.abspath(__file__))
     params_path = argv[0] if argv else os.path.join(here, "..", "shared_exit_frozen_params.json")
     out_path = argv[1] if len(argv) > 1 else os.path.join(
-        here, "..", "exit_geometry_diagram_revision3.svg"
+        here, "..", "exit_geometry_diagram.svg"
     )
     with open(params_path, "r", encoding="utf-8") as f:
         p = json.load(f)
@@ -125,7 +125,7 @@ def main(argv=None):
 
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {SIZE+2*MARGIN} {SIZE+2*MARGIN}">
 <rect width="100%" height="100%" fill="white" />
-<text x="{MARGIN}" y="30" font-size="16" font-weight="bold">Shared edge-exit N2 geometry -- revision 3</text>
+<text x="{MARGIN}" y="30" font-size="16" font-weight="bold">Shared edge-exit N2 geometry -- revision {p.get('revision', 'unknown')}</text>
 {''.join(elems)}
 </svg>"""
     with open(out_path, "w", encoding="utf-8") as f:

@@ -18,6 +18,18 @@ def _load_params():
         return json.load(f)
 
 
+def _point_to_segment_distance(point, start, end):
+    px, py = point
+    ax, ay = start
+    bx, by = end
+    dx, dy = bx - ax, by - ay
+    length_sq = dx * dx + dy * dy
+    if length_sq == 0:
+        return math.hypot(px - ax, py - ay)
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / length_sq))
+    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+
+
 def test_parking_zones_exceed_required_separation():
     params = _load_params()
     zones = params["parking_zones"]
@@ -52,3 +64,37 @@ def test_parking_zones_are_not_the_same_point_as_the_shared_exit():
         if not isinstance(zone, dict) or "center_x_m" not in zone:
             continue
         assert (zone["center_x_m"], zone["center_y_m"]) != exit_center
+
+
+def test_parking_zones_clear_every_arena_wall_by_sensor_release_requirement():
+    params = _load_params()
+    required = 0.220 + params["robot_radius_m"] + 0.03
+    half = params["arena_half_extent_m"]
+    for name in ("robot_a", "robot_b"):
+        zone = params["parking_zones"][name]
+        for coordinate in (zone["center_x_m"], zone["center_y_m"]):
+            assert half - abs(coordinate) > required
+
+
+def test_both_ingress_and_post_exit_paths_clear_parked_peer():
+    params = _load_params()
+    exit_center = (params["exit"]["center_x_m"], params["exit"]["center_y_m"])
+    a_start = (params["robots"]["robot_a"]["start_x_m"], params["robots"]["robot_a"]["start_y_m"])
+    b_start = (params["robots"]["robot_b"]["start_x_m"], params["robots"]["robot_b"]["start_y_m"])
+    waypoints = [tuple(p) for p in params["robots"]["robot_b"]["search_waypoints_m"]]
+    park_a = (params["parking_zones"]["robot_a"]["center_x_m"], params["parking_zones"]["robot_a"]["center_y_m"])
+    park_b = (params["parking_zones"]["robot_b"]["center_x_m"], params["parking_zones"]["robot_b"]["center_y_m"])
+    required = 0.220 + 2 * params["robot_radius_m"] + 0.03
+    cases = [
+        ([a_start, exit_center], park_b),
+        (waypoints, park_a),
+        ([b_start, exit_center], park_a),
+        ([exit_center, park_a], park_b),
+        ([exit_center, park_b], park_a),
+    ]
+    for polyline, parked_peer in cases:
+        minimum = min(
+            _point_to_segment_distance(parked_peer, polyline[i], polyline[i + 1])
+            for i in range(len(polyline) - 1)
+        )
+        assert minimum > required, (minimum, required, polyline, parked_peer)

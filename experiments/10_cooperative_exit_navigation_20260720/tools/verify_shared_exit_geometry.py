@@ -27,8 +27,8 @@ GOAL_RADIUS_M = 0.10
 
 GATE_POSTS = [(0.3561, 0.1439), (0.1439, 0.3561)]
 
-PARKING_A = {"center": (0.3914, 0.1510), "radius": 0.04}
-PARKING_B = {"center": (0.1510, 0.3914), "radius": 0.04}
+PARKING_A = {"center": (-0.20, 0.40), "radius": 0.04}
+PARKING_B = {"center": (0.40, -0.20), "radius": 0.04}
 REQUIRED_PARKING_SEPARATION_M = 0.14  # safety_radius_m -- pre-registered minimum
 # PILOT04 (EXCLUDED diagnostic) proved 0.14m alone is not sufficient in
 # practice -- the local IR/ToF sensor's own detection range must also be
@@ -45,8 +45,6 @@ PARKED_VS_PARKED_REQUIRED_M = LOCAL_FRONT_RELEASE_M + ROBOT_DIAMETER_M + GEOMETR
 # wall can never be "passed" the way a discrete object can, so this
 # produces an unresolvable, not merely slow, repeating encounter.
 PARKED_VS_WALL_REQUIRED_M = LOCAL_FRONT_RELEASE_M + ROBOT_RADIUS_M + GEOMETRY_MARGIN_M
-ROBOT_B_LAST_WAYPOINT_SEGMENT = ((0.25, 0.05), (0.25, 0.25))
-
 OBSTACLE_CENTER = (0.15, -0.15)
 OBSTACLE_HALF_SIZE_M = 0.04  # 0.08m box -> 0.04m half-extent, used as a conservative circular proxy
 
@@ -133,16 +131,17 @@ def main():
     for name, zone in (("robot_a", PARKING_A), ("robot_b", PARKING_B)):
         cx, cy = zone["center"]
         for axis, coord in (("x", cx), ("y", cy)):
-            clearance = ARENA_HALF_EXTENT_M - coord - zone["radius"] - ROBOT_RADIUS_M
+            nearest_wall = ARENA_HALF_EXTENT_M - abs(coord)
+            clearance = nearest_wall - zone["radius"] - ROBOT_RADIUS_M
             check(
-                f"{name} parking zone + robot radius clears +{axis} wall (physical/CPA-style)",
+                f"{name} parking zone + robot radius clears nearest {axis} wall (physical/CPA-style)",
                 clearance > 0,
                 f"clearance={clearance:.4f}m (center_{axis}={coord}, "
                 f"radius={zone['radius']}, robot_radius={ROBOT_RADIUS_M})",
             )
-            wall_release_clearance = ARENA_HALF_EXTENT_M - coord - PARKED_VS_WALL_REQUIRED_M
+            wall_release_clearance = nearest_wall - PARKED_VS_WALL_REQUIRED_M
             check(
-                f"{name} parking zone clears +{axis} wall by local_front_release_m + robot_radius_m + margin "
+                f"{name} parking zone clears nearest {axis} wall by local_front_release_m + robot_radius_m + margin "
                 "(PILOT08 finding: physical/CPA-style clearance alone is not sufficient)",
                 wall_release_clearance > 0,
                 f"clearance={wall_release_clearance:.4f}m (center_{axis}={coord}, "
@@ -177,28 +176,24 @@ def main():
         f"+ geometry_margin_m {GEOMETRY_MARGIN_M})",
     )
 
-    print(
-        "\n[INFO] Robot B's real, deterministic transit-path closest approach to "
-        "Robot A's parked position (NOT a hard PASS/FAIL check -- an any-angle "
-        "worst-case bound of the same magnitude as PARKED_VS_PARKED_REQUIRED_M is "
-        "geometrically infeasible in this 1.5x1.5m arena at this exit location; "
-        "see shared_exit_frozen_params.json parking_zones.clearance_analysis for "
-        "the full reasoning and the max_runtime_s one-encounter allowance that "
-        "budgets for this):"
-    )
-    (wx0, wy0), (wx1, wy1) = ROBOT_B_LAST_WAYPOINT_SEGMENT
-    ux, uy = wx1 - wx0, wy1 - wy0
-    un = math.hypot(ux, uy)
-    ux, uy = ux / un, uy / un
-    b_entry = (GOAL_CENTER[0] - GOAL_RADIUS_M * ux, GOAL_CENTER[1] - GOAL_RADIUS_M * uy)
-    b_entry_to_a = dist(b_entry, PARKING_A["center"])
-    print(
-        f"      robot_b_entry_point≈{tuple(round(v, 4) for v in b_entry)} "
-        f"distance_to_parked_robot_a={b_entry_to_a:.5f}m "
-        f"(vs. required {PARKED_VS_PARKED_REQUIRED_M:.5f}m -- "
-        f"{'MEETS' if b_entry_to_a > PARKED_VS_PARKED_REQUIRED_M else 'below'} the ideal target, "
-        f"mitigated by max_runtime_s's one_local_encounter_allowance_s)"
-    )
+    print("\n=== Symmetric transit-vs-parked-peer clearance (PILOT09 finding) ===")
+    paths = {
+        "robot_a ingress vs parked robot_b": ([ROBOT_A_START, GOAL_CENTER], PARKING_B["center"]),
+        "robot_b OFF search vs parked robot_a": (ROBOT_B_WAYPOINTS, PARKING_A["center"]),
+        "robot_b ON direct route vs parked robot_a": ([ROBOT_B_START, GOAL_CENTER], PARKING_A["center"]),
+        "robot_a post-exit leg vs parked robot_b": ([GOAL_CENTER, PARKING_A["center"]], PARKING_B["center"]),
+        "robot_b post-exit leg vs parked robot_a": ([GOAL_CENTER, PARKING_B["center"]], PARKING_A["center"]),
+    }
+    for label, (polyline, parked_peer) in paths.items():
+        minimum = min(
+            point_to_segment_dist(parked_peer, polyline[i], polyline[i + 1])
+            for i in range(len(polyline) - 1)
+        )
+        check(
+            label,
+            minimum > PARKED_VS_PARKED_REQUIRED_M,
+            f"minimum={minimum:.5f}m > local-sensor-aware requirement={PARKED_VS_PARKED_REQUIRED_M:.5f}m",
+        )
 
     print("\n=== Start poses outside goal region ===")
     for name, pose in (("robot_a", ROBOT_A_START), ("robot_b", ROBOT_B_START)):

@@ -1,0 +1,44 @@
+{
+  "trial_id": "shared_exit_n2_n2_exit_comm_off_EXCLUSIONARY_PILOT09",
+  "audit_type": "READ_ONLY_POST_HOC_MINIMUM_SEPARATION_RECONSTRUCTION",
+  "source": "Windows SHA-256-verified rosbag copy",
+  "matched_state_samples": 911,
+  "matching_method": "nearest monotonic EpuckState production timestamp, maximum accepted delta 0.08s",
+  "minimum_pairwise_distance_m": 0.10333177631966829,
+  "safety_radius_m": 0.14,
+  "safety_margin_m": -0.03666822368033172,
+  "relative_time_from_first_state_s": 74.42,
+  "state_timestamp_delta_s": 0.0,
+  "robot_a_epuck1": {
+    "x_m": 0.089470,
+    "y_m": 0.417701,
+    "yaw_rad": -1.631088,
+    "linear_velocity_mps": 0.011932,
+    "angular_velocity_rps": 0.176466,
+    "front_distance_m": 1.123258,
+    "left_distance_m": "INF",
+    "right_distance_m": "INF",
+    "obstacle_status": "OBSTACLE_CLEAR",
+    "validity_flags": 7
+  },
+  "robot_b_epuck2": {
+    "x_m": 0.182372,
+    "y_m": 0.372461,
+    "yaw_rad": 0.686964,
+    "linear_velocity_mps": 0.009106,
+    "angular_velocity_rps": 0.0,
+    "front_distance_m": 0.563856,
+    "left_distance_m": "INF",
+    "right_distance_m": "INF",
+    "obstacle_status": "OBSTACLE_CLEAR",
+    "validity_flags": 7
+  },
+  "root_cause": "Revision 4 omitted Robot A ingress versus parked Robot B; Robot B's old holding point lay beside Robot A's ingress corridor.",
+  "not_caused_by": [
+    "low or elevated visual marker detection",
+    "wall detection",
+    "invalid local sensors",
+    "stop_after_recovery early termination"
+  ],
+  "disposition": "PILOT09 remains excluded and preserved. Revision 5 adds symmetric hard geometry constraints before any retry."
+}
