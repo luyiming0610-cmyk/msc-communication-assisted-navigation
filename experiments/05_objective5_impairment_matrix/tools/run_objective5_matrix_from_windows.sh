@@ -38,11 +38,12 @@ IMPAIRMENT_PY="$REPO/src/epuck2_comm/epuck2_comm/network_impairment.py"
 SEQCOUNTER_PY="$REPO/src/epuck2_comm/epuck2_comm/sequence_counter.py"
 
 # Frozen behavioral-code SHA-256, as verified identical across all 5
-# Condition A formal trials (commit 2837d08 / 4882489). Any future
+# Condition A formal trials, then refreshed after the path-only folder rename
+# in commit 2ae869f (no behavioral logic change). Any future
 # condition's Trial 01 must match these UNLESS a deliberate, reviewed code
 # change was made and this wrapper's expected values were updated alongside
 # it in the same commit -- never silently.
-EXPECTED_ORCH_SHA256="20d2ef63a152a7d65632e4fd3414c9cd1cdaa2a449f58daf7eac1bd28110913b"
+EXPECTED_ORCH_SHA256="94bfede6726f712d98ed91ebebb103cdf59ed5c372b653f59443454994851244"
 EXPECTED_RELAY_SHA256="f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff"
 EXPECTED_IMPAIRMENT_SHA256="253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561"
 EXPECTED_SEQCOUNTER_SHA256="57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
