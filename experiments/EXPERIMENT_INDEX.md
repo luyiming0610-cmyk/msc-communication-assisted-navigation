@@ -158,9 +158,13 @@ it runs.**
   0.000s in all 5). Full cross-trial statistics + descriptive
   startup-delta relationship check (no significance claims, n=5) in
   `objective5_impairment_matrix_v1_condition_B_formal_batch_summary.{json,md}`.
-  **Condition F precondition recorded in `project_status.json`**: the
-  startup offset (up to ~2.66s, ~3.8x F's 0.7s outage duration) must be
-  checked against actual outage-window timing before formal F begins.
+  **Condition F mandatory timing precondition: `PASS_WITH_SCOPE_CLARIFICATION`.**
+  A reproducible offline audit of 15 B/D/E timing records shows `[40.0,40.7)`
+  and `[55.0,55.7)` fully inside active avoidance in every audited trial;
+  pilot03 independently measured synchronized bidirectional windows. No
+  frozen outage window covers initial `AVOID_TURN` entry. Formal F is therefore
+  ready only as a stale-stop/recovery-during-active-avoidance test. Evidence:
+  `condition_F_outage_timing_precondition.{json,md}`.
 - **Formal Condition C batch, COMPLETE, FAILED SAFETY GATE (4/5 SUCCESS)**:
   `objective5_impairment_matrix_v1_condition_C_trial01..05_attempt01`
   (fixed `delay_s=1.00`, `jitter_s=0.0`, `drop_probability=0.0`, outage

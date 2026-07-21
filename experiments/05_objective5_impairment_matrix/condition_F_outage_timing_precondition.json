@@ -1,0 +1,640 @@
+{
+  "audit_id": "condition_F_outage_timing_precondition_20260721",
+  "audit_type": "OFFLINE_PRECONDITION_AUDIT",
+  "webots_run_for_audit": false,
+  "condition_id": "F",
+  "frozen_outage_schedule": {
+    "clock_domain": "shared absolute ROS simulation time",
+    "outage_phase_s": 10.0,
+    "outage_period_s": 15.0,
+    "outage_duration_s": 0.7,
+    "nominal_windows_s": [
+      [
+        10.0,
+        10.7
+      ],
+      [
+        25.0,
+        25.7
+      ],
+      [
+        40.0,
+        40.7
+      ],
+      [
+        55.0,
+        55.7
+      ]
+    ]
+  },
+  "historical_trial_count": 15,
+  "historical_trials": [
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial02_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_B_trial02_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 22.74,
+        "epuck2": 25.12
+      },
+      "cruise": {
+        "epuck1": 27.76,
+        "epuck2": 30.16
+      },
+      "avoid_turn": {
+        "epuck1": 36.46,
+        "epuck2": 36.46
+      },
+      "recover": {
+        "epuck1": 57.76,
+        "epuck2": 57.76
+      },
+      "avoid_entry_min_s": 36.46,
+      "avoid_entry_max_s": 36.46,
+      "recover_min_s": 57.76,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial03_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_B_trial03_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 23.88,
+        "epuck2": 23.9
+      },
+      "cruise": {
+        "epuck1": 28.9,
+        "epuck2": 28.9
+      },
+      "avoid_turn": {
+        "epuck1": 36.36,
+        "epuck2": 36.36
+      },
+      "recover": {
+        "epuck1": 57.76,
+        "epuck2": 57.76
+      },
+      "avoid_entry_min_s": 36.36,
+      "avoid_entry_max_s": 36.36,
+      "recover_min_s": 57.76,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial04_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_B_trial04_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 24.06,
+        "epuck2": 24.4
+      },
+      "cruise": {
+        "epuck1": 29.06,
+        "epuck2": 29.4
+      },
+      "avoid_turn": {
+        "epuck1": 36.86,
+        "epuck2": 36.86
+      },
+      "recover": {
+        "epuck1": 58.1,
+        "epuck2": 58.1
+      },
+      "avoid_entry_min_s": 36.86,
+      "avoid_entry_max_s": 36.86,
+      "recover_min_s": 58.1,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_B_trial05_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_B_trial05_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 27.16,
+        "epuck2": 27.16
+      },
+      "cruise": {
+        "epuck1": 32.2,
+        "epuck2": 32.2
+      },
+      "avoid_turn": {
+        "epuck1": 39.86,
+        "epuck2": 39.86
+      },
+      "recover": {
+        "epuck1": 61.06,
+        "epuck2": 61.06
+      },
+      "avoid_entry_min_s": 39.86,
+      "avoid_entry_max_s": 39.86,
+      "recover_min_s": 61.06,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial01_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_D_trial01_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 23.5,
+        "epuck2": 23.52
+      },
+      "cruise": {
+        "epuck1": 28.5,
+        "epuck2": 28.56
+      },
+      "avoid_turn": {
+        "epuck1": 36.06,
+        "epuck2": 36.06
+      },
+      "recover": {
+        "epuck1": 57.36,
+        "epuck2": 57.36
+      },
+      "avoid_entry_min_s": 36.06,
+      "avoid_entry_max_s": 36.06,
+      "recover_min_s": 57.36,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial02_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_D_trial02_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 24.42,
+        "epuck2": 24.46
+      },
+      "cruise": {
+        "epuck1": 29.46,
+        "epuck2": 29.46
+      },
+      "avoid_turn": {
+        "epuck1": 36.66,
+        "epuck2": 36.66
+      },
+      "recover": {
+        "epuck1": 58.36,
+        "epuck2": 58.36
+      },
+      "avoid_entry_min_s": 36.66,
+      "avoid_entry_max_s": 36.66,
+      "recover_min_s": 58.36,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial03_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_D_trial03_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 22.3,
+        "epuck2": 22.3
+      },
+      "cruise": {
+        "epuck1": 27.3,
+        "epuck2": 27.3
+      },
+      "avoid_turn": {
+        "epuck1": 35.0,
+        "epuck2": 35.0
+      },
+      "recover": {
+        "epuck1": 56.1,
+        "epuck2": 56.1
+      },
+      "avoid_entry_min_s": 35.0,
+      "avoid_entry_max_s": 35.0,
+      "recover_min_s": 56.1,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial04_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_D_trial04_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 25.28,
+        "epuck2": 22.96
+      },
+      "cruise": {
+        "epuck1": 30.3,
+        "epuck2": 27.96
+      },
+      "avoid_turn": {
+        "epuck1": 36.7,
+        "epuck2": 36.7
+      },
+      "recover": {
+        "epuck1": 57.96,
+        "epuck2": 57.96
+      },
+      "avoid_entry_min_s": 36.7,
+      "avoid_entry_max_s": 36.7,
+      "recover_min_s": 57.96,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial05_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_D_trial05_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 24.78,
+        "epuck2": 25.44
+      },
+      "cruise": {
+        "epuck1": 29.8,
+        "epuck2": 30.46
+      },
+      "avoid_turn": {
+        "epuck1": 37.46,
+        "epuck2": 37.46
+      },
+      "recover": {
+        "epuck1": 58.96,
+        "epuck2": 58.96
+      },
+      "avoid_entry_min_s": 37.46,
+      "avoid_entry_max_s": 37.46,
+      "recover_min_s": 58.96,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_D_trial06_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_D_trial06_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": {
+        "epuck1": 25.98,
+        "epuck2": 26.22
+      },
+      "cruise": {
+        "epuck1": 31.0,
+        "epuck2": 31.26
+      },
+      "avoid_turn": {
+        "epuck1": 38.66,
+        "epuck2": 38.66
+      },
+      "recover": {
+        "epuck1": 59.96,
+        "epuck2": 59.8
+      },
+      "avoid_entry_min_s": 38.66,
+      "avoid_entry_max_s": 38.66,
+      "recover_min_s": 59.8,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial01_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_E_trial01_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": null,
+      "cruise": {
+        "epuck1": 29.6,
+        "epuck2": 30.86
+      },
+      "avoid_turn": {
+        "epuck1": 37.56,
+        "epuck2": 37.56
+      },
+      "recover": {
+        "epuck1": 58.86,
+        "epuck2": 58.86
+      },
+      "avoid_entry_min_s": 37.56,
+      "avoid_entry_max_s": 37.56,
+      "recover_min_s": 58.86,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial02_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_E_trial02_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": null,
+      "cruise": {
+        "epuck1": 29.9,
+        "epuck2": 30.06
+      },
+      "avoid_turn": {
+        "epuck1": 37.3,
+        "epuck2": 37.3
+      },
+      "recover": {
+        "epuck1": 58.6,
+        "epuck2": 58.6
+      },
+      "avoid_entry_min_s": 37.3,
+      "avoid_entry_max_s": 37.3,
+      "recover_min_s": 58.6,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial03_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_E_trial03_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": null,
+      "cruise": {
+        "epuck1": 27.76,
+        "epuck2": 27.9
+      },
+      "avoid_turn": {
+        "epuck1": 35.06,
+        "epuck2": 35.06
+      },
+      "recover": {
+        "epuck1": 56.5,
+        "epuck2": 56.5
+      },
+      "avoid_entry_min_s": 35.06,
+      "avoid_entry_max_s": 35.06,
+      "recover_min_s": 56.5,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial04_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_E_trial04_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": null,
+      "cruise": {
+        "epuck1": 27.86,
+        "epuck2": 27.86
+      },
+      "avoid_turn": {
+        "epuck1": 35.16,
+        "epuck2": 35.16
+      },
+      "recover": {
+        "epuck1": 56.5,
+        "epuck2": 56.5
+      },
+      "avoid_entry_min_s": 35.16,
+      "avoid_entry_max_s": 35.16,
+      "recover_min_s": 56.5,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    },
+    {
+      "trial_id": "objective5_impairment_matrix_v1_condition_E_trial05_attempt01",
+      "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_impairment_matrix_v1_condition_E_trial05_attempt01_analysis\\startup_sync_audit.json",
+      "timebase_init": null,
+      "cruise": {
+        "epuck1": 31.46,
+        "epuck2": 31.46
+      },
+      "avoid_turn": {
+        "epuck1": 38.9,
+        "epuck2": 38.9
+      },
+      "recover": {
+        "epuck1": 60.06,
+        "epuck2": 60.06
+      },
+      "avoid_entry_min_s": 38.9,
+      "avoid_entry_max_s": 38.9,
+      "recover_min_s": 60.06,
+      "avoid_entry_delta_s": 0.0,
+      "windows_fully_inside_active_avoidance": [
+        [
+          40.0,
+          40.7
+        ],
+        [
+          55.0,
+          55.7
+        ]
+      ],
+      "windows_covering_initial_avoid_entry": [],
+      "window_40_fully_inside_active_avoidance": true,
+      "window_55_fully_inside_active_avoidance": true
+    }
+  ],
+  "pilot03_bidirectional_window_measurement": {
+    "source": "C:\\Users\\路一鸣\\Desktop\\硬件实验毕设\\e-puck2-Comm\\experiments\\05_objective5_impairment_matrix\\objective5_matrix_v1_conditionF_exclusionary_pilot03_analysis\\NOTE.md",
+    "detected_windows": [
+      {
+        "window_index": 0,
+        "epuck1_to_epuck2_start_s": 25.04,
+        "epuck1_to_epuck2_end_s": 25.6,
+        "epuck2_to_epuck1_start_s": 25.04,
+        "epuck2_to_epuck1_end_s": 25.6,
+        "start_deviation_s": 0.0,
+        "end_deviation_s": 0.0
+      },
+      {
+        "window_index": 1,
+        "epuck1_to_epuck2_start_s": 40.06,
+        "epuck1_to_epuck2_end_s": 40.6,
+        "epuck2_to_epuck1_start_s": 40.06,
+        "epuck2_to_epuck1_end_s": 40.6,
+        "start_deviation_s": 0.0,
+        "end_deviation_s": 0.0
+      },
+      {
+        "window_index": 2,
+        "epuck1_to_epuck2_start_s": 55.06,
+        "epuck1_to_epuck2_end_s": 55.6,
+        "epuck2_to_epuck1_start_s": 55.06,
+        "epuck2_to_epuck1_end_s": 55.6,
+        "start_deviation_s": 0.0,
+        "end_deviation_s": 0.0
+      },
+      {
+        "window_index": 3,
+        "epuck1_to_epuck2_start_s": 70.1,
+        "epuck1_to_epuck2_end_s": 70.66,
+        "epuck2_to_epuck1_start_s": 70.1,
+        "epuck2_to_epuck1_end_s": 70.66,
+        "start_deviation_s": 0.0,
+        "end_deviation_s": 0.0
+      },
+      {
+        "window_index": 4,
+        "epuck1_to_epuck2_start_s": 85.1,
+        "epuck1_to_epuck2_end_s": 85.66,
+        "epuck2_to_epuck1_start_s": 85.1,
+        "epuck2_to_epuck1_end_s": 85.66,
+        "start_deviation_s": 0.0,
+        "end_deviation_s": 0.0
+      }
+    ],
+    "all_measured_start_end_deviations_zero": true,
+    "measurement_limit": "boundaries reconstructed from discrete message arrivals; exact continuous boundary precision is not claimed"
+  },
+  "gate_checks": {
+    "window_40_fully_inside_active_avoidance_all_historical_trials": true,
+    "window_55_fully_inside_active_avoidance_all_historical_trials": true,
+    "no_nominal_window_covers_initial_avoid_turn_entry": true,
+    "pilot03_bidirectional_windows_measured_synchronous": true
+  },
+  "precondition_verdict": "PASS_WITH_SCOPE_CLARIFICATION",
+  "scope_clarification": "Condition F tests stale-state safety and recovery when a synchronized full outage occurs during an already-active CPA avoidance manoeuvre. It does not test whether an outage causes or delays the initial PREDICTED_CPA trigger, because no frozen outage window covers the initial AVOID_TURN entry in the audited historical trials.",
+  "formal_trial_requirements": [
+    "record each relay's actual outage-tagged message windows",
+    "record TIMEBASE_INIT, CRUISE, AVOID_TURN, SAFE_STOP_STALE, and RECOVER transitions for both robots",
+    "verify at least one synchronized outage occurs after AVOID_TURN and before RECOVER",
+    "report startup-only and active-avoidance stale events separately",
+    "do not relabel the condition as an initial-CPA-trigger impairment test"
+  ]
+}

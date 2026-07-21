@@ -146,18 +146,18 @@
     }
   ],
   "active_experiment": {
-    "name": "Objective 5 impairment matrix -- Conditions A-E complete; Condition F precondition pending",
-    "status": "Condition E FINAL_BATCH_PASS (5/5); Condition F NOT STARTED and blocked pending the outage-window/startup-offset audit",
-    "finding_so_far": "Condition E retained task success in 5/5 trials under independent p=0.15 loss. Relay-authoritative mean drop fractions were 0.151646 and 0.148138; all safety margins were positive.",
+    "name": "Objective 5 Condition F periodic bidirectional outage",
+    "status": "PRECONDITION PASSED_WITH_SCOPE_CLARIFICATION; formal Trial 01 READY but NOT STARTED",
+    "finding_so_far": "Across 15 B/D/E timing audits, the 40.0-40.7s and 55.0-55.7s windows lie fully inside active CPA avoidance; pilot03 measured bidirectional outage-window deviation as zero. No window covers initial AVOID_TURN entry.",
+    "required_scope": "test stale-state stop and recovery during an already-active CPA manoeuvre; do not claim initial CPA-trigger impairment",
     "not_yet_done": [
-      "Condition F mandatory outage-window/startup-offset precondition and formal batch",
+      "Condition F formal Trials 01-05",
       "Condition G combined-impairment formal batch",
       "dual-physical-e-puck validation if a second unit becomes available",
       "physical ground-motion and simulation-to-physical reality-gap comparison"
-    ],
-    "shared_exit_status": "Stage 1 formal paired batch COMPLETE; Stage 0 remains PREPARATORY / EXCLUSIONARY"
+    ]
   },
-  "next_action": "Do not rerun Condition E or the completed shared-exit batch. The next Objective 5 task is the mandatory Condition F outage-window/startup-offset audit; no formal F trial may run until that precondition passes. Condition G and physical ground-motion/dual-robot or hardware-in-the-loop reality-gap validation remain unfinished.",
+  "next_action": "Condition F precondition has passed with scope clarification. The next action is manually observed formal Condition F Trial 01 using the frozen configuration. After it finishes, verify an actual synchronized outage after AVOID_TURN and before RECOVER, separate startup-only stale events from active-avoidance stale events, and do not auto-start Trial 02 without reviewing Trial 01.",
   "blocked_items": [
     {
       "item": "10_cooperative_exit_navigation_20260720 -- Webots working-directory path RESOLVED (was reported missing, that report was a verification error)",
@@ -173,7 +173,7 @@
     },
     {
       "item": "Condition F formal trials -- MANDATORY pre-start outage-window/startup-offset confound analysis",
-      "blocked_by": "PRECONDITION, recorded 2026-07-19 per user instruction after the Condition B Trial 01 startup-sync audit: the observed orchestrator startup offset (up to ~2.66s between the two controllers' TIMEBASE_INIT, direction not fixed across trials) EXCEEDS Condition F's outage_duration_s=0.7 by ~3.8x. Because F's outage windows are anchored to absolute /clock elapsed time (10/25/40/55s), not to either robot's own started_at, this offset can materially shift which outage windows overlap each trial's critical CPA decision period -- possibly differently per trial and per robot. It is NOT acceptable to dismiss this by noting outage_period_s=15.0 exceeds the startup offset (an earlier over-inference, explicitly retracted). Before formal Condition F Trial 01 runs, an analysis MUST reconstruct, for the planned timing scheme, the global outage-window schedule against each trial's actual TIMEBASE_INIT/CRUISE/AVOID_TURN times -- proving which windows each trial actually experiences and whether any cover the CPA decision phase. This is a Condition-F-specific precondition; nothing is changed in the current Condition B phase."
+      "blocked_by": "RESOLVED 2026-07-21: offline precondition PASS_WITH_SCOPE_CLARIFICATION. Fifteen available B/D/E startup-sync records show both [40.0,40.7) and [55.0,55.7) fully after first AVOID_TURN and before earliest RECOVER; no window covers initial AVOID_TURN entry. Condition F exclusionary pilot03 independently reconstructed five synchronized bidirectional windows with 0 measured start/end deviation. Formal F may proceed only as a stale-stop/recovery-during-active-avoidance test, with per-trial event-to-window verification."
     },
     {
       "item": "Phase 4 formal Trials 06+ or any new avoidance scenario",
@@ -199,7 +199,8 @@
     "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_B_trial0{1..5}_attempt01_analysis/ + objective5_impairment_matrix_v1_condition_B_formal_batch_summary.{json,md} (Objective 5 impairment matrix, Condition B formal n=5 batch, FORMAL_SIM, COMPLETE 5/5 PASS; raw rosbag/diag_logs outside git at native WSL path /home/eamon/epuck_comm_bags/ and a SHA-256-verified Windows copy under experiments/05_objective5_impairment_matrix/bags/, also gitignored)",
     "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_C_trial0{1..5}_attempt01_analysis/ + objective5_impairment_matrix_v1_condition_C_formal_batch_summary.{json,md} (Objective 5 impairment matrix, Condition C formal n=5 batch, FORMAL_SIM, COMPLETE_FAILED_SAFETY_GATE: 4/5 SUCCESS, 1/5 UNSAFE_FAILURE; raw rosbag/diag_logs preserved at native WSL and verified Windows gitignored copy)",
     "experiments/10_cooperative_exit_navigation_20260720/shared_exit_formal_batch_summary/ + experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_formal_20260721/ (shared-exit N2 formal paired batch, FORMAL_SIM, FINAL_BATCH_PASS: COMM_OFF 5/5 and COMM_ON 5/5; raw native WSL sources retained under /home/eamon/epuck_comm_bags; 175/175 copied files SHA-256 matched)",
-    "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_E_trial0{1..5}_attempt01_analysis/ + objective5_condition_E_formal_batch_summary.{json,md} (Objective 5 Condition E, FORMAL_SIM, FINAL_BATCH_PASS 5/5; native WSL raw evidence retained under /home/eamon/epuck_comm_bags and 70/70 SHA-256-verified Windows copies under the gitignored bags directory)"
+    "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_E_trial0{1..5}_attempt01_analysis/ + objective5_condition_E_formal_batch_summary.{json,md} (Objective 5 Condition E, FORMAL_SIM, FINAL_BATCH_PASS 5/5; native WSL raw evidence retained under /home/eamon/epuck_comm_bags and 70/70 SHA-256-verified Windows copies under the gitignored bags directory)",
+    "experiments/05_objective5_impairment_matrix/condition_F_outage_timing_precondition.{json,md} (Condition F mandatory timing precondition, PASS_WITH_SCOPE_CLARIFICATION; offline analysis, no new trial)"
   ],
   "diagnostic_data_roots": [
     "experiments/3-1.灞€閮ㄩ伩闅滈攣瀛樺疄楠?bags/ (controller_v2 development)",
