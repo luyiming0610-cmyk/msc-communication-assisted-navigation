@@ -1,0 +1,280 @@
+{
+  "trial_id": "objective5_impairment_matrix_v1_condition_F_trial04_attempt01",
+  "audit_type": "OFFLINE_OUTAGE_AND_CONTROLLER_TRANSITION_AUDIT",
+  "configured_outage": {
+    "period_s": 15.0,
+    "duration_s": 0.7,
+    "phase_s": 10.0
+  },
+  "first_avoid_turn_ros_time_s": {
+    "epuck1": 26.66,
+    "epuck2": 26.66
+  },
+  "relay_outage_windows": {
+    "epuck1_to_epuck2": [
+      {
+        "first_dropped_receive_time_s": 10.08,
+        "last_dropped_receive_time_s": 10.64,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 25.04,
+        "last_dropped_receive_time_s": 25.6,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 40.06,
+        "last_dropped_receive_time_s": 40.6,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 55.06,
+        "last_dropped_receive_time_s": 55.6,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 70.1,
+        "last_dropped_receive_time_s": 70.66,
+        "dropped_message_count": 6
+      }
+    ],
+    "epuck2_to_epuck1": [
+      {
+        "first_dropped_receive_time_s": 10.04,
+        "last_dropped_receive_time_s": 10.62,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 25.04,
+        "last_dropped_receive_time_s": 25.6,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 40.06,
+        "last_dropped_receive_time_s": 40.6,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 55.06,
+        "last_dropped_receive_time_s": 55.6,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 70.1,
+        "last_dropped_receive_time_s": 70.66,
+        "dropped_message_count": 6
+      }
+    ]
+  },
+  "paired_window_timing": [
+    {
+      "window_index": 0,
+      "first_drop_start_delta_epuck1_minus_epuck2_s": 0.040000000000000924,
+      "last_drop_end_delta_epuck1_minus_epuck2_s": 0.02000000000000135
+    },
+    {
+      "window_index": 1,
+      "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+      "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+    },
+    {
+      "window_index": 2,
+      "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+      "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+    },
+    {
+      "window_index": 3,
+      "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+      "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+    },
+    {
+      "window_index": 4,
+      "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+      "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+    }
+  ],
+  "safe_stop_stale_intervals": [
+    {
+      "robot_id": 1,
+      "start_ros_time_s": 13.86,
+      "end_ros_time_s": 13.9,
+      "observed_safe_stop_duration_s": 0.040000000000000924,
+      "mode_before_stop": "WAITING",
+      "mode_after_recovery": "STARTUP_HOLD",
+      "phase_classification": "STARTUP"
+    },
+    {
+      "robot_id": 1,
+      "start_ros_time_s": 25.46,
+      "end_ros_time_s": 25.76,
+      "observed_safe_stop_duration_s": 0.3000000000000007,
+      "mode_before_stop": "CRUISE",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+    },
+    {
+      "robot_id": 1,
+      "start_ros_time_s": 40.5,
+      "end_ros_time_s": 40.76,
+      "observed_safe_stop_duration_s": 0.259999999999998,
+      "mode_before_stop": "AVOID_PASS",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+    },
+    {
+      "robot_id": 1,
+      "start_ros_time_s": 55.5,
+      "end_ros_time_s": 55.76,
+      "observed_safe_stop_duration_s": 0.259999999999998,
+      "mode_before_stop": "CRUISE",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+    },
+    {
+      "robot_id": 1,
+      "start_ros_time_s": 70.56,
+      "end_ros_time_s": 70.8,
+      "observed_safe_stop_duration_s": 0.23999999999999488,
+      "mode_before_stop": "LOCAL_SIDE_TRACK_CREEP",
+      "mode_after_recovery": "LOCAL_SIDE_TRACK_CREEP",
+      "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+    },
+    {
+      "robot_id": 2,
+      "start_ros_time_s": 14.1,
+      "end_ros_time_s": 14.16,
+      "observed_safe_stop_duration_s": 0.0600000000000005,
+      "mode_before_stop": "WAITING",
+      "mode_after_recovery": "STARTUP_HOLD",
+      "phase_classification": "STARTUP"
+    },
+    {
+      "robot_id": 2,
+      "start_ros_time_s": 25.46,
+      "end_ros_time_s": 25.76,
+      "observed_safe_stop_duration_s": 0.3000000000000007,
+      "mode_before_stop": "CRUISE",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+    },
+    {
+      "robot_id": 2,
+      "start_ros_time_s": 40.5,
+      "end_ros_time_s": 40.76,
+      "observed_safe_stop_duration_s": 0.259999999999998,
+      "mode_before_stop": "AVOID_PASS",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+    },
+    {
+      "robot_id": 2,
+      "start_ros_time_s": 55.5,
+      "end_ros_time_s": 55.76,
+      "observed_safe_stop_duration_s": 0.259999999999998,
+      "mode_before_stop": "CRUISE",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+    },
+    {
+      "robot_id": 2,
+      "start_ros_time_s": 70.56,
+      "end_ros_time_s": 70.8,
+      "observed_safe_stop_duration_s": 0.23999999999999488,
+      "mode_before_stop": "LOCAL_SIDE_TRACK_CREEP",
+      "mode_after_recovery": "LOCAL_SIDE_TRACK_CREEP",
+      "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+    }
+  ],
+  "all_stale_stops_recovered": true,
+  "active_avoidance_stale_stop_confirmed": true,
+  "local_layer_engaged": true,
+  "local_transition_count": 14,
+  "local_transitions": [
+    {
+      "robot_id": 1,
+      "ros_time_s": 64.12,
+      "source_mode": "CRUISE",
+      "destination_mode": "LOCAL_FRONT_WARN"
+    },
+    {
+      "robot_id": 1,
+      "ros_time_s": 65.62,
+      "source_mode": "LOCAL_FRONT_WARN",
+      "destination_mode": "LOCAL_DETECT_TURN"
+    },
+    {
+      "robot_id": 1,
+      "ros_time_s": 66.3,
+      "source_mode": "LOCAL_DETECT_TURN",
+      "destination_mode": "LOCAL_SIDE_TRACK_HOLD"
+    },
+    {
+      "robot_id": 1,
+      "ros_time_s": 66.36,
+      "source_mode": "LOCAL_SIDE_TRACK_HOLD",
+      "destination_mode": "LOCAL_SIDE_TRACK_CREEP"
+    },
+    {
+      "robot_id": 1,
+      "ros_time_s": 70.56,
+      "source_mode": "LOCAL_SIDE_TRACK_CREEP",
+      "destination_mode": "SAFE_STOP_STALE"
+    },
+    {
+      "robot_id": 1,
+      "ros_time_s": 70.8,
+      "source_mode": "SAFE_STOP_STALE",
+      "destination_mode": "LOCAL_SIDE_TRACK_CREEP"
+    },
+    {
+      "robot_id": 1,
+      "ros_time_s": 73.86,
+      "source_mode": "LOCAL_SIDE_TRACK_CREEP",
+      "destination_mode": "COMPLETE"
+    },
+    {
+      "robot_id": 2,
+      "ros_time_s": 64.2,
+      "source_mode": "CRUISE",
+      "destination_mode": "LOCAL_FRONT_WARN"
+    },
+    {
+      "robot_id": 2,
+      "ros_time_s": 65.56,
+      "source_mode": "LOCAL_FRONT_WARN",
+      "destination_mode": "LOCAL_DETECT_TURN"
+    },
+    {
+      "robot_id": 2,
+      "ros_time_s": 66.46,
+      "source_mode": "LOCAL_DETECT_TURN",
+      "destination_mode": "LOCAL_SIDE_TRACK_HOLD"
+    },
+    {
+      "robot_id": 2,
+      "ros_time_s": 66.5,
+      "source_mode": "LOCAL_SIDE_TRACK_HOLD",
+      "destination_mode": "LOCAL_SIDE_TRACK_CREEP"
+    },
+    {
+      "robot_id": 2,
+      "ros_time_s": 70.56,
+      "source_mode": "LOCAL_SIDE_TRACK_CREEP",
+      "destination_mode": "SAFE_STOP_STALE"
+    },
+    {
+      "robot_id": 2,
+      "ros_time_s": 70.8,
+      "source_mode": "SAFE_STOP_STALE",
+      "destination_mode": "LOCAL_SIDE_TRACK_CREEP"
+    },
+    {
+      "robot_id": 2,
+      "ros_time_s": 74.16,
+      "source_mode": "LOCAL_SIDE_TRACK_CREEP",
+      "destination_mode": "COMPLETE"
+    }
+  ],
+  "interpretation": "EXPECTED_SAFE_DEGRADATION_WITH_RECOVERY_AND_LOCAL_LAYER_ENGAGEMENT",
+  "causality_note": "SAFE_STOP_STALE intervals align with the configured outage manipulation. Local-layer engagement is reported as observed later in the run; this audit does not claim the outage caused the local-layer transition."
+}

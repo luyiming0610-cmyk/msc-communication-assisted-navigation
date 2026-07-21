@@ -1,0 +1,226 @@
+{
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "F",
+  "trial_index": 3,
+  "attempt": 1,
+  "trial_id": "objective5_impairment_matrix_v1_condition_F_trial03_attempt01",
+  "batch_status": "FINAL_BATCH_PASS",
+  "data_validity": "VALID",
+  "task_outcome": "SUCCESS",
+  "measurement_validity": "VALID",
+  "legacy_replay": false,
+  "safety": {
+    "min_interrobot_distance_m": 0.14662546676383612,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.006625466763836102
+  },
+  "manual_observation": {
+    "status": "NOT_INDIVIDUALLY_OBSERVED",
+    "note": "Automated sequential continuation was authorized after Trial 01 passed; no separate human observation was supplied for this trial."
+  },
+  "process_cleanup_check": {
+    "result": "CLEAN",
+    "checked_after_batch_completion": true
+  },
+  "bag_integrity_check": {
+    "ros2_bag_info_succeeded": true,
+    "message_count": 3266,
+    "topic_count": 8,
+    "duration_s": 58.934549572
+  },
+  "raw_data_preservation": {
+    "native_wsl_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_F_trial03_attempt01",
+    "native_wsl_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_F_trial03_attempt01_diag_logs",
+    "windows_bag_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_F_trial03_attempt01/",
+    "windows_diag_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_F_trial03_attempt01_diag_logs/",
+    "windows_copy_committed_to_git": false,
+    "sha256_verified_native_vs_windows_copy": true,
+    "verified_file_count": 14
+  },
+  "run_identity": {
+    "git_commit": "4fc4c516ec4dedd52e62ee570b7660328aa6bf2e",
+    "orchestrator_sha256": "94bfede6726f712d98ed91ebebb103cdf59ed5c372b653f59443454994851244",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "communication_metrics": {
+    "epuck1_to_epuck2": {
+      "relay_received_count": 449,
+      "relay_forwarded_count": 429,
+      "outage_drop_count": 20,
+      "observed_outage_drop_fraction": 0.044543429844097995,
+      "relay_delivery_ratio": 0.955456570155902,
+      "consumer_capture_ratio": 0.955456570155902,
+      "consumer_window_missing_count": 20,
+      "sequence_window_boundary_censored": false,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "mean_message_age_s": 0.018041958027970845,
+      "p99_message_age_s": 0.020000000000003126,
+      "latency_measurement_status": "RESOLUTION_LIMITED",
+      "mean_bandwidth_bytes_per_s": 639.652285354211
+    },
+    "epuck2_to_epuck1": {
+      "relay_received_count": 455,
+      "relay_forwarded_count": 433,
+      "outage_drop_count": 22,
+      "observed_outage_drop_fraction": 0.04835164835164835,
+      "relay_delivery_ratio": 0.9516483516483516,
+      "consumer_capture_ratio": 0.9558498896247241,
+      "consumer_window_missing_count": 20,
+      "sequence_window_boundary_censored": true,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "mean_message_age_s": 0.017829099293301363,
+      "p99_message_age_s": 0.020000000000003126,
+      "latency_measurement_status": "RESOLUTION_LIMITED",
+      "mean_bandwidth_bytes_per_s": 640.6835424108215
+    }
+  },
+  "queue_drain": {
+    "drain_duration_s": 0.2302,
+    "queue_drained": true
+  },
+  "realtime_factor": {
+    "preload_realtime_factor": 0.971,
+    "full_load_realtime_factor": 0.976,
+    "realtime_factor_ok": true
+  },
+  "outage_recovery_mechanism": {
+    "trial_id": "objective5_impairment_matrix_v1_condition_F_trial03_attempt01",
+    "audit_type": "OFFLINE_OUTAGE_AND_CONTROLLER_TRANSITION_AUDIT",
+    "configured_outage": {
+      "period_s": 15.0,
+      "duration_s": 0.7,
+      "phase_s": 10.0
+    },
+    "first_avoid_turn_ros_time_s": {
+      "epuck1": 29.16,
+      "epuck2": 29.16
+    },
+    "relay_outage_windows": {
+      "epuck1_to_epuck2": [
+        {
+          "first_dropped_receive_time_s": 10.0,
+          "last_dropped_receive_time_s": 10.7,
+          "dropped_message_count": 7
+        },
+        {
+          "first_dropped_receive_time_s": 25.1,
+          "last_dropped_receive_time_s": 25.64,
+          "dropped_message_count": 6
+        },
+        {
+          "first_dropped_receive_time_s": 40.02,
+          "last_dropped_receive_time_s": 40.68,
+          "dropped_message_count": 7
+        }
+      ],
+      "epuck2_to_epuck1": [
+        {
+          "first_dropped_receive_time_s": 10.0,
+          "last_dropped_receive_time_s": 10.7,
+          "dropped_message_count": 7
+        },
+        {
+          "first_dropped_receive_time_s": 25.1,
+          "last_dropped_receive_time_s": 25.64,
+          "dropped_message_count": 6
+        },
+        {
+          "first_dropped_receive_time_s": 40.02,
+          "last_dropped_receive_time_s": 40.68,
+          "dropped_message_count": 7
+        },
+        {
+          "first_dropped_receive_time_s": 55.02,
+          "last_dropped_receive_time_s": 55.14,
+          "dropped_message_count": 2
+        }
+      ]
+    },
+    "paired_window_timing": [
+      {
+        "window_index": 0,
+        "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+        "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+      },
+      {
+        "window_index": 1,
+        "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+        "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+      },
+      {
+        "window_index": 2,
+        "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+        "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+      }
+    ],
+    "safe_stop_stale_intervals": [
+      {
+        "robot_id": 1,
+        "start_ros_time_s": 15.94,
+        "end_ros_time_s": 16.06,
+        "observed_safe_stop_duration_s": 0.11999999999999922,
+        "mode_before_stop": "WAITING",
+        "mode_after_recovery": "STARTUP_HOLD",
+        "phase_classification": "STARTUP"
+      },
+      {
+        "robot_id": 1,
+        "start_ros_time_s": 25.56,
+        "end_ros_time_s": 25.8,
+        "observed_safe_stop_duration_s": 0.240000000000002,
+        "mode_before_stop": "CRUISE",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+      },
+      {
+        "robot_id": 1,
+        "start_ros_time_s": 40.46,
+        "end_ros_time_s": 40.86,
+        "observed_safe_stop_duration_s": 0.3999999999999986,
+        "mode_before_stop": "AVOID_PASS",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+      },
+      {
+        "robot_id": 2,
+        "start_ros_time_s": 16.72,
+        "end_ros_time_s": 16.86,
+        "observed_safe_stop_duration_s": 0.14000000000000057,
+        "mode_before_stop": "WAITING",
+        "mode_after_recovery": "STARTUP_HOLD",
+        "phase_classification": "STARTUP"
+      },
+      {
+        "robot_id": 2,
+        "start_ros_time_s": 25.56,
+        "end_ros_time_s": 25.8,
+        "observed_safe_stop_duration_s": 0.240000000000002,
+        "mode_before_stop": "CRUISE",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+      },
+      {
+        "robot_id": 2,
+        "start_ros_time_s": 40.46,
+        "end_ros_time_s": 40.86,
+        "observed_safe_stop_duration_s": 0.3999999999999986,
+        "mode_before_stop": "AVOID_PASS",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+      }
+    ],
+    "all_stale_stops_recovered": true,
+    "active_avoidance_stale_stop_confirmed": true,
+    "local_layer_engaged": false,
+    "local_transition_count": 0,
+    "local_transitions": [],
+    "interpretation": "EXPECTED_SAFE_DEGRADATION_WITH_RECOVERY",
+    "causality_note": "SAFE_STOP_STALE intervals align with the configured outage manipulation. Local-layer engagement is reported as observed later in the run; this audit does not claim the outage caused the local-layer transition."
+  },
+  "trial_verdict": "PASS",
+  "trial_verdict_reason": "The intended periodic outage was measured, every stale-state safe stop recovered, both robots completed, the bag and metric schema were valid, and the frozen 0.14 m safety gate remained satisfied."
+}

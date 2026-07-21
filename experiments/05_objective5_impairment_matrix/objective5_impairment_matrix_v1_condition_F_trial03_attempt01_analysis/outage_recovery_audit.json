@@ -1,0 +1,134 @@
+{
+  "trial_id": "objective5_impairment_matrix_v1_condition_F_trial03_attempt01",
+  "audit_type": "OFFLINE_OUTAGE_AND_CONTROLLER_TRANSITION_AUDIT",
+  "configured_outage": {
+    "period_s": 15.0,
+    "duration_s": 0.7,
+    "phase_s": 10.0
+  },
+  "first_avoid_turn_ros_time_s": {
+    "epuck1": 29.16,
+    "epuck2": 29.16
+  },
+  "relay_outage_windows": {
+    "epuck1_to_epuck2": [
+      {
+        "first_dropped_receive_time_s": 10.0,
+        "last_dropped_receive_time_s": 10.7,
+        "dropped_message_count": 7
+      },
+      {
+        "first_dropped_receive_time_s": 25.1,
+        "last_dropped_receive_time_s": 25.64,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 40.02,
+        "last_dropped_receive_time_s": 40.68,
+        "dropped_message_count": 7
+      }
+    ],
+    "epuck2_to_epuck1": [
+      {
+        "first_dropped_receive_time_s": 10.0,
+        "last_dropped_receive_time_s": 10.7,
+        "dropped_message_count": 7
+      },
+      {
+        "first_dropped_receive_time_s": 25.1,
+        "last_dropped_receive_time_s": 25.64,
+        "dropped_message_count": 6
+      },
+      {
+        "first_dropped_receive_time_s": 40.02,
+        "last_dropped_receive_time_s": 40.68,
+        "dropped_message_count": 7
+      },
+      {
+        "first_dropped_receive_time_s": 55.02,
+        "last_dropped_receive_time_s": 55.14,
+        "dropped_message_count": 2
+      }
+    ]
+  },
+  "paired_window_timing": [
+    {
+      "window_index": 0,
+      "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+      "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+    },
+    {
+      "window_index": 1,
+      "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+      "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+    },
+    {
+      "window_index": 2,
+      "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+      "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+    }
+  ],
+  "safe_stop_stale_intervals": [
+    {
+      "robot_id": 1,
+      "start_ros_time_s": 15.94,
+      "end_ros_time_s": 16.06,
+      "observed_safe_stop_duration_s": 0.11999999999999922,
+      "mode_before_stop": "WAITING",
+      "mode_after_recovery": "STARTUP_HOLD",
+      "phase_classification": "STARTUP"
+    },
+    {
+      "robot_id": 1,
+      "start_ros_time_s": 25.56,
+      "end_ros_time_s": 25.8,
+      "observed_safe_stop_duration_s": 0.240000000000002,
+      "mode_before_stop": "CRUISE",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+    },
+    {
+      "robot_id": 1,
+      "start_ros_time_s": 40.46,
+      "end_ros_time_s": 40.86,
+      "observed_safe_stop_duration_s": 0.3999999999999986,
+      "mode_before_stop": "AVOID_PASS",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+    },
+    {
+      "robot_id": 2,
+      "start_ros_time_s": 16.72,
+      "end_ros_time_s": 16.86,
+      "observed_safe_stop_duration_s": 0.14000000000000057,
+      "mode_before_stop": "WAITING",
+      "mode_after_recovery": "STARTUP_HOLD",
+      "phase_classification": "STARTUP"
+    },
+    {
+      "robot_id": 2,
+      "start_ros_time_s": 25.56,
+      "end_ros_time_s": 25.8,
+      "observed_safe_stop_duration_s": 0.240000000000002,
+      "mode_before_stop": "CRUISE",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+    },
+    {
+      "robot_id": 2,
+      "start_ros_time_s": 40.46,
+      "end_ros_time_s": 40.86,
+      "observed_safe_stop_duration_s": 0.3999999999999986,
+      "mode_before_stop": "AVOID_PASS",
+      "mode_after_recovery": "CRUISE",
+      "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+    }
+  ],
+  "all_stale_stops_recovered": true,
+  "active_avoidance_stale_stop_confirmed": true,
+  "local_layer_engaged": false,
+  "local_transition_count": 0,
+  "local_transitions": [],
+  "interpretation": "EXPECTED_SAFE_DEGRADATION_WITH_RECOVERY",
+  "causality_note": "SAFE_STOP_STALE intervals align with the configured outage manipulation. Local-layer engagement is reported as observed later in the run; this audit does not claim the outage caused the local-layer transition."
+}

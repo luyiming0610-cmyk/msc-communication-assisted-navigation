@@ -1,0 +1,333 @@
+{
+  "trial_label": "FORMAL_SIM",
+  "condition_id": "F",
+  "trial_index": 1,
+  "attempt": 1,
+  "trial_id": "objective5_impairment_matrix_v1_condition_F_trial01_attempt01",
+  "batch_status": "FINAL_BATCH_PASS",
+  "data_validity": "VALID",
+  "task_outcome": "SUCCESS",
+  "measurement_validity": "VALID",
+  "legacy_replay": false,
+  "safety": {
+    "min_interrobot_distance_m": 0.1435979511442254,
+    "safety_radius_m": 0.14,
+    "safety_margin_m": 0.0035979511442253975
+  },
+  "manual_observation": {
+    "status": "CONFIRMED",
+    "note": "User observed successful avoidance with no visible anomaly. A sub-second pause during avoidance was noticed; offline timestamps identify it as synchronized SAFE_STOP_STALE behavior caused by the configured outage, not evidence of an unexplained PC freeze."
+  },
+  "process_cleanup_check": {
+    "result": "CLEAN",
+    "checked_after_batch_completion": true
+  },
+  "bag_integrity_check": {
+    "ros2_bag_info_succeeded": true,
+    "message_count": 5022,
+    "topic_count": 8,
+    "duration_s": 77.511858758
+  },
+  "raw_data_preservation": {
+    "native_wsl_bag_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_F_trial01_attempt01",
+    "native_wsl_diag_log_dir": "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_F_trial01_attempt01_diag_logs",
+    "windows_bag_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_F_trial01_attempt01/",
+    "windows_diag_copy_dir": "experiments/05_objective5_impairment_matrix/bags/objective5_impairment_matrix_v1_condition_F_trial01_attempt01_diag_logs/",
+    "windows_copy_committed_to_git": false,
+    "sha256_verified_native_vs_windows_copy": true,
+    "verified_file_count": 14
+  },
+  "run_identity": {
+    "git_commit": "4fc4c516ec4dedd52e62ee570b7660328aa6bf2e",
+    "orchestrator_sha256": "94bfede6726f712d98ed91ebebb103cdf59ed5c372b653f59443454994851244",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "communication_metrics": {
+    "epuck1_to_epuck2": {
+      "relay_received_count": 640,
+      "relay_forwarded_count": 616,
+      "outage_drop_count": 24,
+      "observed_outage_drop_fraction": 0.0375,
+      "relay_delivery_ratio": 0.9625,
+      "consumer_capture_ratio": 0.9625,
+      "consumer_window_missing_count": 24,
+      "sequence_window_boundary_censored": false,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "mean_message_age_s": 0.017564935060064304,
+      "p99_message_age_s": 0.020000000000010232,
+      "latency_measurement_status": "RESOLUTION_LIMITED",
+      "mean_bandwidth_bytes_per_s": 668.3320729073895
+    },
+    "epuck2_to_epuck1": {
+      "relay_received_count": 647,
+      "relay_forwarded_count": 621,
+      "outage_drop_count": 26,
+      "observed_outage_drop_fraction": 0.0401854714064915,
+      "relay_delivery_ratio": 0.9598145285935085,
+      "consumer_capture_ratio": 0.9598145285935085,
+      "consumer_window_missing_count": 26,
+      "sequence_window_boundary_censored": false,
+      "duplicate_count": 0,
+      "out_of_order_count": 0,
+      "mean_message_age_s": 0.0174557165797096,
+      "p99_message_age_s": 0.020000000000010232,
+      "latency_measurement_status": "RESOLUTION_LIMITED",
+      "mean_bandwidth_bytes_per_s": 665.1584951030865
+    }
+  },
+  "queue_drain": {
+    "drain_duration_s": 0.2302,
+    "queue_drained": true
+  },
+  "realtime_factor": {
+    "preload_realtime_factor": 0.951,
+    "full_load_realtime_factor": 0.944,
+    "realtime_factor_ok": true
+  },
+  "outage_recovery_mechanism": {
+    "trial_id": "objective5_impairment_matrix_v1_condition_F_trial01_attempt01",
+    "audit_type": "OFFLINE_OUTAGE_AND_CONTROLLER_TRANSITION_AUDIT",
+    "configured_outage": {
+      "period_s": 15.0,
+      "duration_s": 0.7,
+      "phase_s": 10.0
+    },
+    "first_avoid_turn_ros_time_s": {
+      "epuck1": 34.86,
+      "epuck2": 34.86
+    },
+    "relay_outage_windows": {
+      "epuck1_to_epuck2": [
+        {
+          "first_dropped_receive_time_s": 25.04,
+          "last_dropped_receive_time_s": 25.6,
+          "dropped_message_count": 6
+        },
+        {
+          "first_dropped_receive_time_s": 40.06,
+          "last_dropped_receive_time_s": 40.6,
+          "dropped_message_count": 6
+        },
+        {
+          "first_dropped_receive_time_s": 55.06,
+          "last_dropped_receive_time_s": 55.6,
+          "dropped_message_count": 6
+        },
+        {
+          "first_dropped_receive_time_s": 70.1,
+          "last_dropped_receive_time_s": 70.66,
+          "dropped_message_count": 6
+        }
+      ],
+      "epuck2_to_epuck1": [
+        {
+          "first_dropped_receive_time_s": 25.1,
+          "last_dropped_receive_time_s": 25.64,
+          "dropped_message_count": 6
+        },
+        {
+          "first_dropped_receive_time_s": 40.02,
+          "last_dropped_receive_time_s": 40.68,
+          "dropped_message_count": 7
+        },
+        {
+          "first_dropped_receive_time_s": 55.02,
+          "last_dropped_receive_time_s": 55.68,
+          "dropped_message_count": 7
+        },
+        {
+          "first_dropped_receive_time_s": 70.1,
+          "last_dropped_receive_time_s": 70.66,
+          "dropped_message_count": 6
+        }
+      ]
+    },
+    "paired_window_timing": [
+      {
+        "window_index": 0,
+        "first_drop_start_delta_epuck1_minus_epuck2_s": -0.060000000000002274,
+        "last_drop_end_delta_epuck1_minus_epuck2_s": -0.03999999999999915
+      },
+      {
+        "window_index": 1,
+        "first_drop_start_delta_epuck1_minus_epuck2_s": 0.03999999999999915,
+        "last_drop_end_delta_epuck1_minus_epuck2_s": -0.0799999999999983
+      },
+      {
+        "window_index": 2,
+        "first_drop_start_delta_epuck1_minus_epuck2_s": 0.03999999999999915,
+        "last_drop_end_delta_epuck1_minus_epuck2_s": -0.0799999999999983
+      },
+      {
+        "window_index": 3,
+        "first_drop_start_delta_epuck1_minus_epuck2_s": 0.0,
+        "last_drop_end_delta_epuck1_minus_epuck2_s": 0.0
+      }
+    ],
+    "safe_stop_stale_intervals": [
+      {
+        "robot_id": 1,
+        "start_ros_time_s": 22.34,
+        "end_ros_time_s": 22.4,
+        "observed_safe_stop_duration_s": 0.05999999999999872,
+        "mode_before_stop": "WAITING",
+        "mode_after_recovery": "STARTUP_HOLD",
+        "phase_classification": "STARTUP"
+      },
+      {
+        "robot_id": 1,
+        "start_ros_time_s": 25.46,
+        "end_ros_time_s": 25.8,
+        "observed_safe_stop_duration_s": 0.33999999999999986,
+        "mode_before_stop": "STARTUP_HOLD",
+        "mode_after_recovery": "STARTUP_HOLD",
+        "phase_classification": "STARTUP"
+      },
+      {
+        "robot_id": 1,
+        "start_ros_time_s": 40.46,
+        "end_ros_time_s": 40.86,
+        "observed_safe_stop_duration_s": 0.3999999999999986,
+        "mode_before_stop": "AVOID_PASS",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+      },
+      {
+        "robot_id": 1,
+        "start_ros_time_s": 55.46,
+        "end_ros_time_s": 55.86,
+        "observed_safe_stop_duration_s": 0.3999999999999986,
+        "mode_before_stop": "AVOID_PASS",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+      },
+      {
+        "robot_id": 1,
+        "start_ros_time_s": 70.56,
+        "end_ros_time_s": 70.8,
+        "observed_safe_stop_duration_s": 0.23999999999999488,
+        "mode_before_stop": "CRUISE",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+      },
+      {
+        "robot_id": 2,
+        "start_ros_time_s": 22.38,
+        "end_ros_time_s": 22.46,
+        "observed_safe_stop_duration_s": 0.08000000000000185,
+        "mode_before_stop": "WAITING",
+        "mode_after_recovery": "STARTUP_HOLD",
+        "phase_classification": "STARTUP"
+      },
+      {
+        "robot_id": 2,
+        "start_ros_time_s": 25.46,
+        "end_ros_time_s": 25.8,
+        "observed_safe_stop_duration_s": 0.33999999999999986,
+        "mode_before_stop": "STARTUP_HOLD",
+        "mode_after_recovery": "STARTUP_HOLD",
+        "phase_classification": "STARTUP"
+      },
+      {
+        "robot_id": 2,
+        "start_ros_time_s": 40.46,
+        "end_ros_time_s": 40.8,
+        "observed_safe_stop_duration_s": 0.3399999999999963,
+        "mode_before_stop": "AVOID_PASS",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+      },
+      {
+        "robot_id": 2,
+        "start_ros_time_s": 55.46,
+        "end_ros_time_s": 55.86,
+        "observed_safe_stop_duration_s": 0.3999999999999986,
+        "mode_before_stop": "AVOID_PASS",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "ACTIVE_COMMUNICATION_AVOIDANCE"
+      },
+      {
+        "robot_id": 2,
+        "start_ros_time_s": 70.56,
+        "end_ros_time_s": 70.8,
+        "observed_safe_stop_duration_s": 0.23999999999999488,
+        "mode_before_stop": "CRUISE",
+        "mode_after_recovery": "CRUISE",
+        "phase_classification": "POST_AVOIDANCE_OR_CRUISE"
+      }
+    ],
+    "all_stale_stops_recovered": true,
+    "active_avoidance_stale_stop_confirmed": true,
+    "local_layer_engaged": true,
+    "local_transition_count": 10,
+    "local_transitions": [
+      {
+        "robot_id": 1,
+        "ros_time_s": 76.26,
+        "source_mode": "CRUISE",
+        "destination_mode": "LOCAL_FRONT_WARN"
+      },
+      {
+        "robot_id": 1,
+        "ros_time_s": 77.7,
+        "source_mode": "LOCAL_FRONT_WARN",
+        "destination_mode": "LOCAL_DETECT_TURN"
+      },
+      {
+        "robot_id": 1,
+        "ros_time_s": 78.46,
+        "source_mode": "LOCAL_DETECT_TURN",
+        "destination_mode": "LOCAL_SIDE_TRACK_HOLD"
+      },
+      {
+        "robot_id": 1,
+        "ros_time_s": 78.5,
+        "source_mode": "LOCAL_SIDE_TRACK_HOLD",
+        "destination_mode": "LOCAL_SIDE_TRACK_CREEP"
+      },
+      {
+        "robot_id": 1,
+        "ros_time_s": 82.36,
+        "source_mode": "LOCAL_SIDE_TRACK_CREEP",
+        "destination_mode": "COMPLETE"
+      },
+      {
+        "robot_id": 2,
+        "ros_time_s": 76.26,
+        "source_mode": "CRUISE",
+        "destination_mode": "LOCAL_FRONT_WARN"
+      },
+      {
+        "robot_id": 2,
+        "ros_time_s": 77.7,
+        "source_mode": "LOCAL_FRONT_WARN",
+        "destination_mode": "LOCAL_DETECT_TURN"
+      },
+      {
+        "robot_id": 2,
+        "ros_time_s": 78.46,
+        "source_mode": "LOCAL_DETECT_TURN",
+        "destination_mode": "LOCAL_SIDE_TRACK_HOLD"
+      },
+      {
+        "robot_id": 2,
+        "ros_time_s": 78.5,
+        "source_mode": "LOCAL_SIDE_TRACK_HOLD",
+        "destination_mode": "LOCAL_SIDE_TRACK_CREEP"
+      },
+      {
+        "robot_id": 2,
+        "ros_time_s": 82.4,
+        "source_mode": "LOCAL_SIDE_TRACK_CREEP",
+        "destination_mode": "COMPLETE"
+      }
+    ],
+    "interpretation": "EXPECTED_SAFE_DEGRADATION_WITH_RECOVERY_AND_LOCAL_LAYER_ENGAGEMENT",
+    "causality_note": "SAFE_STOP_STALE intervals align with the configured outage manipulation. Local-layer engagement is reported as observed later in the run; this audit does not claim the outage caused the local-layer transition."
+  },
+  "trial_verdict": "PASS",
+  "trial_verdict_reason": "The intended periodic outage was measured, every stale-state safe stop recovered, both robots completed, the bag and metric schema were valid, and the frozen 0.14 m safety gate remained satisfied."
+}

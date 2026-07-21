@@ -158,13 +158,11 @@ it runs.**
   0.000s in all 5). Full cross-trial statistics + descriptive
   startup-delta relationship check (no significance claims, n=5) in
   `objective5_impairment_matrix_v1_condition_B_formal_batch_summary.{json,md}`.
-  **Condition F mandatory timing precondition: `PASS_WITH_SCOPE_CLARIFICATION`.**
-  A reproducible offline audit of 15 B/D/E timing records shows `[40.0,40.7)`
-  and `[55.0,55.7)` fully inside active avoidance in every audited trial;
-  pilot03 independently measured synchronized bidirectional windows. No
-  frozen outage window covers initial `AVOID_TURN` entry. Formal F is therefore
-  ready only as a stale-stop/recovery-during-active-avoidance test. Evidence:
-  `condition_F_outage_timing_precondition.{json,md}`.
+  **Condition F timing precondition (historical prerequisite): `PASS_WITH_SCOPE_CLARIFICATION`.**
+  The audit established that the registered 40.0s and 55.0s outage windows
+  test stale-stop/recovery during already-active avoidance, not impairment of
+  the initial `AVOID_TURN`. The subsequent formal batch is now complete; the
+  precondition remains preserved in `condition_F_outage_timing_precondition.{json,md}`.
 - **Formal Condition C batch, COMPLETE, FAILED SAFETY GATE (4/5 SUCCESS)**:
   `objective5_impairment_matrix_v1_condition_C_trial01..05_attempt01`
   (fixed `delay_s=1.00`, `jitter_s=0.0`, `drop_probability=0.0`, outage
@@ -245,6 +243,23 @@ it runs.**
     `objective5_impairment_matrix_v1_condition_D_trial0{1..6}_attempt01_analysis/`.
 - **Condition E independent-loss formal batch: `FINAL_BATCH_PASS` (5/5).**
   Five Webots trials used independent Bernoulli loss (`drop_probability=0.15`), zero delay/jitter, and fixed seeds. All datasets were `VALID`; all tasks were `SUCCESS`; all safety margins were positive (tightest 4.734mm); all first triggers were `PREDICTED_CPA` with `LOCAL_*` zero. Relay-authoritative mean drop fractions were 0.151646 (epuck1→epuck2) and 0.148138 (epuck2→epuck1). Total loss is taken from relay received/forwarded/drop counters; sequence gaps are explicitly boundary-censored and are not treated as total loss. Trial 01 was manually confirmed; Trials 02–05 were authorized automated continuations. Raw evidence: 70/70 files SHA-256 matched, 0 mismatch. Summary: `objective5_condition_E_formal_batch_summary.{json,md}`; per-trial evidence: `objective5_impairment_matrix_v1_condition_E_trial0{1..5}_attempt01_analysis/`. Execution commit: `540ad98cbeb3bbf79c3782ec6fe349d071d6f19a`.
+- **Condition F periodic-outage formal batch: `FINAL_BATCH_PASS` (5/5).**
+  Five Webots trials used synchronized bidirectional outage (`0.7s` every
+  `15.0s`, phase `10.0s`) with zero fixed delay, jitter, and independent loss.
+  All datasets were `VALID`, all tasks were `SUCCESS`, and all frozen 0.14m
+  safety gates passed (mean margin 8.096mm; tightest 3.598mm). The relay
+  recorded 260 outage drops; mean consumer capture ratios were 0.957420 and
+  0.957077, with zero duplicate/out-of-order messages. Every `SAFE_STOP_STALE`
+  interval recovered. Trials F01/F02/F04/F05 later engaged the local safety
+  layer; F03 did not. This variation is reported without claiming that outage
+  caused local-layer entry. Trial 01 was manually observed; Trials 02-05 were
+  authorized automated continuations. Raw evidence: 70/70 files SHA-256
+  matched, all five bags readable, and the post-batch process check was clean.
+  Supported scope: safe degradation and recovery during already-active CPA
+  avoidance, not impairment of the initial CPA trigger. Summary:
+  `objective5_condition_F_formal_batch_summary.{json,md}`; per-trial evidence:
+  `objective5_impairment_matrix_v1_condition_F_trial0{1..5}_attempt01_analysis/`.
+  Execution commit: `4fc4c516ec4dedd52e62ee570b7660328aa6bf2e`.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,

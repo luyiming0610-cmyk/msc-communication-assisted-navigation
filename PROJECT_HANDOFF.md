@@ -221,14 +221,34 @@ This completed batch is not the next task. Objective 5 Conditions F-G and physic
 
 Condition E is `FINAL_BATCH_PASS`: five independent-loss trials (`drop_probability=0.15`) produced 5/5 valid successful tasks with positive safety margins. Relay-authoritative mean drop fractions were 0.151646 (epuck1→epuck2) and 0.148138 (epuck2→epuck1); the tightest margin was 4.734mm. All five trials were `PREDICTED_CPA` with no local-layer engagement. Trial 01 was manually observed; Trials 02–05 were authorized automated continuations. Native-to-Windows evidence verification matched 70/70 files. Use `experiments/05_objective5_impairment_matrix/objective5_condition_E_formal_batch_summary.{json,md}` as the batch entry point. Total loss uses relay counters; sequence gaps are boundary-censored diagnostics only.
 
+### Objective 5 Condition F formal batch (2026-07-21)
+
+Condition F is `FINAL_BATCH_PASS`: five periodic bidirectional-outage trials
+(`0.7s` every `15.0s`, phase `10.0s`) produced 5/5 valid successful tasks.
+Every stale-state safe stop recovered, all safety margins were positive
+(tightest 3.598mm), and the relay recorded 260 outage drops. Mean consumer
+capture ratios were 0.957420 and 0.957077. The local safety layer later engaged
+in F01/F02/F04/F05 but not F03; this is recorded without causal attribution to
+outage. Native-to-Windows evidence verification matched 70/70 files, all bags
+were ROS-readable, and the post-batch process check was clean. Use
+`experiments/05_objective5_impairment_matrix/objective5_condition_F_formal_batch_summary.{json,md}`
+as the batch entry point. The supported claim is safe stopping and recovery
+during already-active CPA avoidance, not impairment of the initial CPA trigger.
+
 ## Current single next step
 
-Conditions A-E are complete. Condition E is `FINAL_BATCH_PASS` (5/5 valid task successes) under independent `p=0.15` message loss; relay-authoritative mean drop fractions were 0.151646 and 0.148138, and every trial retained a positive safety margin. Its evidence entry points are `experiments/05_objective5_impairment_matrix/objective5_condition_E_formal_batch_summary.{json,md}` and the five per-trial analysis directories. Do not rerun it.
+Conditions A-F are complete; do not rerun Condition F. The next formal
+simulation task is a manually observed Condition G Trial 01 after a read-only
+preflight. Because Condition G contains jitter/reordering, its authoritative
+delivery analysis must use the reorder-safe set-based analyzer, not the live
+adjacent-delta sequence-gap count. Physical ground-motion and dual-robot or
+hardware-in-the-loop reality-gap validation also remain unfinished.
 
-Condition F's mandatory outage-window/startup-offset audit is now `PASS_WITH_SCOPE_CLARIFICATION`. Across 15 historical timing records, `[40.0,40.7)` and `[55.0,55.7)` are inside active avoidance in every case, while no window covers initial `AVOID_TURN` entry. Formal F Trial 01 is ready for manual observation as a stale-stop/recovery-during-active-avoidance test; after it runs, verify the actual event-to-window relationship before any automatic continuation. Condition G and physical ground-motion/dual-robot or hardware-in-the-loop reality-gap validation remain unfinished.
-
-
-The earlier Condition D sequence-accounting finding still applies: the live `sequence_counter.py` adjacent-delta method is invalid under reordering, so Conditions D/G use the reorder-safe set-based offline analyzer. Condition E is in order, but a distinct boundary issue remains: an observer's first-to-last visible sequence window cannot infer leading or trailing losses. Therefore Condition E's total-loss result is derived from the relay's received/forwarded/independent-drop counters; sequence gaps are retained only as interior-window diagnostics.
+The earlier Condition D sequence-accounting finding remains binding for
+Condition G. Condition E total loss remains relay-authoritative because its
+consumer sequence window can be boundary-censored. Condition F total outage
+loss is likewise relay-authoritative, while each trial's controller-transition
+audit is authoritative for stale-stop and recovery timing.
 
 ## What to read first, in order
 
