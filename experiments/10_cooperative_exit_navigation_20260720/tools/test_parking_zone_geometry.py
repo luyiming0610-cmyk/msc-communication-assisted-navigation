@@ -66,14 +66,29 @@ def test_parking_zones_are_not_the_same_point_as_the_shared_exit():
         assert (zone["center_x_m"], zone["center_y_m"]) != exit_center
 
 
-def test_parking_zones_clear_every_arena_wall_by_sensor_release_requirement():
+def test_parking_zones_clear_every_reception_wall_by_sensor_release_requirement():
     params = _load_params()
     required = 0.220 + params["robot_radius_m"] + 0.03
-    half = params["arena_half_extent_m"]
+    reception = params["hammer_exit"]
     for name in ("robot_a", "robot_b"):
         zone = params["parking_zones"][name]
-        for coordinate in (zone["center_x_m"], zone["center_y_m"]):
-            assert half - abs(coordinate) > required
+        distances = (
+            zone["center_x_m"] - reception["reception_x_min_m"],
+            reception["reception_x_max_m"] - zone["center_x_m"],
+            zone["center_y_m"] - reception["reception_y_min_m"],
+            reception["reception_y_max_m"] - zone["center_y_m"],
+        )
+        assert min(distances) > required, (name, distances, required)
+
+
+def test_real_opening_and_exit_target_match():
+    params = _load_params()
+    hammer = params["hammer_exit"]
+    exit_ = params["exit"]
+    actual_width = hammer["opening_y_max_m"] - hammer["opening_y_min_m"]
+    assert math.isclose(actual_width, hammer["opening_width_m"], abs_tol=1e-12)
+    assert hammer["neck_x_min_m"] < exit_["center_x_m"] < hammer["neck_x_max_m"]
+    assert hammer["opening_y_min_m"] < exit_["center_y_m"] < hammer["opening_y_max_m"]
 
 
 def test_both_ingress_and_post_exit_paths_clear_parked_peer():

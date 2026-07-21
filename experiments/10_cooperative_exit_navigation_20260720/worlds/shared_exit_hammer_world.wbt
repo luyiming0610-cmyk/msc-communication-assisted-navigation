@@ -1,0 +1,237 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/develop/projects/robots/gctronic/e-puck/protos/Pi-puck.proto"
+
+WorldInfo {
+  info [
+    "Shared-exit hammer world. A real opening in the east wall leads through a green neck into a wider reception area. Completion requires each robot to hold inside its own painted parking region. All coloured guides are horizontal, zero-thickness, non-colliding visual surfaces; no raised marker is used."
+  ]
+  title "Two e-puck shared-exit hammer trial"
+  basicTimeStep 20
+}
+Viewpoint {
+  orientation -0.35 0.55 0.75 1.65
+  position -1.10 -1.45 2.15
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+
+# Main arena floor: x/y in [-0.75, 0.75].
+Solid {
+  translation 0 0 -0.01
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.58 0.43
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 1.5 1.5 0.02
+      }
+    }
+  ]
+  name "main arena floor"
+  boundingObject Box {
+    size 1.5 1.5 0.02
+  }
+}
+
+# Green neck through the real opening: x=[0.75,0.95], y=[-0.05,0.55].
+Solid {
+  translation 0.85 0.25 -0.01
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.20 0.72 0.28
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 0.20 0.60 0.02
+      }
+    }
+  ]
+  name "green exit neck floor"
+  boundingObject Box {
+    size 0.20 0.60 0.02
+  }
+}
+
+# Wider reception area (the head of the hammer):
+# x=[0.95,1.60], y=[-0.40,0.90].
+Solid {
+  translation 1.275 0.25 -0.01
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.62 0.76 0.61
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 0.65 1.30 0.02
+      }
+    }
+  ]
+  name "exit reception floor"
+  boundingObject Box {
+    size 0.65 1.30 0.02
+  }
+}
+
+# Static walls. The east wall of the main arena is split around the
+# 0.60m opening; neck and reception walls form a continuous boundary.
+Solid {
+  translation -0.77 0 0.05
+  children [ Shape {
+    appearance DEF WALL_APPEARANCE PBRAppearance {
+      baseColor 0.12 0.13 0.15
+      roughness 0.9
+      metalness 0
+    }
+    geometry Box { size 0.04 1.54 0.10 }
+  } ]
+  name "main west wall"
+  boundingObject Box { size 0.04 1.54 0.10 }
+}
+Solid {
+  translation 0 -0.77 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 1.54 0.04 0.10 } } ]
+  name "main south wall"
+  boundingObject Box { size 1.54 0.04 0.10 }
+}
+Solid {
+  translation 0 0.77 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 1.54 0.04 0.10 } } ]
+  name "main north wall"
+  boundingObject Box { size 1.54 0.04 0.10 }
+}
+Solid {
+  translation 0.77 -0.41 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 0.72 0.10 } } ]
+  name "main east wall lower segment"
+  boundingObject Box { size 0.04 0.72 0.10 }
+}
+Solid {
+  translation 0.77 0.66 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 0.22 0.10 } } ]
+  name "main east wall upper segment"
+  boundingObject Box { size 0.04 0.22 0.10 }
+}
+Solid {
+  translation 0.85 -0.07 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.20 0.04 0.10 } } ]
+  name "neck south wall"
+  boundingObject Box { size 0.20 0.04 0.10 }
+}
+Solid {
+  translation 0.85 0.57 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.20 0.04 0.10 } } ]
+  name "neck north wall"
+  boundingObject Box { size 0.20 0.04 0.10 }
+}
+Solid {
+  translation 1.275 -0.42 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.69 0.04 0.10 } } ]
+  name "reception south wall"
+  boundingObject Box { size 0.69 0.04 0.10 }
+}
+Solid {
+  translation 1.275 0.92 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.69 0.04 0.10 } } ]
+  name "reception north wall"
+  boundingObject Box { size 0.69 0.04 0.10 }
+}
+Solid {
+  translation 1.62 0.25 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 1.38 0.10 } } ]
+  name "reception east wall"
+  boundingObject Box { size 0.04 1.38 0.10 }
+}
+Solid {
+  translation 0.93 -0.235 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 0.33 0.10 } } ]
+  name "reception west lower step wall"
+  boundingObject Box { size 0.04 0.33 0.10 }
+}
+Solid {
+  translation 0.93 0.735 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 0.33 0.10 } } ]
+  name "reception west upper step wall"
+  boundingObject Box { size 0.04 0.33 0.10 }
+}
+
+# Painted parking regions. These are horizontal IndexedFaceSet surfaces
+# with no thickness and no boundingObject: visible, but neither physical
+# obstacles nor vertical targets for the e-puck distance sensors.
+Transform {
+  translation 1.26 0.57 0.002
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.08 0.25 0.95
+        roughness 1
+        metalness 0
+      }
+      geometry IndexedFaceSet {
+        coord Coordinate {
+          point [
+            0.10 0 0, 0.0866 0.05 0, 0.05 0.0866 0, 0 0.10 0,
+            -0.05 0.0866 0, -0.0866 0.05 0, -0.10 0 0, -0.0866 -0.05 0,
+            -0.05 -0.0866 0, 0 -0.10 0, 0.05 -0.0866 0, 0.0866 -0.05 0
+          ]
+        }
+        coordIndex [ 0 1 2 3 4 5 6 7 8 9 10 11 -1 ]
+      }
+    }
+  ]
+}
+Transform {
+  translation 1.26 -0.07 0.002
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.95 0.42 0.05
+        roughness 1
+        metalness 0
+      }
+      geometry IndexedFaceSet {
+        coord Coordinate {
+          point [
+            0.10 0 0, 0.0866 0.05 0, 0.05 0.0866 0, 0 0.10 0,
+            -0.05 0.0866 0, -0.0866 0.05 0, -0.10 0 0, -0.0866 -0.05 0,
+            -0.05 -0.0866 0, 0 -0.10 0, 0.05 -0.0866 0, 0.0866 -0.05 0
+          ]
+        }
+        coordIndex [ 0 1 2 3 4 5 6 7 8 9 10 11 -1 ]
+      }
+    }
+  ]
+}
+
+E-puck {
+  name "epuck1"
+  translation 0.10 0.55 0
+  rotation 0 0 1 0.0
+  controller "<extern>"
+  version "2"
+  camera_width 640
+  camera_height 480
+  turretSlot [ Pi-puck { } ]
+}
+E-puck {
+  name "epuck2"
+  translation -0.20 -0.20 0
+  rotation 0 0 1 0.785398
+  controller "<extern>"
+  version "2"
+  camera_width 640
+  camera_height 480
+  turretSlot [ Pi-puck { } ]
+}

@@ -74,8 +74,16 @@ IMPAIRMENT_SHA256="$(sha256sum "$REPO/src/epuck2_comm/epuck2_comm/network_impair
 SEQCOUNTER_SHA256="$(sha256sum "$REPO/src/epuck2_comm/epuck2_comm/sequence_counter.py" | awk '{print $1}')"
 COOPAVOIDER_SHA256="$(sha256sum "$REPO/src/epuck2_comm/epuck2_comm/cooperative_avoider.py" | awk '{print $1}')"
 WORLD_SHA256="$(sha256sum "$WORK_DIR/$WORLD_FILE" | awk '{print $1}')"
+CANONICAL_WORLD="$EXP_DIR/worlds/$WORLD_FILE"
+CANONICAL_WORLD_SHA256="$(sha256sum "$CANONICAL_WORLD" | awk '{print $1}')"
 LAUNCH_ENTRY_SHA256="$(sha256sum "$WORK_DIR/run_shared_exit_n2.py" | awk '{print $1}')"
 GIT_COMMIT="$(cd "$REPO" && git rev-parse HEAD)"
+
+if [[ "$WORLD_SHA256" != "$CANONICAL_WORLD_SHA256" ]]; then
+  echo "FATAL: Webots working world does not match the repository's canonical world." >&2
+  echo "working_sha256=$WORLD_SHA256 canonical_sha256=$CANONICAL_WORLD_SHA256" >&2
+  exit 1
+fi
 
 if [[ "$CHECK_ONLY" == "true" ]]; then
   echo "=== --check-only: verifying interop, working directory, SHA-256 identity, argument passthrough. Webots is NOT launched. ==="
@@ -97,6 +105,7 @@ if [[ "$CHECK_ONLY" == "true" ]]; then
   echo "navigation_target_state.py_sha256=$NAV_TARGET_STATE_SHA256"
   echo "cooperative_avoider.py_sha256=$COOPAVOIDER_SHA256 (frozen CPA/safety code; dynamic-heading input default-disabled unless this study enables it)"
   echo "$WORLD_FILE" "sha256=$WORLD_SHA256 (new, additive; A-D and Stage 0 world files untouched)"
+  echo "OK    working world matches canonical repository copy"
   echo "run_shared_exit_n2.py_sha256=$LAUNCH_ENTRY_SHA256"
   echo "git_commit=$GIT_COMMIT"
   echo "comm_mode=$COMM_MODE trial_index=$TRIAL_INDEX pilot_label=${PILOT_LABEL:-<none>}"
@@ -403,7 +412,7 @@ WATCHDOG_DEADLINE_S=$(python3 -c "import math; print(math.ceil($MAX_RUNTIME_S + 
 echo "[$(date -Iseconds)] orchestrator watchdog deadline=${WATCHDOG_DEADLINE_S}s (max_runtime_s=$MAX_RUNTIME_S + startup_hold_s=$STARTUP_HOLD_S + 15.0s settle buffer)" | tee -a "$EXECUTION_LOG"
 deadline=$((SECONDS + WATCHDOG_DEADLINE_S))
 complete_count=0
-STOP_REASON="MAX_RUNTIME"
+STOP_REASON="ORCHESTRATOR_WATCHDOG"
 while (( SECONDS < deadline )); do
   complete_count="$(grep -c 'COMPLETE:' "$CONTROLLER_LOG" 2>/dev/null || true)"
   if grep -q 'TASK_COMPLETE_GOAL' "$MONITOR_LOG" 2>/dev/null; then
@@ -411,13 +420,13 @@ while (( SECONDS < deadline )); do
     echo "[$(date -Iseconds)] task_completion_monitor reports TASK_COMPLETE_GOAL -- stopping trial now, not waiting for max_runtime" | tee -a "$EXECUTION_LOG"
     break
   fi
-  if (( complete_count >= 2 )); then
-    STOP_REASON="CONTROLLER_SELF_COMPLETE"
-    break
-  fi
   if ! kill -0 "$CONTROLLER_PID" 2>/dev/null; then
     echo "[$(date -Iseconds)] controller exited (complete_count=$complete_count)" | tee -a "$EXECUTION_LOG"
-    STOP_REASON="CONTROLLER_EXITED_EARLY"
+    if grep -q 'maximum runtime reached' "$CONTROLLER_LOG" 2>/dev/null; then
+      STOP_REASON="CONTROLLER_MAX_RUNTIME"
+    else
+      STOP_REASON="CONTROLLER_EXITED_EARLY"
+    fi
     break
   fi
   sleep 0.2
@@ -530,6 +539,21 @@ MAX_RUNTIME_HITS="${MAX_RUNTIME_HITS:-0}"
 MONITOR_VERDICT_PRESENT="false"
 [[ -s "$MONITOR_VERDICT" ]] && MONITOR_VERDICT_PRESENT="true"
 
+# A controller's generic COMPLETE line can mean that its maximum runtime
+# elapsed. It is not evidence that the shared-exit task was completed.
+# Only the independent task monitor, after both robots continuously hold
+# in their assigned parking regions, can produce a successful outcome.
+TASK_OUTCOME="FAIL"
+TASK_OUTCOME_REASON="task monitor did not confirm both parking-region holds"
+if [[ "$STOP_REASON" == "TASK_COMPLETE_GOAL" && "$MONITOR_VERDICT_PRESENT" == "true" ]]; then
+  TASK_OUTCOME="SUCCESS"
+  TASK_OUTCOME_REASON="task monitor confirmed both parking-region holds"
+elif [[ "$STOP_REASON" == "CONTROLLER_MAX_RUNTIME" ]]; then
+  TASK_OUTCOME_REASON="controller maximum runtime reached before task-monitor completion"
+elif [[ "$STOP_REASON" == "ORCHESTRATOR_WATCHDOG" ]]; then
+  TASK_OUTCOME_REASON="orchestrator watchdog reached before task-monitor completion"
+fi
+
 cat > "$DIAG_LOG_DIR/trial_verdict.json" <<EOF
 {
   "comm_mode": "$COMM_MODE",
@@ -537,6 +561,8 @@ cat > "$DIAG_LOG_DIR/trial_verdict.json" <<EOF
   "attempt": $ATTEMPT,
   "data_validity": "$DATA_VALIDITY",
   "data_validity_reason": "$INVALID_REASON",
+  "task_outcome": "$TASK_OUTCOME",
+  "task_outcome_reason": "$TASK_OUTCOME_REASON",
   "stop_reason": "$STOP_REASON",
   "controller_complete_count": $complete_count,
   "controller_crashed": $CONTROLLER_CRASHED,
@@ -553,7 +579,7 @@ cat > "$DIAG_LOG_DIR/trial_verdict.json" <<EOF
   "git_commit": "$GIT_COMMIT"
 }
 EOF
-echo "[$(date -Iseconds)] $STEM RECORDING_COMPLETE data_validity=$DATA_VALIDITY stop_reason=$STOP_REASON complete_count=$complete_count" | tee -a "$EXECUTION_LOG"
+echo "[$(date -Iseconds)] $STEM RECORDING_COMPLETE data_validity=$DATA_VALIDITY task_outcome=$TASK_OUTCOME stop_reason=$STOP_REASON complete_count=$complete_count" | tee -a "$EXECUTION_LOG"
 cat "$DIAG_LOG_DIR/trial_verdict.json"
 echo "native bag dir: $NATIVE_BAG_DIR"
 echo "diag log dir: $DIAG_LOG_DIR"
