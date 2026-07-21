@@ -1,0 +1,71 @@
+{
+  "study": "Three-robot shared-exit discovery with and without communication",
+  "status": "PILOT_CONFIGURATION_NOT_FORMAL",
+  "world_file": "shared_exit_n3_hammer_world.wbt",
+  "main_arena": {
+    "x_min_m": -0.75,
+    "x_max_m": 0.75,
+    "y_min_m": -0.75,
+    "y_max_m": 0.75
+  },
+  "exit": {
+    "center_x_m": 0.86,
+    "center_y_m": 0.25,
+    "goal_hold_radius_m": 0.10
+  },
+  "parking_zones": {
+    "robot_a": {"center_x_m": 1.26, "center_y_m": 0.585, "radius_m": 0.08, "colour": "blue"},
+    "robot_b": {"center_x_m": 1.26, "center_y_m": -0.085, "radius_m": 0.08, "colour": "orange"},
+    "robot_c": {"center_x_m": 1.26, "center_y_m": 0.250, "radius_m": 0.08, "colour": "purple"},
+    "minimum_center_separation_m": 0.335
+  },
+  "robots": {
+    "robot_a": {
+      "robot_id": 1,
+      "role": "informed; travels directly to the exit and announces only after physical discovery",
+      "start_x_m": 0.10,
+      "start_y_m": 0.55,
+      "start_yaw_rad": 0.0
+    },
+    "robot_b": {
+      "robot_id": 2,
+      "role": "uninformed lower-area systematic search",
+      "start_x_m": -0.20,
+      "start_y_m": -0.20,
+      "start_yaw_rad": 0.785398,
+      "search_waypoints_m": [[-0.20, -0.20], [0.05, -0.35], [0.25, 0.05], [0.86, 0.25]],
+      "search_waypoint_arrival_radius_m": 0.10
+    },
+    "robot_c": {
+      "robot_id": 3,
+      "role": "uninformed upper-area systematic search",
+      "start_x_m": -0.45,
+      "start_y_m": 0.40,
+      "start_yaw_rad": 1.190290,
+      "search_waypoints_m": [[-0.45, 0.40], [-0.55, 0.65], [-0.15, 0.65], [0.30, 0.60], [0.55, 0.50], [0.86, 0.25]],
+      "search_waypoint_arrival_radius_m": 0.10
+    }
+  },
+  "communication": {
+    "off": "A knows the exit; B and C complete their frozen searches independently; no GoalAnnouncement and no peer CPA state is consumed",
+    "on": "A announces only after entering the exit; B and C immediately abandon their remaining search waypoints after the first valid announcement; multi-peer CPA selection is enabled"
+  },
+  "multi_peer_policy": {
+    "risk_priority": "smallest time-to-CPA, then smallest distance-at-CPA, then smallest robot id",
+    "no_risk_fallback": "nearest fresh usable peer, then smallest robot id",
+    "stale_policy": "fail closed by withholding selected-peer output whenever any configured peer is stale"
+  },
+  "safety_radius_m": 0.14,
+  "collision_contact_distance_m": 0.07,
+  "goal_hold_time_s": 2.0,
+  "completion_max_linear_speed_mps": 0.005,
+  "completion_max_angular_speed_rps": 0.05,
+  "startup_hold_s": 5.0,
+  "max_runtime_s": 170.0,
+  "nominal_speed_mps": 0.04,
+  "formal_plan": {
+    "pilot_sequence": ["one observed COMM_OFF pilot", "one observed COMM_ON pilot"],
+    "formal_pairs_after_pilot": 5,
+    "primary_metric": "paired makespan difference COMM_OFF minus COMM_ON"
+  }
+}
