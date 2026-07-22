@@ -22,3 +22,13 @@
 The N=3-only reception area is widened and adjacent parking-centre spacing is increased to `0.450 m`. Communication avoidance, local IR/ToF avoidance, `safety_radius_m=0.14`, and the controller's `trigger_distance_m=0.34` remain enabled and unchanged. The corrected configuration requires new OFF and ON pilots, followed by a matched OFF/ON formal attempt02.
 
 The dissertation may use the excluded attempt as a failure-analysis case: an apparently successful parking event was invalidated by a geometry/controller interaction, diagnosed from human observation plus selector and controller logs, corrected without weakening safety, and then retested against the same completion criteria.
+
+## Formal Trial 04, ON attempt01 - excluded startup failure
+
+- Execution commit: `311f96e98385b19a1ed654d67970bcb41d25bd64`.
+- Outcome: `VALID` recorded data, `FAIL` task outcome, watchdog termination.
+- Raw evidence is preserved under `/home/eamon/epuck_comm_bags/shared_exit_n3_n3_exit_comm_on_trial04_attempt01` and its diagnostic-log sibling.
+- Direct cause: the epuck2 `diffdrive_controller` load service timed out during Webots startup. The controller was present but not activated, so epuck2 published state with `validity_flags=0x06` instead of `0x07` and never supplied valid odometry.
+- Safety response: every multi-peer selector withheld output under the unchanged fail-closed policy; all three controllers remained in `SAFE_STOP_STALE`. No task motion or goal announcement occurred.
+- Methodological disposition: excluded startup failure, never counted as a successful formal trial and never overwritten.
+- Corrective action: the orchestrator now requires all three state streams to produce `validity_flags=7` and all three selected-peer topics to produce real messages before rosbag recording and task timing begin. Topic-name existence alone is no longer treated as readiness.

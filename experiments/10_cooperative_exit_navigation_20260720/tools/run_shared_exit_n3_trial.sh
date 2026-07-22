@@ -124,6 +124,28 @@ wait_topics() {
   echo "timed out waiting for topics: $*" >&2; return 1
 }
 
+wait_valid_state() {
+  local timeout_s="$1" topic="$2" deadline=$((SECONDS + timeout_s)) output value
+  while (( SECONDS < deadline )); do
+    output="$(timeout 4 ros2 topic echo "$topic" --field validity_flags --once 2>/dev/null || true)"
+    value="$(grep -m1 -E '^[[:space:]]*[0-9]+[[:space:]]*$' <<<"$output" | tr -d '[:space:]' || true)"
+    [[ "$value" == 7 ]] && return 0
+    sleep 1
+  done
+  echo "timed out waiting for fully valid state: $topic (required validity_flags=7, last=${value:-none})" >&2
+  return 1
+}
+
+wait_topic_message() {
+  local timeout_s="$1" topic="$2" deadline=$((SECONDS + timeout_s))
+  while (( SECONDS < deadline )); do
+    timeout 4 ros2 topic echo "$topic" --once >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  echo "timed out waiting for first message: $topic" >&2
+  return 1
+}
+
 echo "[$(date -Iseconds)] $STEM START" | tee "$EXEC_LOG"
 echo "mode=$COMM_MODE git_commit=$GIT_COMMIT world_sha256=$WORLD_SHA256" | tee -a "$EXEC_LOG"
 cp "$PARAMS" "$LOG_DIR/frozen_params_canonical_copy.json"
@@ -142,13 +164,16 @@ for id in 1 2 3; do
     >"$LOG_DIR/state_epuck$id.log" 2>&1 & PIDS+=("$!")
 done
 wait_topics 30 /epuck1/state /epuck2/state /epuck3/state
+for id in 1 2 3; do wait_valid_state 40 "/epuck$id/state"; done
+echo "[$(date -Iseconds)] all three state streams fully valid (validity_flags=7)" | tee -a "$EXEC_LOG"
 
 if [[ "$COMM_MODE" == "N3_EXIT_COMM_ON" ]]; then
   setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=1 --own-topic=/epuck1/state --peer-topics=/epuck2/state,/epuck3/state --output-topic=/epuck1/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M --trigger-distance-m=$PEER_TRIGGER_DISTANCE_M >"$LOG_DIR/selector_epuck1.log" 2>&1 & PIDS+=("$!")
   setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=2 --own-topic=/epuck2/state --peer-topics=/epuck1/state,/epuck3/state --output-topic=/epuck2/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M --trigger-distance-m=$PEER_TRIGGER_DISTANCE_M >"$LOG_DIR/selector_epuck2.log" 2>&1 & PIDS+=("$!")
   setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=3 --own-topic=/epuck3/state --peer-topics=/epuck1/state,/epuck2/state --output-topic=/epuck3/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M --trigger-distance-m=$PEER_TRIGGER_DISTANCE_M >"$LOG_DIR/selector_epuck3.log" 2>&1 & PIDS+=("$!")
   wait_topics 20 /epuck1/selected_peer_state /epuck2/selected_peer_state /epuck3/selected_peer_state
-  echo "[$(date -Iseconds)] multi-peer selectors ready" | tee -a "$EXEC_LOG"
+  for id in 1 2 3; do wait_topic_message 30 "/epuck$id/selected_peer_state"; done
+  echo "[$(date -Iseconds)] multi-peer selectors ready with confirmed output messages" | tee -a "$EXEC_LOG"
 fi
 
 TOPICS=(/epuck1/state /epuck2/state /epuck3/state /epuck1/cmd_vel /epuck2/cmd_vel /epuck3/cmd_vel /epuck1/nav_intent /epuck2/nav_intent /epuck3/nav_intent)
