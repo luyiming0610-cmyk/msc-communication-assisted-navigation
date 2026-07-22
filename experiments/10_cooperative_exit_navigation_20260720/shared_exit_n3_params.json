@@ -13,11 +13,18 @@
     "center_y_m": 0.25,
     "goal_hold_radius_m": 0.10
   },
+  "reception_area": {
+    "x_min_m": 0.95,
+    "x_max_m": 1.60,
+    "y_min_m": -0.55,
+    "y_max_m": 1.05
+  },
   "parking_zones": {
-    "robot_a": {"center_x_m": 1.26, "center_y_m": 0.585, "radius_m": 0.08, "colour": "blue"},
-    "robot_b": {"center_x_m": 1.26, "center_y_m": -0.085, "radius_m": 0.08, "colour": "orange"},
+    "robot_a": {"center_x_m": 1.26, "center_y_m": 0.700, "radius_m": 0.08, "colour": "blue"},
+    "robot_b": {"center_x_m": 1.26, "center_y_m": -0.200, "radius_m": 0.08, "colour": "orange"},
     "robot_c": {"center_x_m": 1.26, "center_y_m": 0.250, "radius_m": 0.08, "colour": "purple"},
-    "minimum_center_separation_m": 0.335
+    "minimum_center_separation_m": 0.450,
+    "design_reason": "Adjacent parking centres remain 0.110 m beyond the frozen 0.340 m proximity trigger, preventing completed robots from retriggering peer avoidance."
   },
   "robots": {
     "robot_a": {
@@ -56,6 +63,7 @@
     "stale_policy": "fail closed by withholding selected-peer output whenever any configured peer is stale"
   },
   "safety_radius_m": 0.14,
+  "peer_trigger_distance_m": 0.34,
   "collision_contact_distance_m": 0.07,
   "goal_hold_time_s": 2.0,
   "completion_max_linear_speed_mps": 0.005,

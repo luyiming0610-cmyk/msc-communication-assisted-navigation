@@ -9,7 +9,7 @@ WorldInfo {
   info [
     "Shared-exit hammer world. A real opening in the east wall leads through a green neck into a wider reception area. Completion requires each robot to hold inside its own painted parking region. All coloured guides are horizontal, zero-thickness, non-colliding visual surfaces; no raised marker is used."
   ]
-  title "Two e-puck shared-exit hammer trial"
+  title "Three e-puck shared-exit hammer trial"
   basicTimeStep 20
 }
 Viewpoint {
@@ -64,7 +64,7 @@ Solid {
 }
 
 # Wider reception area (the head of the hammer):
-# x=[0.95,1.60], y=[-0.40,0.90].
+# x=[0.95,1.60], y=[-0.55,1.05].
 Solid {
   translation 1.275 0.25 -0.01
   children [
@@ -75,13 +75,13 @@ Solid {
         metalness 0
       }
       geometry Box {
-        size 0.65 1.30 0.02
+        size 0.65 1.60 0.02
       }
     }
   ]
   name "exit reception floor"
   boundingObject Box {
-    size 0.65 1.30 0.02
+    size 0.65 1.60 0.02
   }
 }
 
@@ -137,41 +137,41 @@ Solid {
   boundingObject Box { size 0.20 0.04 0.10 }
 }
 Solid {
-  translation 1.275 -0.42 0.05
+  translation 1.275 -0.57 0.05
   children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.69 0.04 0.10 } } ]
   name "reception south wall"
   boundingObject Box { size 0.69 0.04 0.10 }
 }
 Solid {
-  translation 1.275 0.92 0.05
+  translation 1.275 1.07 0.05
   children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.69 0.04 0.10 } } ]
   name "reception north wall"
   boundingObject Box { size 0.69 0.04 0.10 }
 }
 Solid {
   translation 1.62 0.25 0.05
-  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 1.38 0.10 } } ]
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 1.68 0.10 } } ]
   name "reception east wall"
-  boundingObject Box { size 0.04 1.38 0.10 }
+  boundingObject Box { size 0.04 1.68 0.10 }
 }
 Solid {
-  translation 0.93 -0.235 0.05
-  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 0.33 0.10 } } ]
+  translation 0.93 -0.310 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 0.48 0.10 } } ]
   name "reception west lower step wall"
-  boundingObject Box { size 0.04 0.33 0.10 }
+  boundingObject Box { size 0.04 0.48 0.10 }
 }
 Solid {
-  translation 0.93 0.735 0.05
-  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 0.33 0.10 } } ]
+  translation 0.93 0.810 0.05
+  children [ Shape { appearance USE WALL_APPEARANCE geometry Box { size 0.04 0.48 0.10 } } ]
   name "reception west upper step wall"
-  boundingObject Box { size 0.04 0.33 0.10 }
+  boundingObject Box { size 0.04 0.48 0.10 }
 }
 
 # Painted parking regions. These are horizontal IndexedFaceSet surfaces
 # with no thickness and no boundingObject: visible, but neither physical
 # obstacles nor vertical targets for the e-puck distance sensors.
 Transform {
-  translation 1.26 0.585 0.002
+  translation 1.26 0.700 0.002
   children [
     Shape {
       appearance PBRAppearance {
@@ -193,7 +193,7 @@ Transform {
   ]
 }
 Transform {
-  translation 1.26 -0.085 0.002
+  translation 1.26 -0.200 0.002
   children [
     Shape {
       appearance PBRAppearance {

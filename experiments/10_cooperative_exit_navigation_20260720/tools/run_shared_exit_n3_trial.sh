@@ -144,9 +144,9 @@ done
 wait_topics 30 /epuck1/state /epuck2/state /epuck3/state
 
 if [[ "$COMM_MODE" == "N3_EXIT_COMM_ON" ]]; then
-  setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=1 --own-topic=/epuck1/state --peer-topics=/epuck2/state,/epuck3/state --output-topic=/epuck1/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M >"$LOG_DIR/selector_epuck1.log" 2>&1 & PIDS+=("$!")
-  setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=2 --own-topic=/epuck2/state --peer-topics=/epuck1/state,/epuck3/state --output-topic=/epuck2/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M >"$LOG_DIR/selector_epuck2.log" 2>&1 & PIDS+=("$!")
-  setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=3 --own-topic=/epuck3/state --peer-topics=/epuck1/state,/epuck2/state --output-topic=/epuck3/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M >"$LOG_DIR/selector_epuck3.log" 2>&1 & PIDS+=("$!")
+  setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=1 --own-topic=/epuck1/state --peer-topics=/epuck2/state,/epuck3/state --output-topic=/epuck1/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M --trigger-distance-m=$PEER_TRIGGER_DISTANCE_M >"$LOG_DIR/selector_epuck1.log" 2>&1 & PIDS+=("$!")
+  setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=2 --own-topic=/epuck2/state --peer-topics=/epuck1/state,/epuck3/state --output-topic=/epuck2/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M --trigger-distance-m=$PEER_TRIGGER_DISTANCE_M >"$LOG_DIR/selector_epuck2.log" 2>&1 & PIDS+=("$!")
+  setsid python3 "$TOOLS_DIR/multi_peer_selector.py" --robot-id=3 --own-topic=/epuck3/state --peer-topics=/epuck1/state,/epuck2/state --output-topic=/epuck3/selected_peer_state --safety-radius-m=$SAFETY_RADIUS_M --trigger-distance-m=$PEER_TRIGGER_DISTANCE_M >"$LOG_DIR/selector_epuck3.log" 2>&1 & PIDS+=("$!")
   wait_topics 20 /epuck1/selected_peer_state /epuck2/selected_peer_state /epuck3/selected_peer_state
   echo "[$(date -Iseconds)] multi-peer selectors ready" | tee -a "$EXEC_LOG"
 fi

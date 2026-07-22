@@ -19,6 +19,7 @@ def main():
         "COMPLETION_MAX_LINEAR_SPEED_MPS": params["completion_max_linear_speed_mps"],
         "COMPLETION_MAX_ANGULAR_SPEED_RPS": params["completion_max_angular_speed_rps"],
         "SAFETY_RADIUS_M": params["safety_radius_m"],
+        "PEER_TRIGGER_DISTANCE_M": params["peer_trigger_distance_m"],
         "COLLISION_CONTACT_DISTANCE_M": params["collision_contact_distance_m"],
         "MAX_RUNTIME_S": params["max_runtime_s"],
         "STARTUP_HOLD_S": params["startup_hold_s"],

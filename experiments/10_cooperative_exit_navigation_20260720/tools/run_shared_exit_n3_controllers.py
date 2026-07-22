@@ -35,6 +35,7 @@ def controller(namespace, robot_id, peer_topic, heading, enable_peer, params):
             "use_sim_time": True,
             "nominal_speed_mps": params["nominal_speed_mps"],
             "safety_radius_m": params["safety_radius_m"],
+            "trigger_distance_m": params["peer_trigger_distance_m"],
             "startup_hold_s": params["startup_hold_s"],
             "max_runtime_s": params["max_runtime_s"],
             "stop_after_recovery": False,

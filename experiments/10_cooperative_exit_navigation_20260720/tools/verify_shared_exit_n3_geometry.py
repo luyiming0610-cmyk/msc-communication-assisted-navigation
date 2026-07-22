@@ -19,13 +19,24 @@ def check(condition, text):
 
 
 zones = p["parking_zones"]
+reception = p["reception_area"]
 centres = [(zones[name]["center_x_m"], zones[name]["center_y_m"]) for name in ("robot_a", "robot_b", "robot_c")]
 distances = [math.dist(centres[i], centres[j]) for i in range(3) for j in range(i + 1, 3)]
 check(min(distances) >= 0.324, f"parking centres maintain sensor-aware separation: min={min(distances):.3f}m")
+check(
+    min(distances) >= p["peer_trigger_distance_m"] + 0.05,
+    f"parking centres clear peer proximity trigger with margin: min={min(distances):.3f}m trigger={p['peer_trigger_distance_m']:.3f}m",
+)
 for name in ("robot_a", "robot_b", "robot_c"):
     zone = zones[name]
-    check(0.95 + 0.287 < zone["center_x_m"] < 1.60 - 0.287, f"{name} parking clears east/west walls")
-    check(-0.40 + 0.287 < zone["center_y_m"] < 0.90 - 0.287, f"{name} parking clears north/south walls")
+    check(
+        reception["x_min_m"] + 0.287 < zone["center_x_m"] < reception["x_max_m"] - 0.287,
+        f"{name} parking clears east/west walls",
+    )
+    check(
+        reception["y_min_m"] + 0.287 < zone["center_y_m"] < reception["y_max_m"] - 0.287,
+        f"{name} parking clears north/south walls",
+    )
 
 starts = []
 for name in ("robot_a", "robot_b", "robot_c"):
