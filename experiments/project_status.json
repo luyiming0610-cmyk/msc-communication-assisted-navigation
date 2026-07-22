@@ -1,9 +1,9 @@
 {
   "schema_version": "1.1.0",
-  "last_updated": "2026-07-21",
+  "last_updated": "2026-07-22",
   "index_generated_from_commit": "2558216",
   "index_files_commit": "026223b",
-  "runtime_head_commit": "540ad98cbeb3bbf79c3782ec6fe349d071d6f19a",
+  "runtime_head_commit": "9339d67482b7758e634b37b208f8562bbd267885",
   "frozen_controller": {
     "version": "controller_v4_timebase_fix_20260717",
     "key_commits": [
@@ -154,6 +154,20 @@
       "sealed": true,
       "execution_git_commit": "4fc4c516ec4dedd52e62ee570b7660328aa6bf2e",
       "note": "0.7s bidirectional outage every 15s at phase 10s. 5/5 valid successful tasks; every stale-state safe stop recovered; all positive safety margins (minimum 3.598mm); 260 total outage drops; mean capture ratios 0.957420/0.957077; local layer later engaged in F01/F02/F04/F05; 70/70 raw files SHA-256 matched. Scope is recovery during already-active CPA avoidance, not impairment of initial CPA trigger."
+    },
+    {
+      "name": "Shared-exit N3 formal paired batch",
+      "status": "FINAL_BATCH_PASS",
+      "trial_count": 10,
+      "paired_trial_count": 5,
+      "pass_count": 10,
+      "failed_count": 0,
+      "evidence_level": "FORMAL_SIM",
+      "sealed": true,
+      "note": "COMM_OFF 5/5 and COMM_ON 5/5 successful. Mean paired makespan saving 1.684s (1.561%), but only 3/5 pairs improved and 2/5 were slightly slower; therefore the efficiency result is mixed with a small positive descriptive mean. Five communication event chains verified; zero counted collisions, local failsafes, or watchdog endings.",
+      "summary": "experiments/10_cooperative_exit_navigation_20260720/shared_exit_n3_formal_batch_summary/batch_summary.json",
+      "experiment_id": "shared_exit_n3_formal_paired_batch_20260722",
+      "execution_git_commit": "9339d67482b7758e634b37b208f8562bbd267885"
     }
   ],
   "active_experiment": {
@@ -211,7 +225,8 @@
     "experiments/10_cooperative_exit_navigation_20260720/shared_exit_formal_batch_summary/ + experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_formal_20260721/ (shared-exit N2 formal paired batch, FORMAL_SIM, FINAL_BATCH_PASS: COMM_OFF 5/5 and COMM_ON 5/5; raw native WSL sources retained under /home/eamon/epuck_comm_bags; 175/175 copied files SHA-256 matched)",
     "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_E_trial0{1..5}_attempt01_analysis/ + objective5_condition_E_formal_batch_summary.{json,md} (Objective 5 Condition E, FORMAL_SIM, FINAL_BATCH_PASS 5/5; native WSL raw evidence retained under /home/eamon/epuck_comm_bags and 70/70 SHA-256-verified Windows copies under the gitignored bags directory)",
     "experiments/05_objective5_impairment_matrix/condition_F_outage_timing_precondition.{json,md} (Condition F mandatory timing precondition, PASS_WITH_SCOPE_CLARIFICATION; offline analysis, no new trial)",
-    "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_F_trial0{1..5}_attempt01_analysis/ + objective5_condition_F_formal_batch_summary.{json,md} (Objective 5 Condition F, FORMAL_SIM, FINAL_BATCH_PASS 5/5; periodic 0.7s bidirectional outage every 15s; native WSL raw evidence retained and 70/70 SHA-256-verified Windows copies under the gitignored bags directory)"
+    "experiments/05_objective5_impairment_matrix/objective5_impairment_matrix_v1_condition_F_trial0{1..5}_attempt01_analysis/ + objective5_condition_F_formal_batch_summary.{json,md} (Objective 5 Condition F, FORMAL_SIM, FINAL_BATCH_PASS 5/5; periodic 0.7s bidirectional outage every 15s; native WSL raw evidence retained and 70/70 SHA-256-verified Windows copies under the gitignored bags directory)",
+    "experiments/10_cooperative_exit_navigation_20260720/shared_exit_n3_formal_batch_summary/ + experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_n3_formal_20260722/ (shared-exit N3 formal paired batch, FORMAL_SIM, FINAL_BATCH_PASS: COMM_OFF 5/5 and COMM_ON 5/5; mixed efficiency, mean saving 1.684s/1.561%, 3/5 pairs improved; native WSL sources retained under /home/eamon/epuck_comm_bags; 175/175 copied files SHA-256 matched)"
   ],
   "diagnostic_data_roots": [
     "experiments/3-1.灞€閮ㄩ伩闅滈攣瀛樺疄楠?bags/ (controller_v2 development)",
@@ -244,6 +259,7 @@
     "Condition D trial verdicts must use the three-axis split DATA_VALIDITY / MANIPULATION_VALIDITY / TASK_OUTCOME. The finalize_trial.py strict gate reuses the A/B/C criterion out_of_order_count==0, which is INVERTED for D (reordering is the intended manipulation). A D trial with out_of_order>0 and actual_missing=0 is a PASS of the manipulation check, not a failure. See condition_D_trial01_corrected_verdict.json for the canonical schema.",
     "Shared-exit N2 result is an n=5 paired Webots simulation batch. All five pairs improved, but the result is descriptive and must not be presented as broad statistical generalisation.",
     "Condition E total-loss accounting uses relay received/forwarded/independent-drop counters. sequence_counter gap counts cover only the consumer-visible first-to-last sequence window and can omit leading/trailing drops; they are retained as boundary-censored diagnostic evidence, not authoritative total loss.",
-    "Condition F validates stale-state safe stop and recovery during already-active CPA avoidance under one fixed 0.7s/15s/phase-10s bidirectional outage schedule. It does not show that outage prevented the initial CPA trigger. Local-layer engagement occurred later in F01/F02/F04/F05 and is reported without causal attribution to outage."
+    "Condition F validates stale-state safe stop and recovery during already-active CPA avoidance under one fixed 0.7s/15s/phase-10s bidirectional outage schedule. It does not show that outage prevented the initial CPA trigger. Local-layer engagement occurred later in F01/F02/F04/F05 and is reported without causal attribution to outage.",
+    "Shared-exit N3 evidence is an n=5 paired Webots simulation batch. Task completion was 10/10, but only 3/5 communication-enabled pairs improved and 2/5 were slightly slower; the 1.684s (1.561%) mean saving is descriptive, mixed, and must not be claimed as a uniform or broadly generalisable benefit."
   ]
 }

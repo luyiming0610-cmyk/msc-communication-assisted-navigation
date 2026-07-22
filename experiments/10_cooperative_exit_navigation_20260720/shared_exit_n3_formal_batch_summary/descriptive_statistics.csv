@@ -1,0 +1,5 @@
+metric,n,mean,sample_sd,minimum,maximum
+OFF makespan (s),5,111.384,9.947,99.880,119.880
+ON makespan (s),5,109.700,10.873,95.880,120.320
+Paired saving (s),5,1.684,2.600,-0.780,5.440
+Paired improvement (%),5,1.561,2.516,-0.781,5.369

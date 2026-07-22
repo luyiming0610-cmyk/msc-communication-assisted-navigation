@@ -1,0 +1,43 @@
+{
+  "experiment_id": "shared_exit_n3_formal_paired_batch_20260722",
+  "evidence_level": "FORMAL_SIM",
+  "status": "FINAL_BATCH_PASS",
+  "efficiency_conclusion": "MIXED_EFFICIENCY_SMALL_POSITIVE_MEAN",
+  "n_paired_trials": 5,
+  "formal_runs": 10,
+  "successful_runs": 10,
+  "failed_counted_runs": 0,
+  "pairs_improved": 3,
+  "pairs_not_improved": 2,
+  "off_makespan_s": {
+    "mean": 111.384,
+    "sample_sd": 9.947,
+    "minimum": 99.880,
+    "maximum": 119.880
+  },
+  "on_makespan_s": {
+    "mean": 109.700,
+    "sample_sd": 10.873,
+    "minimum": 95.880,
+    "maximum": 120.320
+  },
+  "paired_saving_s": {
+    "mean": 1.684,
+    "sample_sd": 2.600,
+    "minimum": -0.780,
+    "maximum": 5.440
+  },
+  "paired_improvement_pct": {
+    "mean": 1.561,
+    "sample_sd": 2.516,
+    "minimum": -0.781,
+    "maximum": 5.369
+  },
+  "communication_event_chain_pass_count": 5,
+  "local_failsafe_count_in_counted_trials": 0,
+  "world_sha256": "b4721d04064c3546350f0727f7f4ba038fe7bb64dfed8eccb92adcd188e064d4",
+  "raw_evidence_file_count": 175,
+  "raw_evidence_sha256_match_count": 175,
+  "raw_evidence_sha256_mismatch_count": 0,
+  "scope_limitation": "Descriptive n=5 paired Webots simulation; no broad statistical generalisation and no claim of uniform per-trial improvement."
+}

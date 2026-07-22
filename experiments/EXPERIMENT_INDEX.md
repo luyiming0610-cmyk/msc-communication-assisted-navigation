@@ -321,7 +321,7 @@ excluded runs. Nothing here is deleted.
 - Various `cooperative_avoidance_20260716` diagnostic/invalid/interrupted/timeout runs — see `cooperative_avoidance_20260716_diagnostics_and_invalid` registry row and the experiment's own index doc
 - `communication_baseline_20260716/` — registry row `communication_baseline_20260716_stub`; contains exactly one file, an empty (0-byte) stub, no real experiment ever ran here (`artifact_missing`); unrelated to the current Objective 5 comm-baseline work despite the similar name
 
-### 10_cooperative_exit_navigation_20260720 (Stage 0 retained; Stage 1 formal paired batch complete)
+### 10_cooperative_exit_navigation_20260720 (Stage 0 retained; N2 and N3 formal paired batches complete)
 
 Supervisor-requested new task-level study, added 2026-07-20, scope
 narrowed by the supervisor a second time (2026-07-20) to N2-only with a
@@ -353,7 +353,34 @@ a real east-wall opening, asymmetric exit knowledge, and a deterministic Robot-B
 
 Mechanism audit passed in all five communication-enabled trials: Robot A physically entered/discovered the exit, then transmitted its first `GoalAnnouncement`, then Robot B changed from deterministic search to direct exit navigation. No premature switch was found. Authoritative derived evidence: `shared_exit_formal_batch_summary/batch_summary.json` and `shared_exit_formal_batch_summary/summary.md`. Raw evidence remains at `/home/eamon/epuck_comm_bags/` with a gitignored Windows copy at `bags/shared_exit_formal_20260721/`; all 175/175 copied files matched by SHA-256. Frozen execution commit: `049dcc496de7fd7a1c881eff221c701eef2cc564`.
 
-Stage 1 is complete and must not be rerun merely to improve the result. A future N3/N4 extension remains separate and not started; it requires explicit authorization and the already documented multi-peer design work.
+Stage 1 is complete and must not be rerun merely to improve the result.
+
+**Stage 2 — three-robot shared edge-exit extension (FORMAL BATCH COMPLETE, `FINAL_BATCH_PASS`)**:
+five paired `N3_EXIT_COMM_OFF`/`N3_EXIT_COMM_ON` trials were counted after
+the multi-peer readiness and parking-spacing corrections were frozen. All
+10 runs reached the three assigned parking holds with valid data; no counted
+run ended in collision, local failsafe, or watchdog. In every communication-
+enabled trial the event order was Robot A physical exit discovery, first
+`GoalAnnouncement`, then both searching robots switching to direct exit
+navigation.
+
+The efficiency outcome is deliberately reported as mixed: OFF makespan was
+111.384 +/- 9.947s and ON makespan was 109.700 +/- 10.873s. Mean paired saving
+was 1.684 +/- 2.600s (1.561%), with 3/5 pairs faster and 2/5 slightly slower.
+This is a small positive descriptive mean, not uniform improvement and not a
+broad statistical claim. The authoritative derived evidence is in
+`shared_exit_n3_formal_batch_summary/`; the 175/175 SHA-256-verified raw copy
+is under the gitignored `bags/shared_exit_n3_formal_20260722/`, with native
+sources retained under `/home/eamon/epuck_comm_bags/`. Counted execution
+commits were `311f96e98385b19a1ed654d67970bcb41d25bd64` and
+`9339d67482b7758e634b37b208f8562bbd267885`, with one frozen world SHA-256.
+Excluded development attempts remain documented in `N3_ATTEMPT_HISTORY.md`
+and are not pooled with the formal statistics.
+
+The next scalability/reality-gap step is not an N3 rerun. Because a second
+physical e-puck is unavailable, the planned physical extension is one real
+e-puck plus simulated peer(s), with that hardware-in-the-loop limitation
+explicitly justified.
 
 ## Known open/unconfirmed items from this indexing pass
 

@@ -1,0 +1,20 @@
+{
+  "experiment_id": "shared_exit_n3_formal_paired_batch_20260722",
+  "date": "2026-07-22",
+  "platform": "Webots with ROS 2 Humble under WSL2",
+  "world_file": "shared_exit_n3_hammer_world.wbt",
+  "world_sha256": "b4721d04064c3546350f0727f7f4ba038fe7bb64dfed8eccb92adcd188e064d4",
+  "parking_geometry_commit": "311f96e98385b19a1ed654d67970bcb41d25bd64",
+  "readiness_gate_commit": "9339d67482b7758e634b37b208f8562bbd267885",
+  "formal_pairs": [
+    {"trial": 1, "attempt": 2, "execution_commit": "9339d67482b7758e634b37b208f8562bbd267885"},
+    {"trial": 2, "attempt": 1, "execution_commit": "311f96e98385b19a1ed654d67970bcb41d25bd64"},
+    {"trial": 3, "attempt": 1, "execution_commit": "311f96e98385b19a1ed654d67970bcb41d25bd64"},
+    {"trial": 4, "attempt": 3, "execution_commit": "9339d67482b7758e634b37b208f8562bbd267885"},
+    {"trial": 5, "attempt": 1, "execution_commit": "9339d67482b7758e634b37b208f8562bbd267885"}
+  ],
+  "wsl_source_root": "/home/eamon/epuck_comm_bags",
+  "windows_evidence_root": "experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_n3_formal_20260722",
+  "excluded_attempts_record": "../N3_ATTEMPT_HISTORY.md",
+  "notes": "Execution commits differ only because the readiness gate was added after a documented Webots controller-startup failure. The world, routes, controller behaviour and safety parameters remained unchanged across counted trials."
+}

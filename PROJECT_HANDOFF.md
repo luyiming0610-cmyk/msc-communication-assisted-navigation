@@ -96,12 +96,13 @@ python3 -m pytest test/ -q
 01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-E complete; F-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (NEW 2026-07-20, supervisor-requested N2 shared-edge-exit comm-vs-no-comm study; Stage 0 preparatory validation retained, Stage 1 formal paired batch complete, see STAGE_CLASSIFICATION.md).
 
 **New 2026-07-20**: `10_cooperative_exit_navigation_20260720/` studies a
-DIFFERENT question from Objective 5's A-E impairment evidence (which stays frozen and unmodified,
+DIFFERENT question from Objective 5's A-F impairment evidence (which stays frozen and unmodified,
 still the pairwise-CPA-under-communication-impairment evidence): does
 communication help two robots find and reach a shared exit faster/more
 safely. The supervisor's explicit direction (2026-07-20, second round)
-narrowed the shared-exit scope to **N2 only** (N3/N4 and extra shared-exit parameter
-matrices deferred). Condition E was later completed separately in the Objective 5 impairment matrix. The shared-exit design requires a **real edge/corner
+narrowed the initial shared-exit scope to **N2 first**; the later N3 extension
+was run only after the N2 paired batch and multi-peer readiness checks were
+complete. Condition E was later completed separately in the Objective 5 impairment matrix. The shared-exit design requires a **real edge/corner
 exit with asymmetric exit-discovery information** (Robot A discovers the
 exit; Robot B does not, and only COMM_ON delivers that information to
 Robot B via a new `GoalAnnouncement`/`ExitAnnouncement` message) --
@@ -120,12 +121,15 @@ The project now has a 4-stage evidence chain, indexed in
   Two real defects were found and fixed by this pilot process itself
   (start-pose-inside-goal-region; the cmd_vel-verification race) —- see
   STAGE_CLASSIFICATION.md for the full pilot inventory and commit list.
-- **Stage 1 (in progress)**: the real edge-exit `N2_EXIT_COMM_OFF` vs
-  `N2_EXIT_COMM_ON` study — exactly 2 exclusionary pilots, no formal
-  batch yet.
-- **Stage 2 (not started)**: formal N2 trials, Trial 01 per condition
-  manually launched/observed by the user.
-- **Stage 3 (not started)**: N3/N4 extension.
+- **Stage 1 (complete)**: the real edge-exit `N2_EXIT_COMM_OFF` vs
+  `N2_EXIT_COMM_ON` formal paired batch, 10/10 successful and 5/5 pairs
+  faster with communication.
+- **Stage 2 (complete)**: the N3 formal paired extension, 10/10 successful.
+  Its efficiency result is mixed: mean makespan saving 1.684s (1.561%),
+  3/5 pairs improved and 2/5 were slightly slower.
+- **Stage 3 (planned)**: hardware-in-the-loop reality-gap work using the one
+  available physical e-puck and simulated peer(s). A second physical unit is
+  unavailable, so this limitation must be stated and justified.
 
 The external Webots working directory was renamed to
 `2-1.仿真通信实验/working` and has now been located and verified (see
@@ -214,7 +218,27 @@ row per experiment/batch — `status`, `evidence_level`,
 
 The supervisor-requested asymmetric exit-discovery study is complete (`FINAL_BATCH_PASS`, `FORMAL_SIM`). Five paired `COMM_OFF`/`COMM_ON` trials all succeeded (10/10 runs, zero observed collisions). Communication reduced Robot B's mean completion time from 94.184s to 88.184s; mean paired makespan saving was 6.000s (6.345%), with improvement in all 5/5 pairs. Five communication-enabled event chains independently confirmed `EXIT_DISCOVERED -> ANNOUNCEMENT_TX_FIRST -> SEARCH_TO_GOAL_SWITCH`. Derived evidence is under `experiments/10_cooperative_exit_navigation_20260720/shared_exit_formal_batch_summary/`; native raw evidence remains under `/home/eamon/epuck_comm_bags/`, with a 175/175 SHA-256-verified, gitignored Windows copy under the experiment's `bags/shared_exit_formal_20260721/` directory. Frozen execution commit: `049dcc496de7fd7a1c881eff221c701eef2cc564`. Stage 0 remains preparatory/exclusionary and is not pooled with this formal batch.
 
-This completed batch is not the next task. Objective 5 Conditions F-G and physical ground-motion/dual-robot or hardware-in-the-loop reality-gap validation remain unfinished.
+
+## Shared-exit N3 formal paired batch (complete)
+
+The three-robot scalability extension is also complete (`FINAL_BATCH_PASS`,
+`FORMAL_SIM`). Five paired COMM_OFF/COMM_ON trials produced 10/10 valid task
+successes with no counted collision, local failsafe, or watchdog ending. The
+five COMM_ON event chains all confirmed physical exit discovery by Robot A,
+first `GoalAnnouncement`, and then search-to-goal switching by both Robots B
+and C. Efficiency was mixed: mean makespan changed from 111.384s OFF to
+109.700s ON; mean paired saving was 1.684s (1.561%), with 3/5 pairs improved
+and 2/5 slightly slower. Do not describe this as uniform improvement. Derived
+evidence is under
+`experiments/10_cooperative_exit_navigation_20260720/shared_exit_n3_formal_batch_summary/`;
+the 175/175 SHA-256-verified raw copy is gitignored under
+`bags/shared_exit_n3_formal_20260722/`, and native sources remain under
+`/home/eamon/epuck_comm_bags/`. Excluded development attempts are documented
+separately in `N3_ATTEMPT_HISTORY.md` and are not pooled.
+
+These completed shared-exit batches are not the next task. Objective 5
+Condition G and physical ground-motion or hardware-in-the-loop reality-gap
+validation remain unfinished.
 
 
 ### Objective 5 Condition E formal batch (2026-07-21)

@@ -1,0 +1,36 @@
+N3 COMM_ON formal communication-event audit
+
+Required order for every counted trial:
+EXIT_DISCOVERED_ANNOUNCEMENT_ENABLED -> ANNOUNCEMENT_TX_FIRST -> SEARCH_TO_GOAL_SWITCH for robots B and C
+
+Trial 01 attempt02
+  discovery: 54.320 s
+  first announcement: 54.500 s
+  B switch: 54.500 s
+  C switch: 54.500 s
+
+Trial 02 attempt01
+  discovery: 34.280 s
+  first announcement: 34.500 s
+  B switch: 34.500 s
+  C switch: 34.500 s
+
+Trial 03 attempt01
+  discovery: 28.720 s
+  first announcement: 29.000 s
+  B switch: 29.000 s
+  C switch: 29.000 s
+
+Trial 04 attempt03
+  discovery: 52.380 s
+  first announcement: 52.500 s
+  B switch: 52.500 s
+  C switch: 52.500 s
+
+Trial 05 attempt01
+  discovery: 46.600 s
+  first announcement: 47.000 s
+  B switch: 47.000 s
+  C switch: 47.000 s
+
+Result: 5/5 counted COMM_ON trials pass the required event order. No counted trial contains SAFE_STOP_LOCAL_SENSORS, DURATION_CEILING, TURN_LEDGER_CEILING, COLLISION or WATCHDOG evidence.
