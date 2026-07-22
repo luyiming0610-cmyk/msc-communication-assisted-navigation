@@ -32,3 +32,11 @@ The dissertation may use the excluded attempt as a failure-analysis case: an app
 - Safety response: every multi-peer selector withheld output under the unchanged fail-closed policy; all three controllers remained in `SAFE_STOP_STALE`. No task motion or goal announcement occurred.
 - Methodological disposition: excluded startup failure, never counted as a successful formal trial and never overwritten.
 - Corrective action: the orchestrator now requires all three state streams to produce `validity_flags=7` and all three selected-peer topics to produce real messages before rosbag recording and task timing begin. Topic-name existence alone is no longer treated as readiness.
+
+## Formal Trial 04, OFF attempt02 - excluded pre-record orchestration failure
+
+- Execution commit: `e74137f267d3b049362362d571e2b5ccd138b6a3`.
+- Outcome: the new readiness function stopped with an unbound local shell variable before rosbag recording, controllers, navigators, or task timing began.
+- No task-level result exists and this attempt is not counted in formal statistics.
+- The diagnostic directory is preserved and the name is never reused.
+- Corrective action: the timeout and deadline local variables are initialized in separate statements under `set -u`; the corrected matched Trial 04 pair uses attempt03.

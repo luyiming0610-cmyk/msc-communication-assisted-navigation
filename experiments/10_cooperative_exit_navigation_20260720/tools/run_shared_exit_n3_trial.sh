@@ -125,7 +125,8 @@ wait_topics() {
 }
 
 wait_valid_state() {
-  local timeout_s="$1" topic="$2" deadline=$((SECONDS + timeout_s)) output value
+  local timeout_s="$1" topic="$2" output value
+  local deadline=$((SECONDS + timeout_s))
   while (( SECONDS < deadline )); do
     output="$(timeout 4 ros2 topic echo "$topic" --field validity_flags --once 2>/dev/null || true)"
     value="$(grep -m1 -E '^[[:space:]]*[0-9]+[[:space:]]*$' <<<"$output" | tr -d '[:space:]' || true)"
@@ -137,7 +138,8 @@ wait_valid_state() {
 }
 
 wait_topic_message() {
-  local timeout_s="$1" topic="$2" deadline=$((SECONDS + timeout_s))
+  local timeout_s="$1" topic="$2"
+  local deadline=$((SECONDS + timeout_s))
   while (( SECONDS < deadline )); do
     timeout 4 ros2 topic echo "$topic" --once >/dev/null 2>&1 && return 0
     sleep 1
