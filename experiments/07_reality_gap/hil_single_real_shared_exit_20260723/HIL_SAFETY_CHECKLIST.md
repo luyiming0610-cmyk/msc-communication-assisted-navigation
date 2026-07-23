@@ -69,18 +69,26 @@ independent of and in addition to everything else in this checklist:
    and bridge startup, and during any reconnect** -- never bring up or
    reconnect any part of the physical stack while the robot is on the
    ground.
-2. **Continuous recording of `/cmd_vel` and `/cmd_vel_unguarded`**
-   (e.g. `ros2 bag record`) must be running and confirmed active
-   *before* the robot is placed on the ground -- a Publisher-count=0
-   snapshot is not a substitute; only continuous recording can settle a
-   future command-origin question. This closes the exact evidence gap
-   that forced this incident's origin to be recorded NOT_MEASURABLE.
+2. **Continuous recording of `/cmd_vel_unguarded`, `/cmd_vel`,
+   `/hil_guard/arm`, `/epuck1/state` validity_flags, and
+   `/epuck_bridge/status`**, with local wall-clock and monotonic
+   timestamps on every message -- implemented and tested offline as
+   `tools/hil_command_evidence_recorder.py` (started/stopped via
+   `tools/run_hil_command_evidence_recorder.sh start|stop`, which does
+   exact-PID cleanup, bounded shutdown, a new timestamped output
+   directory per session, and SHA-256-verifies the produced CSV). A
+   Publisher-count=0 snapshot is not a substitute; only continuous
+   recording can settle a future command-origin question. **Not yet
+   run against the physical stack -- design/implementation/tests are
+   complete offline only; see `COMMAND_EVIDENCE_ACTIVATION.md` for the
+   exact steps to actually use it in a session.**
 3. **Pi-side, timestamped logging of every received motor command** --
-   **not yet implemented.** This is a blocking requirement, not
-   optional, for any future powered session. Do not add this code
-   silently; the smallest viable implementation must be proposed and
-   reviewed as its own, separate change before any powered session
-   proceeds.
+   designed, implemented, and unit-tested (24/24 tests) as
+   `pi_command_audit/pi_epuck_tcp_server_sensors_audited.py`, disabled
+   by default (`command_audit_enabled` parameter). **Not yet deployed
+   to the Pi.** The Pi continues running the original, unaudited file
+   until this variant is explicitly reviewed and deployed -- see
+   `pi_command_audit/PROVENANCE.md`.
 4. **A single fail-closed guard process (`hil_cmd_vel_guard.py`) as the
    sole permitted publisher onto the real `/cmd_vel`** -- already an
    existing invariant of this checklist, restated here as a hard
@@ -110,6 +118,31 @@ real, unremapped rclpy nodes (`CooperativeAvoider`, `StatePublisher`,
    and `conftest.py`'s forced test-only `ROS_DOMAIN_ID`.
 8. **Never bring up any part of the physical stack while a test run is
    in progress**, for the same reason in reverse.
+
+## Robot must remain suspended (wheels off the ground) until ALL of the following are true
+
+Added as the command-evidence chain (Part 2/3 above) reached a
+testable, offline-complete state. The robot must stay on its stand --
+not merely "about to be lowered" -- until every one of these is
+confirmed, in this session, not assumed from an earlier one:
+
+1. The Pi-side command audit (`command_audit_enabled=true`) is active
+   and its audit file is confirmed growing.
+2. The WSL-side command-evidence recorder
+   (`run_hil_command_evidence_recorder.sh start`) is active and its
+   manifest confirms the process is running.
+3. The guard (`hil_cmd_vel_guard.py`) is confirmed the sole publisher
+   on the real `/cmd_vel` (`Publisher count` == 1, and that publisher
+   is the guard itself).
+4. The guard's current output is confirmed continuously zero (sampled
+   more than once, not a single snapshot) immediately before ground
+   placement.
+
+Only once all four hold simultaneously may the robot be placed on the
+ground. See `pi_command_audit/PROVENANCE.md` and
+`tools/run_hil_command_evidence_recorder.sh` for exactly how items 1
+and 2 are activated -- both are currently implemented and tested
+offline only, not yet run against the physical stack.
 
 ## Before any nonzero `/cmd_vel` to the physical robot
 

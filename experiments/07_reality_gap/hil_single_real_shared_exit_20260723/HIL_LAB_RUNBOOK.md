@@ -125,15 +125,18 @@ TEST_AREA_CLEAR=YES
 ```
 
 Before the robot is ever moved from the stand to the ground (any
-session, any step after this one): confirm continuous `/cmd_vel` and
-`/cmd_vel_unguarded` recording is active, confirm Pi-side per-command
-logging is available (**not yet implemented -- blocking, see
-`HIL_SAFETY_CHECKLIST.md`**), and re-verify exactly one guarded
-`cmd_vel` publisher with zero output immediately before ground
-placement -- not merely earlier in the session. Stop immediately, at
-the physical e-stop first, on any unexplained movement; see
-`safety_incident_unexpected_motion_20260723/SUMMARY.md` for how the
-2026-07-23 incident was handled.
+session, any step after this one): confirm ALL FOUR conditions in
+`HIL_SAFETY_CHECKLIST.md`'s "Robot must remain suspended until ALL of
+the following are true" section hold simultaneously -- Pi-side command
+audit active, WSL command-evidence recorder active, guard confirmed
+sole `/cmd_vel` publisher, output confirmed continuously zero. See
+`COMMAND_EVIDENCE_ACTIVATION.md` for the exact activation steps for the
+first two (both implemented and tested offline only as of 2026-07-23,
+never yet run against the physical stack). Stop immediately, at the
+physical e-stop first, on any unexplained movement; see
+`safety_incident_unexpected_motion_20260723/SUMMARY.md` and
+`safety_incident_unexpected_motion_2_20260723/SUMMARY.md` for how both
+2026-07-23 incidents were handled.
 
 Then run the short suspended-wheel sequence described in
 `HIL_SAFETY_CHECKLIST.md` (`hil_wheel_suspension_test.py` /

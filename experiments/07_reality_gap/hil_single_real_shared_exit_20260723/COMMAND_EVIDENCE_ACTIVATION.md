@@ -1,0 +1,80 @@
+# Command-evidence chain: exact future activation steps (2026-07-23)
+
+Everything in this document is **designed, implemented, and unit-tested
+offline only**. Nothing here has been run against the physical stack.
+Follow `HIL_SAFETY_CHECKLIST.md`'s "Robot must remain suspended until
+ALL of the following are true" section before any ground placement.
+
+## Part 2 activation: Pi-side command audit
+
+Currently **not deployed**. The Pi still runs the original, unaudited
+`pi_epuck_tcp_server_sensors.py`. To activate in a future session:
+
+1. Review `pi_command_audit/pi_epuck_tcp_server_sensors_audited.py`
+   and `pi_command_audit/PROVENANCE.md` -- confirm the diff summary
+   still matches the file's current content (re-run
+   `tools/audit_source_identity.sh` first to confirm the Pi's current
+   file still matches
+   `pi_command_audit/pi_epuck_tcp_server_sensors_original_mirror.py`'s
+   recorded SHA-256; if it does not, the audited variant must be
+   re-derived from whatever the Pi actually runs now, not assumed
+   still valid).
+2. Copy `pi_epuck_tcp_server_sensors_audited.py` to the Pi, replacing
+   the running file, ONLY after that review -- this is a deliberate,
+   explicit, separate step, never automated by any script in this
+   repository.
+3. Start it with `command_audit_enabled:=true` and an explicit
+   `command_audit_path` (e.g. a per-session timestamped path on the
+   Pi's own filesystem).
+4. Confirm the audit file is growing (`tail -f` or equivalent) before
+   relying on it as evidence for that session.
+5. After the session, retrieve the audit file, compute its SHA-256, and
+   preserve it alongside that session's other evidence.
+
+## Part 3 activation: WSL-side continuous command-evidence recorder
+
+Currently **implemented and tested offline, never run against a live
+bridge/guard**. To activate in a future session:
+
+1. Start the recorder BEFORE any guard or controller:
+   ```bash
+   bash tools/run_hil_command_evidence_recorder.sh start \
+       --upstream-cmd-vel-topic cmd_vel_unguarded \
+       --guarded-cmd-vel-topic cmd_vel \
+       --arm-topic /hil_guard/arm \
+       --state-topic /epuck1/state \
+       --bridge-status-topic /epuck_bridge/status \
+       --duration-s 3600
+   ```
+   This prints `HIL_COMMAND_EVIDENCE_RECORDER_STARTED pid=<PID>
+   manifest=<path>` and `output_dir=<path>`. Confirm its log
+   (`<output_dir>/recorder.log`) shows
+   `HIL_COMMAND_EVIDENCE_RECORDER_TOPIC_VERIFY ok=True` before
+   proceeding -- if `ok=False`, STOP: the recorder itself refused to
+   start because `/cmd_vel_unguarded` or `/cmd_vel` did not resolve as
+   expected (see `hil_command_evidence_recorder.py`'s
+   `verify_required_command_topics_present` for exactly what this
+   does and does not prove).
+2. Proceed with the rest of the session (guard, controller, virtual
+   peer, etc.) as normal.
+3. Stop the recorder LAST, after every other motion process:
+   ```bash
+   bash tools/run_hil_command_evidence_recorder.sh stop <manifest.json>
+   ```
+   This sends exactly one SIGINT to the exact recorded PID, waits up
+   to 10s, then SHA-256-verifies the produced CSV and records the hash
+   and row count back into the manifest.
+4. Preserve `<output_dir>/command_evidence.csv`,
+   `<output_dir>/recorder.log`, and `<output_dir>/manifest.json`
+   (with its `csv_sha256` field) as that session's evidence.
+
+## What this closes, and what it still does not prove
+
+Once both are active in a session, a future safety question about that
+session can be answered with continuous, timestamped records of every
+command-relevant topic on both sides of the bridge, closing the exact
+gap that forced both 2026-07-23 incidents' command origin to be
+recorded NOT_MEASURABLE. It does not retroactively apply to either
+2026-07-23 incident, and it does not by itself prove the ROOT CAUSE of
+either incident -- it only ensures a FUTURE incident would not face the
+same evidence gap.
