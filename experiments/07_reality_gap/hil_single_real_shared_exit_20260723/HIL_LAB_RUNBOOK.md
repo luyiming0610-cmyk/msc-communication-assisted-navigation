@@ -25,6 +25,18 @@ correct/expected result at this stage, not a failure.
 
 ## 2. Bring up the physical stack (one window each; leave all running)
 
+**Per `HIL_SAFETY_CHECKLIST.md`'s "Required for any future powered
+physical session" section (added after the 2026-07-23
+`UNEXPECTED_PHYSICAL_MOTION` incident,
+`safety_incident_unexpected_motion_20260723/SUMMARY.md`): the robot
+must be on its stand, wheels suspended, for all of step 2 and for any
+later reconnect of any of these processes -- never bring up or
+reconnect any part of this stack with the robot on the ground.
+Continuous recording of `/cmd_vel` and `/cmd_vel_unguarded` must also
+be started and confirmed active before the robot is ever placed on the
+ground (step 4 below) -- do not rely on a point-in-time publisher-count
+snapshot.**
+
 **Pi window 1 -- driver:**
 ```bash
 ros2 run epuck_ros2_driver driver
@@ -80,6 +92,17 @@ WHEELS_CLEAR_OF_GROUND=YES
 USER_AT_EMERGENCY_STOP=YES
 TEST_AREA_CLEAR=YES
 ```
+
+Before the robot is ever moved from the stand to the ground (any
+session, any step after this one): confirm continuous `/cmd_vel` and
+`/cmd_vel_unguarded` recording is active, confirm Pi-side per-command
+logging is available (**not yet implemented -- blocking, see
+`HIL_SAFETY_CHECKLIST.md`**), and re-verify exactly one guarded
+`cmd_vel` publisher with zero output immediately before ground
+placement -- not merely earlier in the session. Stop immediately, at
+the physical e-stop first, on any unexplained movement; see
+`safety_incident_unexpected_motion_20260723/SUMMARY.md` for how the
+2026-07-23 incident was handled.
 
 Then run the short suspended-wheel sequence described in
 `HIL_SAFETY_CHECKLIST.md` (`hil_wheel_suspension_test.py` /
@@ -170,3 +193,8 @@ Stops every process from that trial by its **exact recorded PID**
 - `HIL_KNOWN_LIMITATIONS_AND_READINESS_20260723.md`: the current
   overall readiness status and the known ~32-33s validity-flags
   disturbance -- read this before interpreting any trial's result.
+- `safety_incident_unexpected_motion_20260723/SUMMARY.md`: the
+  2026-07-23 `UNEXPECTED_PHYSICAL_MOTION` incident record (root cause
+  NOT_MEASURABLE, not solved) and the preconditions it added to
+  `HIL_SAFETY_CHECKLIST.md` -- read this before any future powered
+  session.

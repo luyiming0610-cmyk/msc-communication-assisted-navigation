@@ -57,6 +57,43 @@ human procedure (this document) -- neither substitutes for the other.
   actually contain measured values (verified by
   `hil_preflight.check_required_params_confirmed`).
 
+## Required for any future powered physical session (2026-07-23 incident)
+
+Added after `safety_incident_unexpected_motion_20260723/SUMMARY.md`
+(`UNEXPECTED_PHYSICAL_MOTION`, root cause **NOT_MEASURABLE**, not
+solved). These are binding preconditions for every future session in
+which the physical robot's driver/bridge/server stack is powered,
+independent of and in addition to everything else in this checklist:
+
+1. **Robot wheels suspended (on its stand) during all driver, server,
+   and bridge startup, and during any reconnect** -- never bring up or
+   reconnect any part of the physical stack while the robot is on the
+   ground.
+2. **Continuous recording of `/cmd_vel` and `/cmd_vel_unguarded`**
+   (e.g. `ros2 bag record`) must be running and confirmed active
+   *before* the robot is placed on the ground -- a Publisher-count=0
+   snapshot is not a substitute; only continuous recording can settle a
+   future command-origin question. This closes the exact evidence gap
+   that forced this incident's origin to be recorded NOT_MEASURABLE.
+3. **Pi-side, timestamped logging of every received motor command** --
+   **not yet implemented.** This is a blocking requirement, not
+   optional, for any future powered session. Do not add this code
+   silently; the smallest viable implementation must be proposed and
+   reviewed as its own, separate change before any powered session
+   proceeds.
+4. **A single fail-closed guard process (`hil_cmd_vel_guard.py`) as the
+   sole permitted publisher onto the real `/cmd_vel`** -- already an
+   existing invariant of this checklist, restated here as a hard
+   precondition specifically for the ground-placement step.
+5. **Explicit zero-output verification** (guarded `cmd_vel` publisher
+   count exactly 1, its output confirmed zero, upstream armed=False)
+   completed and observed **immediately before** the robot is placed on
+   the ground -- not merely at some earlier point in the session.
+6. **Immediate incident stop on any unexplained movement** -- physical
+   e-stop first, then software disarm, then halt all further physical
+   work and audit before any further live action, exactly as this
+   incident was handled.
+
 ## Before any nonzero `/cmd_vel` to the physical robot
 
 All four, verbatim, from the user, in the same session as the test:

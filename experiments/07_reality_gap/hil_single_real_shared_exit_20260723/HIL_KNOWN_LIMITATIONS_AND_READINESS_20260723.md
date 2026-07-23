@@ -104,6 +104,7 @@ handling below).
 | Field geometry | **Not frozen** -- `hil_frozen_params.json`'s `field_geometry.*` remain `UNCONFIRMED_PHYSICAL_MEASUREMENT` |
 | Ground angular cap | **Not confirmed** -- `max_angular_speed_rps` remains `UNCONFIRMED_PHYSICAL_MEASUREMENT`; the two suspended-wheel values above were explicitly test-scoped, never adopted as this |
 | Ground motion | **Not yet authorized** |
+| `UNEXPECTED_PHYSICAL_MOTION` safety incident (2026-07-23) | **Audited, root cause NOT_MEASURABLE, not solved** -- see `safety_incident_unexpected_motion_20260723/SUMMARY.md`. Added binding preconditions to `HIL_SAFETY_CHECKLIST.md` for any future powered session, including Pi-side per-command logging, which is **not yet implemented** (blocking) |
 
 ## Topic-contract accuracy check (finding only -- not implemented)
 
