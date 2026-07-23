@@ -6,11 +6,11 @@ from hil_recorder_plan import build_recorder_plan
 
 def _kwargs(**overrides):
     kwargs = dict(
-        physical_state_topic="/epuck5809/state",
+        physical_state_topic="/epuck1/state",
         virtual_state_topic="/epuck_virtual_peer/state",
         goal_announcement_topic="/hil/goal_announcement",
-        nav_intent_topic="/epuck5809/nav_intent",
-        guarded_cmd_vel_topic="/epuck5809/cmd_vel",
+        nav_intent_topic="/epuck1/nav_intent",
+        guarded_cmd_vel_topic="/cmd_vel",
         guard_arm_topic="/hil_guard/arm",
         bridge_status_topic="/hil/bridge_status",
         task_completion_topic="/hil/task_completion",
@@ -25,7 +25,7 @@ class BuildRecorderPlanTest(unittest.TestCase):
     def test_all_topics_included(self):
         plan = build_recorder_plan(**_kwargs())
         self.assertEqual(len(plan.topics), 9)
-        self.assertIn("/epuck5809/cmd_vel", plan.topics)
+        self.assertIn("/cmd_vel", plan.topics)
 
     def test_empty_topic_rejected(self):
         with self.assertRaises(ValueError):

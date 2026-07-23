@@ -30,10 +30,15 @@ human procedure (this document) -- neither substitutes for the other.
 - Fails closed to zero velocity if: heartbeat (upstream cmd_vel stream)
   is stale/missing; physical `EpuckState` is stale/missing; physical
   `EpuckState.version` mismatches the frozen protocol version; physical
-  `validity_flags` does not have `FLAG_ODOM_VALID` set; the virtual
-  peer's state is stale/missing (only when `require_virtual_peer=true`,
-  i.e. HIL_COMM_ON); the upstream `/cmd_vel_unguarded` topic has zero or
-  more than one publisher.
+  `validity_flags` does not have all of `FLAG_ODOM_VALID | FLAG_IR_VALID
+  | FLAG_TOF_VALID` set (value 7 -- ODOM alone is insufficient, since
+  `cooperative_avoider.py`'s local IR/ToF avoidance path requires both;
+  hardened in commit `9e2b586`); the virtual peer's state is
+  stale/missing (only when `require_virtual_peer=true`, i.e.
+  HIL_COMM_ON); the upstream `/cmd_vel_unguarded` topic has zero or more
+  than one publisher; the final, driver-facing `/cmd_vel` topic has zero
+  or more than one publisher, or its sole publisher is not the guard
+  itself.
 - Guarantees zero velocity on process exit / Ctrl+C (`stop()`, mirrors
   `cooperative_avoider.py`'s own shutdown pattern of publishing zero
   three times before teardown).
