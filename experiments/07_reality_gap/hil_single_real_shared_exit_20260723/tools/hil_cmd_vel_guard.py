@@ -326,7 +326,11 @@ def main(argv=None):
     node = HilCmdVelGuard(args)
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
+        # SIGINT surfaces here as ExternalShutdownException in this
+        # rclpy version, not KeyboardInterrupt -- the finally block
+        # (which guarantees zero velocity) still ran either way, but
+        # catching only KeyboardInterrupt left a clean shutdown noisy.
         pass
     finally:
         try:

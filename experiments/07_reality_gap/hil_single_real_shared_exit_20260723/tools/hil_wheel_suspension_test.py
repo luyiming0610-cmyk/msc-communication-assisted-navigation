@@ -122,7 +122,11 @@ def main(argv=None):
     node = HilWheelSuspensionTest(args)
     try:
         rclpy.spin(node)
-    except (KeyboardInterrupt, SystemExit):
+    except (KeyboardInterrupt, SystemExit, rclpy.executors.ExternalShutdownException):
+        # An early SIGINT surfaces here as ExternalShutdownException in
+        # this rclpy version, not KeyboardInterrupt -- the finally block
+        # below still runs either way, but this avoided a noisy
+        # uncaught traceback on an early manual interrupt.
         pass
     finally:
         try:

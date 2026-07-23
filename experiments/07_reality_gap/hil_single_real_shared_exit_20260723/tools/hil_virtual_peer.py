@@ -97,6 +97,8 @@ def _build_node():
             )
             self.announced = False
             self.last_tick_s = None
+            self.state_seq = 0
+            self.announce_seq = 0
 
             self.state_pub = self.create_publisher(EpuckState, args.state_topic, 20)
             self.announcement_pub = None
@@ -120,23 +122,32 @@ def _build_node():
             linear, angular, arrived = plan_virtual_command(self.state, self.plan, self.args.max_angular_rps)
             self.state = step_virtual_state(self.state, dt, linear, angular)
 
+            self.state_seq += 1
             msg = EpuckState()
             msg.version = EpuckState.PROTOCOL_VERSION
             msg.robot_id = self.args.robot_id
-            msg.source = "virtual"
+            msg.sequence = self.state_seq % (2 ** 32)
+            msg.stamp = self.get_clock().now().to_msg()
+            msg.source = EpuckState.SOURCE_VIRTUAL
             msg.x_m = self.state.x_m
             msg.y_m = self.state.y_m
             msg.yaw_rad = self.state.yaw_rad
-            msg.linear_speed_mps = self.state.linear_mps
-            msg.angular_speed_rps = self.state.angular_rps
+            msg.linear_velocity_mps = self.state.linear_mps
+            msg.angular_velocity_rps = self.state.angular_rps
             msg.validity_flags = EpuckState.FLAG_ODOM_VALID
             self.state_pub.publish(msg)
 
             if arrived and not self.announced and self.announcement_pub is not None:
+                self.announce_seq += 1
                 announcement = GoalAnnouncement()
-                announcement.robot_id = self.args.robot_id
-                announcement.target_x_m = self.plan.target_x_m
-                announcement.target_y_m = self.plan.target_y_m
+                announcement.protocol_version = GoalAnnouncement.PROTOCOL_VERSION
+                announcement.source_robot_id = self.args.robot_id
+                announcement.sequence = self.announce_seq
+                announcement.production_stamp = self.get_clock().now().to_msg()
+                announcement.goal_id = self.args.goal_id
+                announcement.goal_x_m = self.plan.target_x_m
+                announcement.goal_y_m = self.plan.target_y_m
+                announcement.valid = True
                 self.announcement_pub.publish(announcement)
                 self.announced = True
                 self.get_logger().warn(
@@ -149,6 +160,7 @@ def _build_node():
         parser.add_argument("--robot-id", type=int, required=True)
         parser.add_argument("--state-topic", required=True)
         parser.add_argument("--announcement-topic", default="")
+        parser.add_argument("--goal-id", default="shared_exit")
         parser.add_argument("--start-x-m", type=float, required=True)
         parser.add_argument("--start-y-m", type=float, required=True)
         parser.add_argument("--start-yaw-rad", type=float, default=0.0)
@@ -172,7 +184,13 @@ def main(argv=None):
     node = HilVirtualPeer(args)
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
+        # SIGINT surfaces here as ExternalShutdownException in this
+        # rclpy version, not KeyboardInterrupt -- catching only the
+        # latter let a clean SIGINT shutdown still exit nonzero with an
+        # uncaught traceback (functionally harmless: the finally block
+        # below still runs either way) but noisy. Found and fixed
+        # 2026-07-23 while auditing every hil_*.py tool's shutdown path.
         pass
     finally:
         try:

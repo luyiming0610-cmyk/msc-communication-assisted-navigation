@@ -55,7 +55,11 @@ def main(argv=None):
     node = goal_navigator.GoalNavigator(args)
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
+        # SIGINT surfaces here as ExternalShutdownException in this
+        # rclpy version, not KeyboardInterrupt -- catching only the
+        # latter left a clean SIGINT shutdown noisy (uncaught traceback,
+        # nonzero exit) even though the finally block below always ran.
         pass
     finally:
         try:

@@ -227,7 +227,12 @@ def main(argv=None):
     try:
         while rclpy.ok() and time.monotonic() < stop_at:
             rclpy.spin_once(node, timeout_sec=0.05)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
+        # An early interrupt surfaces here as ExternalShutdownException
+        # in this rclpy version, not KeyboardInterrupt -- the finally
+        # block below (which always flushes buffered rows) still runs
+        # either way, but catching only KeyboardInterrupt left an early
+        # interrupt noisy.
         pass
     finally:
         count = node.flush(args.output_csv)
