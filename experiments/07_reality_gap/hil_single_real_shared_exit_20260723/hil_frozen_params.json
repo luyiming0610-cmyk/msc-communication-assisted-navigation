@@ -30,8 +30,8 @@
     "hil_guard_limits": {
         "_comment": "Independently enforced by hil_cmd_vel_guard.py; does not trust cooperative_avoider's own clamp.",
         "max_linear_speed_mps": 0.02,
-        "max_angular_speed_rps": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
-        "max_angular_speed_rps_note": "No verified in-lab measurement yet of a safe suspended-wheel angular rate for epuck5809. Must be set from the wheel-suspension test observations (Step 11 of the HIL protocol), never guessed from simulation nominal_speed/turn_rate values, which govern a different (Webots) actuation model.",
+        "max_angular_speed_rps": 0.0,
+        "max_angular_speed_rps_note": "TEST_SCOPED_VALUE_NOT_A_MEASURED_LIMIT, set 2026-07-23 by explicit user decision to allow hil_cmd_vel_guard to arm for the suspended-wheel straight-line-only test (which needs zero angular velocity throughout, never a turn). This is NOT a measured safe turning rate for epuck5809 and MUST NOT be reused for any turning or ground-motion trial -- reset to UNCONFIRMED_PHYSICAL_MEASUREMENT (or replaced with a genuinely measured value) before any test that requires rotation. No verified in-lab measurement of a safe turning rate exists yet; one known real data point is the Pi TCP bridge's own hard-coded watchdog ceiling logged this session (limits 0.040m/s 2.000rad/s) -- that is a server-side safety limit, not a recommended guard value, and was not adopted here.",
         "heartbeat_timeout_s": 0.5,
         "physical_state_timeout_s": 0.5,
         "virtual_peer_timeout_s": 1.0
