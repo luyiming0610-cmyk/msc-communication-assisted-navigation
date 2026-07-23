@@ -101,6 +101,33 @@ arm topic) could not itself have moved the real robot. The flaw is
 recorded and fixed as a matter of defense-in-depth, independent of
 whether it explains this incident.
 
+## Addendum (added during the second incident's audit): the colcon-test row above needs correction
+
+Row `15:30:57-15:33:32` above states the colcon suite run in that
+interval had "None -- offline tests... only" real-topic contact. **This
+was an incomplete conclusion, corrected here rather than silently
+edited away, per this session's own rule against rewriting a prior
+finding without saying so.** The audit for the second incident
+(`safety_incident_unexpected_motion_2_20260723/SUMMARY.md`) found that
+this exact `colcon test` run for `epuck2_comm` constructs real,
+unremapped `CooperativeAvoider`/`StatePublisher`/
+`NetworkImpairmentRelay`/`SequenceCounterNode` rclpy nodes with no
+`ROS_DOMAIN_ID` isolation, and that `CooperativeAvoider`'s test
+instances are driven to publish genuine nonzero `Twist` commands on the
+bare `cmd_vel` topic -- the same topic name the WSL bridge (PID 7961,
+confirmed alive and connected throughout this incident's window) is
+subscribed to. This run landed at 2026-07-23T14:31:08Z (15:31:08 BST),
+**inside this incident's own reported window (15:15-15:35 BST).**
+
+This does **not** change the formal conclusion: command origin remains
+**NOT_MEASURABLE** for this incident (no continuous `/cmd_vel`
+recording exists either way). It does mean the same-domain unremapped
+test publisher must now be treated as a **high-confidence candidate
+cause for this incident too**, not proven fact -- exactly the same
+status assigned to it in the second incident's own record. See that
+document for the full mechanism-level finding and the fix implemented
+(topic namespacing + `ROS_DOMAIN_ID` isolation + `run_isolated_test_suite.sh`).
+
 ## Explicitly not done / not concluded
 
 - Root cause is **not solved** and is **not claimed solved**.

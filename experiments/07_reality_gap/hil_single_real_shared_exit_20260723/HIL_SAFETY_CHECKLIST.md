@@ -94,6 +94,23 @@ independent of and in addition to everything else in this checklist:
    work and audit before any further live action, exactly as this
    incident was handled.
 
+## Required in addition, after the second 2026-07-23 incident (shared-domain test hazard)
+
+Added after `safety_incident_unexpected_motion_2_20260723/SUMMARY.md`
+found that `epuck2_comm`'s own `colcon test`/`pytest` suite constructs
+real, unremapped rclpy nodes (`CooperativeAvoider`, `StatePublisher`,
+`NetworkImpairmentRelay`, `SequenceCounterNode`) with no
+`ROS_DOMAIN_ID` isolation from any live physical process:
+
+7. **Never run `pytest`/`colcon test`/`python3 -m unittest` for
+   `epuck2_comm` directly while any part of the physical stack could be
+   live.** Use `run_isolated_test_suite.sh` instead -- see
+   `HIL_LAB_RUNBOOK.md` step 1. This is required in addition to (not
+   instead of) the test files' own `-r __ns:=/pytest_isolated` remaps
+   and `conftest.py`'s forced test-only `ROS_DOMAIN_ID`.
+8. **Never bring up any part of the physical stack while a test run is
+   in progress**, for the same reason in reverse.
+
 ## Before any nonzero `/cmd_vel` to the physical robot
 
 All four, verbatim, from the user, in the same session as the test:

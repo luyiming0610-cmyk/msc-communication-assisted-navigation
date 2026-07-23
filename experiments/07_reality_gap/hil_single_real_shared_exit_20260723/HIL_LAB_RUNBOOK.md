@@ -10,14 +10,45 @@ sourced.
 
 ## 1. Offline checks (no hardware, no network)
 
+**Since the second 2026-07-23 `UNEXPECTED_PHYSICAL_MOTION` incident
+(`safety_incident_unexpected_motion_2_20260723/SUMMARY.md`): direct
+`pytest`/`colcon test`/`python3 -m unittest` invocation of the
+`epuck2_comm` package is PROHIBITED whenever any part of the physical
+stack (bridge, driver, state_publisher, guard, or controller) could be
+live. Its own test suite was found to construct real, unremapped
+rclpy nodes with no ROS_DOMAIN_ID isolation -- a routine test run could
+place genuine nonzero commands onto the real `cmd_vel` topic if a live
+bridge happened to share the same DDS domain. The isolated topic remaps
+now present in the affected test files (`-r __ns:=/pytest_isolated`)
+and `conftest.py`'s forced `ROS_DOMAIN_ID` are defense-in-depth, not a
+reason to relax this rule. The ONLY sanctioned way to run either suite
+from now on is:**
+
 ```bash
-python3 -m unittest discover -s . -p "test_hil_*.py" -v
+bash run_isolated_test_suite.sh
+```
+
+This refuses to run at all if any physical/HIL process is detected,
+checks the real `/cmd_vel` publisher count in the default ROS domain
+before touching anything, switches to a dedicated non-physical
+`ROS_DOMAIN_ID` only for the duration of the test run, runs the HIL
+suite and the colcon suite inside that isolation, then switches back
+and re-checks `/cmd_vel` afterward. It prints
+`SAFE_ISOLATED_TEST_RUN_PASS` or `SAFE_ISOLATED_TEST_RUN_FAIL` with the
+specific reason.
+
+The offline integration test and the launcher's own `--check-only`/
+`--dry-run` modes remain safe to run directly (they start no rclpy
+node with a real topic, or refuse to start anything):
+
+```bash
 bash test_hil_integration_offline.sh
 bash run_hil_shared_exit_trial.sh --check-only
 bash run_hil_shared_exit_trial.sh --dry-run
 ```
 
-Expected: all unit tests and the offline integration test pass;
+Expected: `run_isolated_test_suite.sh` reports
+`SAFE_ISOLATED_TEST_RUN_PASS`; the offline integration test passes;
 `--check-only` prints `hil_preflight.py`'s JSON report; while
 `hil_frozen_params.json` still has any `UNCONFIRMED_PHYSICAL_MEASUREMENT`
 field, its `status` is `BLOCKED_AWAITING_LAB_MEASUREMENT`, which is the
