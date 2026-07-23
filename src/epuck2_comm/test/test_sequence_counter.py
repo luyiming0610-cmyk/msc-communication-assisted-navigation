@@ -175,7 +175,7 @@ def test_node_callback_extracts_stamp_and_computes_a_plausible_live_age(monkeypa
         "epuck2_comm.sequence_counter.SequenceCounterNode._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         node = SequenceCounterNode(["state"], output_path, checkpoint_period_s=1000.0)
         callback = node._make_callback("state")
@@ -201,7 +201,7 @@ def test_periodic_checkpoint_writes_complete_false_and_final_write_sets_complete
         "epuck2_comm.sequence_counter.SequenceCounterNode._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         node = SequenceCounterNode(["state"], output_path, checkpoint_period_s=1000.0)
 

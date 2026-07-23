@@ -54,6 +54,7 @@ def _nav_intent(heading_rad, speed_mps, valid=True, sequence=1, phase="GO_TO_EXI
 def _make_node(fake_clock, extra_args=None):
     args = [
         "--ros-args",
+        "-r", "__ns:=/pytest_isolated",
         "-p", "armed:=true",
         "-p", "enable_peer_avoidance:=false",
         "-p", "startup_hold_s:=0.0",

@@ -16,7 +16,7 @@ def _stamp_to_s(stamp) -> float:
 
 
 def test_no_publish_while_ros_clock_is_not_yet_valid(monkeypatch):
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         node = StatePublisher()
         published = []
@@ -33,7 +33,7 @@ def test_no_publish_while_ros_clock_is_not_yet_valid(monkeypatch):
 
 
 def test_stamp_is_nonzero_once_clock_is_valid(monkeypatch):
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         node = StatePublisher()
         published = []
@@ -50,7 +50,7 @@ def test_stamp_is_nonzero_once_clock_is_valid(monkeypatch):
 
 
 def test_stamp_advances_monotonically_with_ros_time(monkeypatch):
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         node = StatePublisher()
         published = []
@@ -74,7 +74,7 @@ def test_real_nonzero_clock_never_triggers_waiting_for_clock(monkeypatch):
     """Hardware mode (use_sim_time=false): the system clock is always a
     large positive Unix-epoch value from the first tick, so the `now <= 0.0`
     guard must never degrade a real hardware clock into a permanent hold."""
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         node = StatePublisher()
         published = []

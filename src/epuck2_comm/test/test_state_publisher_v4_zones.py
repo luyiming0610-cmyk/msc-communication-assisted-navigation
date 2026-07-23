@@ -32,7 +32,7 @@ def _feed_all_clear(node, now):
 
 
 def test_zone_mapping_and_mirror_symmetry():
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         node = StatePublisher()
         import time
@@ -78,7 +78,7 @@ def test_ps3_ps4_rear_pair_now_reaches_the_state_message():
     read by v1/v2/v3 -- feeding ONLY ps3/ps4 close must now show up as
     right_rear_m/left_rear_m, something no prior version's front/left/right
     triple could ever represent."""
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         import time
 
@@ -102,7 +102,7 @@ def test_ps3_ps4_rear_pair_now_reaches_the_state_message():
 
 
 def test_clear_space_baseline_reported_as_inf_not_raw_baseline():
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         import time
 
@@ -122,7 +122,7 @@ def test_clear_space_baseline_reported_as_inf_not_raw_baseline():
 
 
 def test_stale_ps_reading_treated_as_no_detection():
-    rclpy.init()
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated"])
     try:
         import time
 

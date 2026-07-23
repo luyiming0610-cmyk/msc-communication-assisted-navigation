@@ -33,7 +33,7 @@ def test_zero_impairment_forwards_immediately_and_unchanged(monkeypatch):
         "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.0", "-p", "jitter_s:=0.0", "-p", "drop_probability:=0.0"])
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated", "-p", "delay_s:=0.0", "-p", "jitter_s:=0.0", "-p", "drop_probability:=0.0"])
     try:
         node = NetworkImpairmentRelay()
         received = []
@@ -60,7 +60,7 @@ def test_fixed_delay_holds_message_until_release_time(monkeypatch):
         "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.2", "-p", "jitter_s:=0.0", "-p", "drop_probability:=0.0"])
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated", "-p", "delay_s:=0.2", "-p", "jitter_s:=0.0", "-p", "drop_probability:=0.0"])
     try:
         node = NetworkImpairmentRelay()
         node._on_message(_state(1))
@@ -85,7 +85,7 @@ def test_drop_probability_one_drops_every_message(monkeypatch):
         "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init(args=["--ros-args", "-p", "drop_probability:=1.0"])
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated", "-p", "drop_probability:=1.0"])
     try:
         node = NetworkImpairmentRelay()
         for i in range(10):
@@ -104,7 +104,7 @@ def test_message_content_is_never_mutated_by_the_relay(monkeypatch):
         "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.0"])
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated", "-p", "delay_s:=0.0"])
     try:
         node = NetworkImpairmentRelay()
         published = []
@@ -131,7 +131,7 @@ def test_relay_csv_records_drop_reason_for_outage_and_independent_separately(tmp
     )
     log_path = str(tmp_path / "relay.csv")
     rclpy.init(args=[
-        "--ros-args",
+        "--ros-args", "-r", "__ns:=/pytest_isolated",
         "-p", "drop_probability:=1.0",
         "-p", "outage_period_s:=15.0",
         "-p", "outage_duration_s:=0.7",
@@ -173,7 +173,7 @@ def test_both_relay_instances_reading_same_sim_clock_see_synchronized_outage_win
         lambda self: fake_clock["t"],
     )
     rclpy.init(args=[
-        "--ros-args",
+        "--ros-args", "-r", "__ns:=/pytest_isolated",
         "-p", "outage_period_s:=15.0", "-p", "outage_duration_s:=0.7", "-p", "outage_phase_s:=10.0",
     ])
     try:
@@ -201,7 +201,7 @@ def test_pending_queue_depth_reflects_undelivered_messages(monkeypatch):
         "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.5"])
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated", "-p", "delay_s:=0.5"])
     try:
         node = NetworkImpairmentRelay()
         assert node.pending_queue_depth() == 0
@@ -222,7 +222,7 @@ def test_status_topic_publishes_counts_and_queue_depth(monkeypatch):
         "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.5"])
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated", "-p", "delay_s:=0.5"])
     try:
         node = NetworkImpairmentRelay()
         node._on_message(_state(1))
@@ -252,7 +252,7 @@ def test_status_topic_reports_outage_active_and_index_during_a_window(monkeypatc
         lambda self: fake_clock["t"],
     )
     rclpy.init(args=[
-        "--ros-args",
+        "--ros-args", "-r", "__ns:=/pytest_isolated",
         "-p", "outage_period_s:=15.0", "-p", "outage_duration_s:=0.7", "-p", "outage_phase_s:=10.0",
     ])
     try:
@@ -287,7 +287,7 @@ def test_default_outage_relay_forwards_identically_to_pre_extension_relay(monkey
         "epuck2_comm.network_impairment_relay.NetworkImpairmentRelay._now_s",
         lambda self: fake_clock["t"],
     )
-    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.2", "-p", "jitter_s:=0.0", "-p", "drop_probability:=0.0"])
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated", "-p", "delay_s:=0.2", "-p", "jitter_s:=0.0", "-p", "drop_probability:=0.0"])
     try:
         node = NetworkImpairmentRelay()
         node._on_message(_state(1))
@@ -310,7 +310,7 @@ def test_relay_csv_records_source_stamp_and_actual_release_time(tmp_path, monkey
         lambda self: fake_clock["t"],
     )
     log_path = str(tmp_path / "relay.csv")
-    rclpy.init(args=["--ros-args", "-p", "delay_s:=0.2", "-p", f"log_path:={log_path}"])
+    rclpy.init(args=["--ros-args", "-r", "__ns:=/pytest_isolated", "-p", "delay_s:=0.2", "-p", f"log_path:={log_path}"])
     try:
         node = NetworkImpairmentRelay()
         node._on_message(_state(1, stamp_s=99.5))

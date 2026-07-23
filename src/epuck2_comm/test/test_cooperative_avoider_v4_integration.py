@@ -60,6 +60,7 @@ def test_command_smoothing_never_delays_a_same_tick_safety_stop(monkeypatch):
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=0.0",
@@ -104,6 +105,7 @@ def test_legacy_local_bypass_fallback_never_appears_for_a_clean_front_only_encou
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=0.0",
@@ -157,6 +159,7 @@ def test_full_encounter_reaches_pass_confirm_and_recovers_to_cruise(monkeypatch)
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=0.0",
@@ -232,6 +235,7 @@ def test_invalid_odometry_sample_never_reaches_the_encounter_ledger(monkeypatch)
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=0.0",
@@ -286,6 +290,7 @@ def test_started_at_is_not_captured_while_ros_clock_reads_zero(monkeypatch):
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=5.0",
@@ -331,6 +336,7 @@ def test_max_runtime_is_measured_from_first_valid_clock_sample_not_from_zero(mon
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=0.0",
@@ -381,6 +387,7 @@ def test_startup_hold_measured_from_valid_clock_start(monkeypatch):
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=5.0",
@@ -432,6 +439,7 @@ def test_timebase_resets_safely_on_backward_ros_time_jump(monkeypatch):
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=0.0",
@@ -482,6 +490,7 @@ def test_nonzero_first_clock_sample_behaves_exactly_as_before(monkeypatch):
     rclpy.init(
         args=[
             "--ros-args",
+            "-r", "__ns:=/pytest_isolated",
             "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false",
             "-p", "startup_hold_s:=0.0",
