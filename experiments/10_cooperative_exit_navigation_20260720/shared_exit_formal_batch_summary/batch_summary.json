@@ -94,7 +94,9 @@
                      "sha256_matched_file_count":  175,
                      "sha256_mismatch_count":  0,
                      "frozen_params_sha256":  "65c291132f3698ee4cfd5aa849a2bb7a22f4f83f51e31215f9f6eb39242d059f",
-                     "communication_event_audit_sha256":  "b3ad91bde4c62c5c77bf9cf0d7ce8e870edd77c105841e2a6f5bb1a0a00c6f13",
+                     "communication_event_audit_sha256":  "d865c2777631b4ddcd47e6711436a2d9d0055d7569f0fca96ef224332253cfd9",
+    "communication_event_audit_sha256_pre_encoding_fix_20260723":  "b3ad91bde4c62c5c77bf9cf0d7ce8e870edd77c105841e2a6f5bb1a0a00c6f13",
+    "communication_event_audit_sha256_note":  "communication_event_audit.txt was originally written as UTF-16LE with BOM (bytes FF FE...), causing a garbled/spread-character appearance when read as UTF-8 or plain text. Re-saved 2026-07-23 as UTF-8 (no BOM) with the fully-decoded text verified byte-for-byte-equal before and after conversion (string equality check, not just a visual check) -- no event line, timestamp, or numeric value was altered, only the byte encoding. The current field above is the new UTF-8 file's SHA-256; communication_event_audit_sha256_pre_encoding_fix_20260723 preserves the prior UTF-16LE file's hash for traceability.",
                      "raw_evidence_manifest_sha256":  "edbd2e91c9459b9abdbeb486853d6c3f9f5d81aee91a8259a2b18b960dda6057"
                  },
     "interpretation":  "Communication reduced the uninformed robot\u0027s completion time and overall makespan in all five paired trials without reducing task success or observed safety.",

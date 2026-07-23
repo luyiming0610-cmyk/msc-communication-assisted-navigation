@@ -88,20 +88,51 @@ directory) are **retained, unmodified** -- they are not deleted, and Stage
 requires new scene geometry), but they remain as the Stage 0 evidence
 record.
 
-## Stage 1 -- Two-robot shared exit pilot (IN PROGRESS)
+## Stage 1 -- Two-robot shared exit pilot (COMPLETE)
 
 Real edge/corner exit, asymmetric exit-discovery information,
 `GoalAnnouncement`/`ExitAnnouncement` message, minimal goal-directed
 navigation layer, deterministic Robot-B search strategy. `N2_EXIT_COMM_OFF`
-vs `N2_EXIT_COMM_ON`, exactly 2 exclusionary pilots only. See
+vs `N2_EXIT_COMM_ON`, exclusionary pilots run and reviewed. See
 `edge_exit_design_20260720.md` in this directory for the frozen scene/
-message/navigation design.
+message/navigation design. Superseded in scope by the formal batch below;
+this stage's own pilots remain preserved evidence, not re-run.
 
-## Stage 2 -- Formal N2 trials (NOT STARTED)
+## Stage 2 -- Formal N2 trials (COMPLETE, `FINAL_BATCH_PASS`)
 
-Each condition's Trial 01 manually launched and observed by the user;
-Trial 02-05 only after explicit authorization.
+Five paired `N2_EXIT_COMM_OFF`/`N2_EXIT_COMM_ON` formal trials (10 runs),
+all successful, zero collisions. Robot B's mean completion time fell from
+94.184 +/- 3.029s to 88.184 +/- 2.298s; mean paired makespan saving
+6.000 +/- 1.709s (6.345%); all 5/5 pairs improved. Authoritative evidence:
+`shared_exit_formal_batch_summary/batch_summary.json` and `summary.md`.
+Frozen execution commit `049dcc496de7fd7a1c881eff221c701eef2cc564`. This
+section records status only -- it does not restate or reinterpret the
+batch's own numbers, which remain unchanged; see the batch summary itself
+for the authoritative figures.
 
-## Stage 3 -- Multi-robot extension (NOT STARTED)
+## Stage 3 -- Multi-robot (N3) extension (COMPLETE, `FINAL_BATCH_PASS`)
 
-N3/N4. Not begun, not scheduled until Stage 2 is complete and authorized.
+Five paired `N3_EXIT_COMM_OFF`/`N3_EXIT_COMM_ON` formal trials (10 runs,
+three robots: one informed, two searching), all successful, zero counted
+collisions/local-failsafes/watchdog endings. Efficiency result is
+`MIXED_EFFICIENCY_SMALL_POSITIVE_MEAN`: mean paired makespan saving
+1.684 +/- 2.600s (1.561%), 3/5 pairs improved, 2/5 slightly slower --
+not a uniform-improvement claim. Authoritative evidence:
+`shared_exit_n3_formal_batch_summary/batch_summary.json` and `summary.md`.
+Excluded development attempts are documented separately in
+`N3_ATTEMPT_HISTORY.md` and are not pooled with the formal statistics.
+Counted execution commits: `311f96e98385b19a1ed654d67970bcb41d25bd64` and
+`9339d67482b7758e634b37b208f8562bbd267885`.
+
+## Stage 4 -- Single-real-robot hardware-in-the-loop (HIL) preparation (NEXT)
+
+A second physical e-puck2/Pi-puck unit is confirmed unavailable (only
+#5809 exists, and the project has no claim to a second one). The next
+stage is a hardware-in-the-loop study: one real e-puck2 (#5809) plus one
+or more simulated/virtual cooperating peer(s), reusing the frozen
+`EpuckState`/`GoalAnnouncement`/`NavigationIntent` protocol and the
+unmodified `cooperative_avoider.py` safety core through new adapter/
+guard/launcher components. This does not claim, and must never be
+described as, a completed dual-physical-robot experiment. See
+`experiments/07_reality_gap/` for the HIL design and preparation work
+once it exists.
