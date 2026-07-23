@@ -5,12 +5,41 @@ offline only**. Nothing here has been run against the physical stack.
 Follow `HIL_SAFETY_CHECKLIST.md`'s "Robot must remain suspended until
 ALL of the following are true" section before any ground placement.
 
+## Binding constraints on Pi deployment (restated, 2026-07-23 hardening review)
+
+- **Pi deployment remains entirely manual and has not been performed.**
+  No script in this repository copies anything to the Pi, connects to
+  it, or modifies it in any way. The steps below are a procedure for a
+  human to follow in a future session, not something any tool here
+  automates or will ever automate.
+- **The audited server must be reviewed and hash-verified immediately
+  before deployment, every time** -- never deployed on the strength of
+  an earlier review. `pi_command_audit/PROVENANCE.md`'s recorded SHA-256
+  values are a snapshot from when they were written, not a permanent
+  guarantee; re-verify them against whatever the Pi is actually running
+  at deployment time (step 1 below), not against memory of a past
+  check.
+- **The original Pi server must be backed up before it is ever
+  replaced.** Copy the Pi's current, running
+  `pi_epuck_tcp_server_sensors.py` (and `bridge_protocol.py`) to a
+  timestamped location before overwriting anything -- never rely on the
+  git-tracked mirror in this repository as the only copy of what was
+  actually running.
+- **The robot must remain powered off (or, if powered, wheels
+  suspended and the command path fully stopped) throughout Pi
+  deployment and the server's subsequent startup.** Deployment and
+  startup are themselves a change to the command path; per
+  `HIL_SAFETY_CHECKLIST.md`, the robot may not be on the ground during
+  any driver/server/bridge startup or reconnect, and swapping the
+  server file is exactly that kind of event.
+
 ## Part 2 activation: Pi-side command audit
 
 Currently **not deployed**. The Pi still runs the original, unaudited
 `pi_epuck_tcp_server_sensors.py`. To activate in a future session:
 
-1. Review `pi_command_audit/pi_epuck_tcp_server_sensors_audited.py`
+1. **Robot powered off or wheels suspended and the command path fully
+   stopped.** Re-review `pi_command_audit/pi_epuck_tcp_server_sensors_audited.py`
    and `pi_command_audit/PROVENANCE.md` -- confirm the diff summary
    still matches the file's current content (re-run
    `tools/audit_source_identity.sh` first to confirm the Pi's current
@@ -18,14 +47,25 @@ Currently **not deployed**. The Pi still runs the original, unaudited
    `pi_command_audit/pi_epuck_tcp_server_sensors_original_mirror.py`'s
    recorded SHA-256; if it does not, the audited variant must be
    re-derived from whatever the Pi actually runs now, not assumed
-   still valid).
+   still valid). Do this review immediately before deployment, not from
+   memory of an earlier check.
+1a. **Back up the Pi's current, running file** (e.g. `cp
+   pi_epuck_tcp_server_sensors.py
+   pi_epuck_tcp_server_sensors.py.backup_$(date -u +%Y%m%dT%H%M%SZ)`
+   on the Pi itself) before touching anything -- this is the only copy
+   of exactly what was running before the change, independent of any
+   git history.
 2. Copy `pi_epuck_tcp_server_sensors_audited.py` to the Pi, replacing
-   the running file, ONLY after that review -- this is a deliberate,
-   explicit, separate step, never automated by any script in this
-   repository.
+   the running file, ONLY after that review and backup -- this is a
+   deliberate, explicit, separate manual step, never automated by any
+   script in this repository, and the robot must still be powered off
+   or suspended with the command path stopped while this happens.
 3. Start it with `command_audit_enabled:=true` and an explicit
    `command_audit_path` (e.g. a per-session timestamped path on the
-   Pi's own filesystem).
+   Pi's own filesystem) -- still with the robot powered off or wheels
+   suspended and the command path stopped; only once the audit is
+   confirmed active (step 4) does the rest of `HIL_SAFETY_CHECKLIST.md`'s
+   ground-placement gate begin to apply.
 4. Confirm the audit file is growing (`tail -f` or equivalent) before
    relying on it as evidence for that session.
 5. After the session, retrieve the audit file, compute its SHA-256, and

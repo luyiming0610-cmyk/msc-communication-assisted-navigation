@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Permanent safe test runner -- the ONLY sanctioned way to run the HIL
-# unit suite and the epuck2_comm/epuck2_comm_interfaces colcon suite
-# from 2026-07-23 onward.
+# unit suite, the Pi command-audit suite, the sync-script suite, and
+# the epuck2_comm/epuck2_comm_interfaces colcon suite from 2026-07-23
+# onward.
 #
 # Added after two UNEXPECTED_PHYSICAL_MOTION safety incidents on
 # 2026-07-23 (see the two safety_incident_unexpected_motion*_20260723/
@@ -21,10 +22,16 @@
 #      BEFORE touching anything.
 #   3. Only then switches to a dedicated, non-physical ROS_DOMAIN_ID for
 #      the entire test run (physical bring-up scripts never set this
-#      variable, so it is guaranteed distinct from them).
-#   4. Runs the HIL suite (offline, no rclpy) and the colcon suite
-#      (isolated domain) inside that isolation.
-#   5. Switches back to the default domain and re-checks /cmd_vel
+#      variable, so it is guaranteed distinct from them) -- every
+#      subsequent rclpy-touching step re-asserts this before running.
+#   4. Runs the HIL suite, the Pi command-audit suite, the sync-script
+#      suite (offline, no rclpy in any of these), the synthetic
+#      sync/build e2e test (also no rclpy, no real directories), and
+#      the colcon suite (isolated domain) inside that isolation.
+#   5. Asserts every expected safety-critical test module was actually
+#      COLLECTED (not silently skipped/zero-collected) before declaring
+#      any suite a pass.
+#   6. Switches back to the default domain and re-checks /cmd_vel
 #      afterward, to catch anything that appeared during the run.
 #
 # This script starts no physical process, changes no controller/guard
@@ -34,24 +41,54 @@
 set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PI_AUDIT_DIR="$(cd "${SCRIPT_DIR}/../pi_command_audit" && pwd)"
 source /opt/ros/humble/setup.bash
 source ~/epuck_ws/install/setup.bash
 set -u
 
-# Matches every process name that constitutes "the physical/HIL
-# command path" -- the same class of names used by
-# run_hil_physical_preflight.sh's own residual-process check, plus the
-# WSL bridge and state_publisher (which run_hil_physical_preflight.sh
-# deliberately does NOT flag, since it expects them already running for
-# a physical HIL session -- but a test run must refuse even then).
 PHYSICAL_PATTERN='state_publisher|wsl_epuck_tcp_bridge|hil_cmd_vel_guard|hil_virtual_peer|hil_topic_adapter|cooperative_avoider|goal_navigator'
-
-# Reserved for automated test runs only; never set by any physical
-# bring-up script, so it is guaranteed distinct from whatever domain
-# (always the unset default, domain 0) any live physical process uses.
 TEST_ROS_DOMAIN_ID=89
 
-echo "=== [1/6] Refusing to run if any physical/HIL process is detected ==="
+# Every test module that MUST be collected and run for this suite to
+# mean anything -- if any of these is silently missing (a typo'd path,
+# a moved file, a collection error swallowed by unittest), the runner
+# fails outright rather than reporting a misleadingly clean pass.
+declare -a REQUIRED_HIL_TEST_MODULES=(
+    "test_hil_command_evidence_recorder"
+    "test_hil_command_evidence_recorder_zero_publishers"
+    "test_sync_epuck2_comm_logic"
+    "test_hil_cmd_vel_guard"
+    "test_hil_integration_offline_topic_isolation"
+)
+declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
+    "test_pi_epuck_tcp_server_sensors_audited"
+)
+
+_assert_isolated_domain() {
+    if [[ "${ROS_DOMAIN_ID:-}" != "${TEST_ROS_DOMAIN_ID}" ]]; then
+        echo "SAFE_TEST_RUNNER_ABORT_ROS_DOMAIN_ID_NOT_ISOLATED(got='${ROS_DOMAIN_ID:-<unset>}', expected='${TEST_ROS_DOMAIN_ID}')"
+        exit 1
+    fi
+    echo "ros_domain_id_confirmed_isolated=${ROS_DOMAIN_ID}"
+}
+
+_assert_modules_collected() {
+    local label="$1" output="$2"; shift 2
+    local missing=()
+    for module in "$@"; do
+        if [[ "${output}" != *"${module}"* ]]; then
+            missing+=("${module}")
+        fi
+    done
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "SAFE_TEST_RUNNER_ABORT_EXPECTED_TEST_NOT_COLLECTED(${label}): ${missing[*]}"
+        return 1
+    fi
+    echo "all_expected_${label}_modules_collected: $*"
+    return 0
+}
+
+echo "=== [1/8] Refusing to run if any physical/HIL process is detected ==="
 if MATCHED="$(pgrep -af -- "${PHYSICAL_PATTERN}" 2>/dev/null)"; then
     echo "${MATCHED}"
     echo "SAFE_TEST_RUNNER_BLOCKED_PHYSICAL_PROCESS_DETECTED"
@@ -60,7 +97,7 @@ fi
 echo "No matching physical/HIL process found."
 
 echo ""
-echo "=== [2/6] Real /cmd_vel publisher count, default domain, BEFORE ==="
+echo "=== [2/8] Real /cmd_vel publisher count, default domain, BEFORE ==="
 unset ROS_DOMAIN_ID
 BEFORE="$(ros2 topic info /cmd_vel 2>/dev/null | grep 'Publisher count' | grep -o '[0-9]*' || true)"
 if [[ -z "${BEFORE}" ]]; then
@@ -73,23 +110,48 @@ if [[ "${BEFORE}" != "TOPIC_NOT_PRESENT" && "${BEFORE}" != "0" ]]; then
 fi
 
 echo ""
-echo "=== [3/6] Switching to isolated ROS_DOMAIN_ID=${TEST_ROS_DOMAIN_ID} ==="
+echo "=== [3/8] Switching to isolated ROS_DOMAIN_ID=${TEST_ROS_DOMAIN_ID} ==="
 export ROS_DOMAIN_ID="${TEST_ROS_DOMAIN_ID}"
-echo "ROS_DOMAIN_ID=${ROS_DOMAIN_ID}"
+_assert_isolated_domain
+
+FAIL=0
 
 echo ""
-echo "=== [4/6] HIL unit test suite (offline, no rclpy at all) ==="
-(cd "${SCRIPT_DIR}" && python3 -m unittest discover -s . -p "test_hil_*.py" -v)
+echo "=== [4/8] HIL unit test suite (includes command-evidence recorder, zero-publisher proofs, sync-logic tests) ==="
+_assert_isolated_domain
+HIL_OUTPUT="$(cd "${SCRIPT_DIR}" && python3 -m unittest discover -s . -p "test_*.py" -v 2>&1)"
+echo "${HIL_OUTPUT}"
 HIL_EXIT=$?
+if ! _assert_modules_collected "HIL" "${HIL_OUTPUT}" "${REQUIRED_HIL_TEST_MODULES[@]}"; then
+    FAIL=1
+fi
 
 echo ""
-echo "=== [5/6] colcon test: epuck2_comm, epuck2_comm_interfaces (isolated domain) ==="
+echo "=== [5/8] Pi command-audit test suite (pure logic, no rclpy) ==="
+_assert_isolated_domain
+PI_OUTPUT="$(cd "${PI_AUDIT_DIR}" && python3 -m unittest discover -s . -p "test_*.py" -v 2>&1)"
+echo "${PI_OUTPUT}"
+PI_EXIT=$?
+if ! _assert_modules_collected "PI_AUDIT" "${PI_OUTPUT}" "${REQUIRED_PI_AUDIT_TEST_MODULES[@]}"; then
+    FAIL=1
+fi
+
+echo ""
+echo "=== [6/8] Synthetic sync/build script end-to-end test (never touches ~/epuck_ws) ==="
+_assert_isolated_domain
+E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_sync_and_build_epuck2_comm_e2e.sh" 2>&1)"
+echo "${E2E_OUTPUT}"
+E2E_EXIT=$?
+
+echo ""
+echo "=== [7/8] colcon test: epuck2_comm, epuck2_comm_interfaces (isolated domain) ==="
+_assert_isolated_domain
 (cd ~/epuck_ws && colcon test --packages-select epuck2_comm epuck2_comm_interfaces --event-handlers console_direct+)
 COLCON_EXIT=$?
 (cd ~/epuck_ws && colcon test-result --verbose) || true
 
 echo ""
-echo "=== [6/6] Real /cmd_vel publisher count, default domain, AFTER ==="
+echo "=== [8/8] Real /cmd_vel publisher count, default domain, AFTER ==="
 unset ROS_DOMAIN_ID
 AFTER="$(ros2 topic info /cmd_vel 2>/dev/null | grep 'Publisher count' | grep -o '[0-9]*' || true)"
 if [[ -z "${AFTER}" ]]; then
@@ -97,9 +159,16 @@ if [[ -z "${AFTER}" ]]; then
 fi
 echo "real_cmd_vel_publisher_count_after=${AFTER}"
 
-FAIL=0
 if [[ ${HIL_EXIT} -ne 0 ]]; then
     echo "HIL_SUITE_FAILED"
+    FAIL=1
+fi
+if [[ ${PI_EXIT} -ne 0 ]]; then
+    echo "PI_AUDIT_SUITE_FAILED"
+    FAIL=1
+fi
+if [[ ${E2E_EXIT} -ne 0 ]]; then
+    echo "SYNC_E2E_TEST_FAILED"
     FAIL=1
 fi
 if [[ ${COLCON_EXIT} -ne 0 ]]; then
