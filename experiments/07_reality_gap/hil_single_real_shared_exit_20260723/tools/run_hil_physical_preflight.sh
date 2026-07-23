@@ -18,7 +18,18 @@
 # state and network reachability. If the device is unreachable, it
 # reports PHYSICAL_READ_ONLY_PREFLIGHT_BLOCKED_DEVICE_UNREACHABLE and
 # exits nonzero -- this is a safety block, not treated as a script bug.
-set -uo pipefail
+set -o pipefail
+
+# Source ROS here unconditionally, rather than assuming the calling
+# shell already did -- found 2026-07-23 when run_hil_preflight.sh
+# invoked this script in a fresh subshell and every ros2 CLI check
+# silently degraded to NOT_CHECKED because ROS was never sourced in
+# that subshell. ROS2's own setup.bash is not `set -u`-safe (it
+# references unset variables internally), so it must run before
+# nounset is enabled, not wrapped in set +u/-u around it.
+source /opt/ros/humble/setup.bash 2>/dev/null || true
+source "$HOME/epuck_ws/install/setup.bash" 2>/dev/null || true
+set -u
 
 PI_IP="${HIL_PI_IP:-192.168.137.71}"
 STATE_TOPIC="${HIL_STATE_TOPIC:-/epuck1/state}"
@@ -40,7 +51,7 @@ if [[ "$PHYSICAL_DEVICE_REACHABLE" != "YES" ]]; then
   echo "VALIDITY_FLAGS=NOT_CHECKED"
   echo "CMD_VEL_PUBLISHER_COUNT=NOT_CHECKED"
   echo "CMD_VEL_PUBLISHERS=NOT_CHECKED"
-  RESIDUAL="$(pgrep -af 'state_publisher|wsl_epuck_tcp_bridge|cooperative_avoider|goal_navigator|hil_cmd_vel_guard|hil_virtual_peer|hil_topic_adapter' 2>/dev/null | grep -v 'bash -lc' || true)"
+  RESIDUAL="$(pgrep -af 'cooperative_avoider|goal_navigator|hil_cmd_vel_guard|hil_virtual_peer|hil_topic_adapter' 2>/dev/null | grep -v 'bash -lc' || true)"
   if [[ -n "$RESIDUAL" ]]; then
     echo "RESIDUAL_PROCESS_CHECK=FOUND"
     echo "$RESIDUAL"
@@ -87,8 +98,16 @@ SENSOR_TOPICS_READY="NOT_CHECKED"
 VALIDITY_FLAGS="NOT_CHECKED"
 if command -v ros2 >/dev/null 2>&1; then
   MISSING=""
+  # Snapshot the topic list ONCE and check every topic against that
+  # single snapshot -- calling `ros2 topic list` fresh per topic in a
+  # loop was found to be flaky (a different, genuinely-present topic
+  # reported "missing" on consecutive runs), consistent with normal
+  # ros2 CLI/daemon discovery-cache timing, not a real absence. Fixed
+  # 2026-07-23 after the same bug class was found and fixed in
+  # run_bridge_instrumentation_substitution.sh.
+  TOPIC_LIST_SNAPSHOT="$(ros2 topic list 2>/dev/null || true)"
   for t in "$STATE_TOPIC" /odom /scan /tof /ps0 /ps1 /ps2 /ps3 /ps4 /ps5 /ps6 /ps7; do
-    ros2 topic list 2>/dev/null | grep -qx "$t" || MISSING="$MISSING $t"
+    grep -qx "$t" <<<"$TOPIC_LIST_SNAPSHOT" || MISSING="$MISSING $t"
   done
   if [[ -z "$MISSING" ]]; then
     SENSOR_TOPICS_READY="YES"
@@ -132,7 +151,13 @@ else
   echo "CMD_VEL_PUBLISHER_COUNT=NOT_CHECKED (ros2 CLI not on PATH)"
 fi
 
-RESIDUAL="$(pgrep -af 'state_publisher|wsl_epuck_tcp_bridge|cooperative_avoider|goal_navigator|hil_cmd_vel_guard|hil_virtual_peer|hil_topic_adapter' 2>/dev/null | grep -v 'bash -lc' || true)"
+# Only checks for HIL-controller-layer processes that must NOT be
+# running yet -- state_publisher and the WSL bridge are intentionally
+# EXCLUDED here: they are supposed to already be running (that is
+# exactly what DRIVER_STATUS/BRIDGE_STATUS above check for), so
+# flagging them as "residual" contradicted this script's own other
+# fields. Fixed 2026-07-23.
+RESIDUAL="$(pgrep -af 'cooperative_avoider|goal_navigator|hil_cmd_vel_guard|hil_virtual_peer|hil_topic_adapter' 2>/dev/null | grep -v 'bash -lc' || true)"
 if [[ -n "$RESIDUAL" ]]; then
   echo "RESIDUAL_PROCESS_CHECK=FOUND"
   echo "$RESIDUAL"

@@ -72,6 +72,8 @@
         "parking_x_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
         "parking_y_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
         "parking_radius_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "search_waypoints_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "search_waypoints_m_note": "Added 2026-07-23 during the HIL orchestrator build: the real robot runs goal_navigator in --mode=search (mirroring the N2/N3 studies' uninformed robot -- the virtual peer is the informed one that already knows the exit and announces it), which requires a real multi-point waypoint path analogous to the N2/N3 studies' ROBOT_B_WAYPOINTS. This was missing from the original field_geometry schema; a single degenerate point (the start pose) is not a valid search pattern. Format once measured: 'x1:y1,x2:y2,...' ending at the exit, matching goal_navigator.py's --waypoints syntax.",
         "obstacles": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
         "walls_and_boundary": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
         "emergency_stop_position": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
@@ -94,6 +96,7 @@
         "field_geometry.parking_x_m",
         "field_geometry.parking_y_m",
         "field_geometry.parking_radius_m",
+        "field_geometry.search_waypoints_m",
         "field_geometry.emergency_stop_position",
         "field_geometry.min_safety_clearance_m"
     ],
