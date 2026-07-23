@@ -12,7 +12,8 @@
     "frozen_protocol": {
         "_comment": "Copied for reference only. Never edited here or anywhere for HIL -- source of truth is epuck2_comm_interfaces/msg/EpuckState.msg etc.",
         "epuck_state_protocol_version": 1,
-        "required_validity_flags_for_motion": "FLAG_ODOM_VALID"
+        "required_validity_flags_for_motion": "FLAG_ODOM_VALID | FLAG_IR_VALID | FLAG_TOF_VALID (value 7)",
+        "required_validity_flags_for_motion_note": "ODOM alone is insufficient for ground motion: cooperative_avoider.py's local IR/ToF avoidance path is required (require_local_sensors=True in every N2/N3 controller launch, confirmed by source read), and the physical baseline batch's own recorded evidence (5/5 FINAL_PASS trials) shows validity_flags=7 was the actual steady-state value achieved on real hardware. hil_cmd_vel_guard.py's default --required-validity-flags is 7, not 1."
     },
     "frozen_cooperative_avoider_params": {
         "_comment": "Copied from cooperative_avoider.py declare_parameter defaults, confirmed by full source read 2026-07-23. Never modified for HIL.",

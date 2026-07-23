@@ -28,7 +28,23 @@ Defaults (all binding, per the pre-registered HIL safety design):
     stale/invalid/missing forces a zero command.
   - Exactly one upstream cmd_vel publisher is required; zero or multiple
     is refused (multiple ROS2 publishers on one topic interleave
-    nondeterministically -- a genuine hazard, not a cosmetic one).
+    nondeterministically -- a genuine hazard, not a cosmetic one). The
+    same check is repeated independently on the FINAL, driver-facing
+    cmd_vel topic: exactly one publisher must exist there and it must be
+    this guard node itself -- a stray old controller, teleop node, or
+    test script publishing directly onto the driver topic bypasses the
+    guard entirely and is not detectable by only checking the upstream
+    (pre-guard) topic.
+  - required_validity_flags_for_motion defaults to
+    FLAG_ODOM_VALID | FLAG_IR_VALID | FLAG_TOF_VALID (value 7, per the
+    frozen EpuckState protocol) -- ODOM alone is insufficient for ground
+    motion because the frozen cooperative_avoider.py's own local
+    IR/ToF avoidance path (require_local_sensors=True in every N2/N3
+    controller launch, confirmed by source read) depends on IR/ToF
+    being valid; the physical baseline batch's own recorded evidence
+    (5/5 FINAL_PASS trials) shows validity_flags=7 was the actual
+    steady-state value on real hardware, so 7 is not a hypothetical
+    requirement.
 """
 from __future__ import annotations
 
@@ -69,6 +85,8 @@ def decide_command(
     last_virtual_peer_at_s: float | None,
     virtual_peer_timeout_s: float,
     upstream_cmd_vel_publisher_count: int,
+    guarded_cmd_vel_publisher_count: int,
+    guarded_publisher_is_self: bool,
 ) -> GuardDecision:
     """Pure fail-closed decision function -- no I/O, no ROS dependency.
 
@@ -87,6 +105,13 @@ def decide_command(
         reasons.append(
             f"UPSTREAM_CMD_VEL_PUBLISHER_COUNT_INVALID({upstream_cmd_vel_publisher_count})"
         )
+
+    if guarded_cmd_vel_publisher_count != 1:
+        reasons.append(
+            f"GUARDED_CMD_VEL_PUBLISHER_COUNT_INVALID({guarded_cmd_vel_publisher_count})"
+        )
+    elif not guarded_publisher_is_self:
+        reasons.append("GUARDED_CMD_VEL_PUBLISHER_NOT_SELF")
 
     if max_angular_speed_rps is None:
         reasons.append("ANGULAR_SPEED_LIMIT_UNCONFIRMED")
@@ -204,8 +229,31 @@ def _build_node():
             except Exception:
                 return -1
 
+        def _guarded_publisher_count_and_self(self):
+            """Read-only ROS-graph query (get_publishers_info_by_topic,
+            same pattern already used and proven by
+            wsl_expanded_pilot_recorder.py's cmd_vel checkpoint logic) on
+            the FINAL driver-facing topic -- distinct from
+            _upstream_publisher_count(), which only sees the pre-guard
+            topic and cannot detect a stray publisher wired directly onto
+            the driver topic, bypassing the guard entirely."""
+            try:
+                infos = self.get_publishers_info_by_topic(
+                    self.resolve_topic_name(self.args.guarded_cmd_vel_topic)
+                )
+            except Exception:
+                return -1, False
+            own_name = self.get_name()
+            own_namespace = self.get_namespace()
+            is_self = any(
+                info.node_name == own_name and info.node_namespace == own_namespace
+                for info in infos
+            )
+            return len(infos), is_self
+
         def _tick(self) -> None:
             now = self._now()
+            guarded_count, guarded_is_self = self._guarded_publisher_count_and_self()
             decision = decide_command(
                 armed=self.armed,
                 target_linear_mps=self.target_linear,
@@ -224,6 +272,8 @@ def _build_node():
                 last_virtual_peer_at_s=self.last_virtual_peer_at,
                 virtual_peer_timeout_s=self.args.virtual_peer_timeout_s,
                 upstream_cmd_vel_publisher_count=self._upstream_publisher_count(),
+                guarded_cmd_vel_publisher_count=guarded_count,
+                guarded_publisher_is_self=guarded_is_self,
             )
             command = Twist()
             command.linear.x = float(decision.linear_mps)
@@ -231,7 +281,8 @@ def _build_node():
             self.guarded_pub.publish(command)
             if decision.blocked_reasons:
                 self.get_logger().warn(
-                    f"HIL_GUARD_BLOCKED reasons={','.join(decision.blocked_reasons)}",
+                    f"HIL_GUARD_BLOCKED reasons={','.join(decision.blocked_reasons)} "
+                    f"guarded_cmd_vel_publisher_count={guarded_count} guarded_publisher_is_self={guarded_is_self}",
                     throttle_duration_sec=1.0,
                 )
 
@@ -257,7 +308,10 @@ def _build_node():
         parser.add_argument("--heartbeat-timeout-s", type=float, default=0.5)
         parser.add_argument("--physical-state-timeout-s", type=float, default=0.5)
         parser.add_argument("--virtual-peer-timeout-s", type=float, default=1.0)
-        parser.add_argument("--required-validity-flags", type=int, default=EpuckState.FLAG_ODOM_VALID)
+        parser.add_argument(
+            "--required-validity-flags", type=int,
+            default=EpuckState.FLAG_ODOM_VALID | EpuckState.FLAG_IR_VALID | EpuckState.FLAG_TOF_VALID,
+        )
         return parser.parse_args(argv)
 
     return rclpy, Node, HilCmdVelGuard, parse_args

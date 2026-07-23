@@ -10,7 +10,15 @@ import unittest
 
 from hil_cmd_vel_guard import decide_command
 
-FLAG_ODOM_VALID = 1  # matches EpuckState.FLAG_ODOM_VALID bit 0
+# Matches EpuckState's frozen bit assignments (src/epuck2_comm_interfaces/msg/EpuckState.msg):
+# FLAG_ODOM_VALID=1, FLAG_IR_VALID=2, FLAG_TOF_VALID=4. Ground motion requires all
+# three (value 7) -- confirmed both by cooperative_avoider.py's require_local_sensors=True
+# (every N2/N3 controller launch) and by the physical baseline batch's own recorded
+# validity_flags_durations_s showing 7 as the actual steady-state value on real hardware.
+FLAG_ODOM_VALID = 1
+FLAG_IR_VALID = 2
+FLAG_TOF_VALID = 4
+FLAG_ALL_VALID = FLAG_ODOM_VALID | FLAG_IR_VALID | FLAG_TOF_VALID
 
 
 def _base_kwargs(**overrides):
@@ -26,12 +34,14 @@ def _base_kwargs(**overrides):
         last_physical_state_at_s=99.9,
         physical_state_timeout_s=0.5,
         physical_state_protocol_ok=True,
-        physical_validity_flags=FLAG_ODOM_VALID,
-        required_validity_flags=FLAG_ODOM_VALID,
+        physical_validity_flags=FLAG_ALL_VALID,
+        required_validity_flags=FLAG_ALL_VALID,
         require_virtual_peer=False,
         last_virtual_peer_at_s=None,
         virtual_peer_timeout_s=1.0,
         upstream_cmd_vel_publisher_count=1,
+        guarded_cmd_vel_publisher_count=1,
+        guarded_publisher_is_self=True,
     )
     kwargs.update(overrides)
     return kwargs
@@ -73,11 +83,95 @@ class PublisherCountTest(unittest.TestCase):
         self.assertIn("UPSTREAM_CMD_VEL_PUBLISHER_COUNT_INVALID(2)", decision.blocked_reasons)
 
 
+class GuardedPublisherCountTest(unittest.TestCase):
+    """Covers the FINAL, driver-facing cmd_vel topic's own publisher
+    check -- distinct from the pre-guard upstream check above. A stray
+    old controller, teleop node, or test script publishing directly
+    onto the driver topic bypasses the guard entirely and is invisible
+    to the upstream-only check, so this is checked independently."""
+
+    def test_correct_one_upstream_one_self_guarded_allows_motion(self):
+        decision = decide_command(**_base_kwargs(
+            upstream_cmd_vel_publisher_count=1,
+            guarded_cmd_vel_publisher_count=1,
+            guarded_publisher_is_self=True,
+        ))
+        self.assertTrue(decision.is_moving)
+
+    def test_zero_guarded_publishers_blocks(self):
+        decision = decide_command(**_base_kwargs(
+            guarded_cmd_vel_publisher_count=0,
+            guarded_publisher_is_self=False,
+        ))
+        self.assertFalse(decision.is_moving)
+        self.assertIn("GUARDED_CMD_VEL_PUBLISHER_COUNT_INVALID(0)", decision.blocked_reasons)
+
+    def test_two_guarded_publishers_blocks(self):
+        decision = decide_command(**_base_kwargs(
+            guarded_cmd_vel_publisher_count=2,
+            guarded_publisher_is_self=False,
+        ))
+        self.assertFalse(decision.is_moving)
+        self.assertIn("GUARDED_CMD_VEL_PUBLISHER_COUNT_INVALID(2)", decision.blocked_reasons)
+
+    def test_single_guarded_publisher_that_is_not_self_blocks(self):
+        """Exactly one publisher exists on the driver topic, but it is
+        some other node (a stray controller/teleop) instead of this
+        guard -- must still block, since the guard's own commands are
+        not the ones actually reaching the driver."""
+        decision = decide_command(**_base_kwargs(
+            guarded_cmd_vel_publisher_count=1,
+            guarded_publisher_is_self=False,
+        ))
+        self.assertFalse(decision.is_moving)
+        self.assertIn("GUARDED_CMD_VEL_PUBLISHER_NOT_SELF", decision.blocked_reasons)
+
+
 class ValidityFlagsTest(unittest.TestCase):
     def test_invalid_validity_flags_forces_zero(self):
         decision = decide_command(**_base_kwargs(physical_validity_flags=0))
         self.assertEqual(decision.linear_mps, 0.0)
         self.assertEqual(decision.angular_rps, 0.0)
+        self.assertIn("PHYSICAL_STATE_INVALID_FLAGS", decision.blocked_reasons)
+
+    def test_all_three_flags_set_allows_next_safety_check(self):
+        decision = decide_command(**_base_kwargs(
+            physical_validity_flags=FLAG_ALL_VALID,
+            required_validity_flags=FLAG_ALL_VALID,
+        ))
+        self.assertNotIn("PHYSICAL_STATE_INVALID_FLAGS", decision.blocked_reasons)
+        self.assertTrue(decision.is_moving)
+
+    def test_missing_odom_blocks_even_with_ir_and_tof(self):
+        decision = decide_command(**_base_kwargs(
+            physical_validity_flags=FLAG_IR_VALID | FLAG_TOF_VALID,
+            required_validity_flags=FLAG_ALL_VALID,
+        ))
+        self.assertFalse(decision.is_moving)
+        self.assertIn("PHYSICAL_STATE_INVALID_FLAGS", decision.blocked_reasons)
+
+    def test_missing_ir_blocks_even_with_odom_and_tof(self):
+        decision = decide_command(**_base_kwargs(
+            physical_validity_flags=FLAG_ODOM_VALID | FLAG_TOF_VALID,
+            required_validity_flags=FLAG_ALL_VALID,
+        ))
+        self.assertFalse(decision.is_moving)
+        self.assertIn("PHYSICAL_STATE_INVALID_FLAGS", decision.blocked_reasons)
+
+    def test_missing_tof_blocks_even_with_odom_and_ir(self):
+        decision = decide_command(**_base_kwargs(
+            physical_validity_flags=FLAG_ODOM_VALID | FLAG_IR_VALID,
+            required_validity_flags=FLAG_ALL_VALID,
+        ))
+        self.assertFalse(decision.is_moving)
+        self.assertIn("PHYSICAL_STATE_INVALID_FLAGS", decision.blocked_reasons)
+
+    def test_zero_flags_blocks(self):
+        decision = decide_command(**_base_kwargs(
+            physical_validity_flags=0,
+            required_validity_flags=FLAG_ALL_VALID,
+        ))
+        self.assertFalse(decision.is_moving)
         self.assertIn("PHYSICAL_STATE_INVALID_FLAGS", decision.blocked_reasons)
 
 
@@ -177,6 +271,8 @@ class DefaultNoMotionWithoutAnyInputTest(unittest.TestCase):
             last_virtual_peer_at_s=None,
             virtual_peer_timeout_s=1.0,
             upstream_cmd_vel_publisher_count=0,
+            guarded_cmd_vel_publisher_count=0,
+            guarded_publisher_is_self=False,
         )
         self.assertFalse(decision.is_moving)
         self.assertEqual(decision.linear_mps, 0.0)
