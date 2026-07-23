@@ -1,0 +1,100 @@
+{
+    "_comment_top": "HIL single-real-robot shared-exit experiment scope. Values copied here from source (cooperative_avoider.py / state_publisher.py declare_parameter defaults, confirmed by full source read 2026-07-23) are frozen and MUST match the shared, unmodified controller exactly -- this file records them for HIL launcher/guard config, it does not redefine them. Any field whose value is not yet backed by a real measurement on the physical unit or in the physical lab space is the literal string 'UNCONFIRMED_PHYSICAL_MEASUREMENT'. The motion launcher (run_hil_shared_exit_trial.sh) MUST refuse to run any ground-motion mode while any such field remains unconfirmed.",
+    "schema_version": 1,
+    "experiment_id": "hil_single_real_shared_exit_20260723",
+    "physical_unit": {
+        "device_id": "epuck5809",
+        "hardware": "e-puck2 + Pi-puck + University of York expansion board + Raspberry Pi Zero 2 W",
+        "hotspot_ssid": "EPUCK5809",
+        "pi_ip_last_known": "192.168.137.71",
+        "pi_ip_last_verified": "UNCONFIRMED_PHYSICAL_MEASUREMENT"
+    },
+    "frozen_protocol": {
+        "_comment": "Copied for reference only. Never edited here or anywhere for HIL -- source of truth is epuck2_comm_interfaces/msg/EpuckState.msg etc.",
+        "epuck_state_protocol_version": 1,
+        "required_validity_flags_for_motion": "FLAG_ODOM_VALID"
+    },
+    "frozen_cooperative_avoider_params": {
+        "_comment": "Copied from cooperative_avoider.py declare_parameter defaults, confirmed by full source read 2026-07-23. Never modified for HIL.",
+        "safety_radius_m": 0.14,
+        "trigger_distance_m": 0.34,
+        "local_front_danger_m": 0.100,
+        "local_front_warn_m": 0.180,
+        "local_front_release_m": 0.220,
+        "local_side_danger_m": 0.042,
+        "local_side_warn_m": 0.052,
+        "local_side_release_m": 0.058,
+        "local_v4_max_encounter_duration_s": 25.0
+    },
+    "hil_guard_limits": {
+        "_comment": "Independently enforced by hil_cmd_vel_guard.py; does not trust cooperative_avoider's own clamp.",
+        "max_linear_speed_mps": 0.02,
+        "max_angular_speed_rps": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "max_angular_speed_rps_note": "No verified in-lab measurement yet of a safe suspended-wheel angular rate for epuck5809. Must be set from the wheel-suspension test observations (Step 11 of the HIL protocol), never guessed from simulation nominal_speed/turn_rate values, which govern a different (Webots) actuation model.",
+        "heartbeat_timeout_s": 0.5,
+        "physical_state_timeout_s": 0.5,
+        "virtual_peer_timeout_s": 1.0
+    },
+    "coordinate_system": {
+        "_comment": "Shared map frame that all EpuckState messages (real and virtual) are expressed in, per state_publisher.py's existing local_to_global() origin_x_m/origin_y_m/origin_yaw_rad parameters -- no new transform code needed, only correctly-measured origin parameters.",
+        "frame_id": "hil_shared_exit_map",
+        "units": "metres, radians, ENU-style (x right, y forward on the physical table as viewed from the operator position -- to be fixed exactly during field measurement)",
+        "physical_robot_origin_x_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "physical_robot_origin_y_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "physical_robot_origin_yaw_rad": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "virtual_peer_origin_x_m": 0.0,
+        "virtual_peer_origin_y_m": 0.0,
+        "virtual_peer_origin_yaw_rad": 0.0,
+        "virtual_peer_origin_note": "Virtual peer runs in its own Webots/simulated frame that is DEFINED to coincide with the shared map frame (it has no separate physical offset to measure); only the real robot's origin requires a physical measurement."
+    },
+    "clock_domains": {
+        "_comment": "goal_navigator.py hardcodes rclpy.init with use_sim_time:=true, which never advances without a live /clock -- incompatible with real hardware. hil_topic_adapter.py instantiates GoalNavigator with a real-time (wall clock, use_sim_time:=false) rclpy context instead, without editing goal_navigator.py.",
+        "physical_robot_clock": "wall_clock_use_sim_time_false",
+        "virtual_peer_clock": "sim_clock_use_sim_time_true_or_wall_clock_depending_on_launch_mode",
+        "cross_domain_note": "Because the two robots run on different clock sources, all cross-robot freshness checks in hil_cmd_vel_guard.py and hil_preflight.py compare each message's RECEIVE-side wall-clock timestamp (set by the receiving node's own clock), never the sender's embedded stamp -- this avoids any need for the two clocks to be synchronized or even comparable."
+    },
+    "hil_comm_scope": {
+        "_comment": "See HIL_DESIGN.md for the full frozen definition; duplicated here in compact form for launcher/guard config consumption.",
+        "HIL_COMM_OFF": "Physical robot never subscribes to the virtual peer's GoalAnnouncement topic; require_virtual_peer=false in the guard config; physical robot navigates using only its own state_publisher/goal_navigator/cooperative_avoider stack and local IR/ToF avoidance if the virtual peer enters its CPA-relevant EpuckState stream.",
+        "HIL_COMM_ON": "Physical robot's goal_navigator subscribes to the virtual peer's GoalAnnouncement topic (--goal-announcement-topic) in addition to everything HIL_COMM_OFF does; require_virtual_peer=true in the guard config."
+    },
+    "field_geometry": {
+        "_comment": "All UNCONFIRMED until Step 12 (post-wheel-suspension-test field measurement) is completed by the user. Do not fill in from the Webots N2/N3 world files -- those describe a simulated arena, not the physical lab space.",
+        "arena_length_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "arena_width_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "start_pose_x_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "start_pose_y_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "start_pose_yaw_rad": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "exit_center_x_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "exit_center_y_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "exit_radius_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "parking_x_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "parking_y_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "parking_radius_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "obstacles": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "walls_and_boundary": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "emergency_stop_position": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "wifi_coverage_note": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "min_safety_clearance_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT"
+    },
+    "required_before_ground_motion": [
+        "hil_guard_limits.max_angular_speed_rps",
+        "coordinate_system.physical_robot_origin_x_m",
+        "coordinate_system.physical_robot_origin_y_m",
+        "coordinate_system.physical_robot_origin_yaw_rad",
+        "field_geometry.arena_length_m",
+        "field_geometry.arena_width_m",
+        "field_geometry.start_pose_x_m",
+        "field_geometry.start_pose_y_m",
+        "field_geometry.start_pose_yaw_rad",
+        "field_geometry.exit_center_x_m",
+        "field_geometry.exit_center_y_m",
+        "field_geometry.exit_radius_m",
+        "field_geometry.parking_x_m",
+        "field_geometry.parking_y_m",
+        "field_geometry.parking_radius_m",
+        "field_geometry.emergency_stop_position",
+        "field_geometry.min_safety_clearance_m"
+    ],
+    "status": "OFFLINE_TOOLING_ONLY_NO_PHYSICAL_MEASUREMENTS_YET"
+}
