@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Offline end-to-end HIL integration test. Uses ONLY test-namespaced
 # topics (/hil_offline_test/...) for everything -- never /epuck1/state,
-# never /cmd_vel_unguarded, never /cmd_vel. The guard's final output in
-# this test goes to a non-hardware sink topic
-# (/hil_offline_test/cmd_vel_sink), never the real /cmd_vel. The real
-# /cmd_vel's Publisher count is checked before and after and must stay
-# 0 throughout.
+# never /cmd_vel_unguarded, never /cmd_vel, and never the guard's
+# GLOBAL default arm topic (/hil_guard/arm) either: a real or another
+# test's guard instance could be subscribed to that same global topic,
+# so this script arms ONLY its own test-namespaced arm topic
+# (/hil_offline_test/hil_guard/arm), passed explicitly via --arm-topic.
+# The guard's final output in this test goes to a non-hardware sink
+# topic (/hil_offline_test/cmd_vel_sink), never the real /cmd_vel. The
+# real /cmd_vel's Publisher count is checked before and after and must
+# stay 0 throughout.
 #
 # Never starts Webots, the real driver, the real bridge, or the real
 # guard/controller against real topics. Never publishes to the real
@@ -64,11 +68,12 @@ start guard python3 "${SCRIPT_DIR}/hil_cmd_vel_guard.py" \
     --physical-state-topic /hil_offline_test/epuck1/state \
     --upstream-cmd-vel-topic /hil_offline_test/cmd_vel_unguarded \
     --guarded-cmd-vel-topic /hil_offline_test/cmd_vel_sink \
+    --arm-topic /hil_offline_test/hil_guard/arm \
     --max-linear-speed-mps 0.02 --max-angular-speed-rps 0.1 \
     --required-validity-flags 7
 sleep 1
 
-ros2 topic pub --once /hil_guard/arm std_msgs/msg/Bool "{data: true}" >/dev/null 2>&1
+ros2 topic pub --once /hil_offline_test/hil_guard/arm std_msgs/msg/Bool "{data: true}" >/dev/null 2>&1
 sleep 0.5
 
 # Capture the WHOLE sink stream for the pulse's duration (not --once,
