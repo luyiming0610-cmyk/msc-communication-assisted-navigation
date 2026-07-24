@@ -45,3 +45,20 @@ Thumbs.db
 # must never be committed as a permanent fact. Managed by
 # hil_ground_diagnostic_session.py; see FIELD_MEASUREMENT_FORM.md.
 /experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/ground_diagnostic_session_state.json
+
+# HIL reality-gap study: raw per-diagnostic evidence (CSV/JSON/JSONL/
+# SHA256SUMS alongside the already-ignored *.log files above),
+# preserved on disk, never committed, per the same raw-evidence policy
+# as the objective5/cooperative-exit bags/ entries above. Listed
+# individually (not a wildcard) so a future raw_logs/ directory
+# containing anything other than known raw-evidence file types is NOT
+# silently ignored -- run_ground_diagnostic_preflight.sh's SOURCE_IDENTITY
+# check relies on exactly this: git status only omits paths an ignore
+# rule actually names, so any untracked code/config file anywhere
+# under this study still shows up as dirty and blocks.
+/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/bridge_instrumentation_substitution_20260723/raw_logs/
+/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/command_evidence_activation_20260724/raw_logs/
+/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/command_evidence_activation_pass_20260724/raw_logs/
+/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/stationary_physical_diagnostic_20260723/raw_logs/
+/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/stationary_physical_diagnostic_20260723_attempt02/raw_logs/
+/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/targeted_stationary_diagnostic_20260723/raw_logs/
