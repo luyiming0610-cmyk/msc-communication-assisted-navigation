@@ -62,13 +62,22 @@ class EvaluatePreStackTest(unittest.TestCase):
             ALL_PRE_STACK_GOOD,
             tracked_fields_ok=False,
             tracked_missing=("measured_geometry.start_x_m",),
-            tracked_unconfirmed=("environment.floor_condition_confirmed",),
+            tracked_unconfirmed=("safety.emergency_stop_position_confirmed",),
         )
         result = evaluate_pre_stack(**kwargs)
         self.assertFalse(result.ok)
         self.assertTrue(any("TRACKED_FIELDS_NOT_READY" in r for r in result.reasons))
         self.assertTrue(any("measured_geometry.start_x_m" in r for r in result.reasons))
-        self.assertTrue(any("environment.floor_condition_confirmed" in r for r in result.reasons))
+        self.assertTrue(any("safety.emergency_stop_position_confirmed" in r for r in result.reasons))
+
+    def test_tracked_fields_ok_does_not_substitute_for_session_ok(self):
+        # A tracked-file value (even fully confirmed) can never bypass
+        # the separate per-session gate -- the two are independent
+        # parameters, and both must be true for pre-stack to pass.
+        kwargs = dict(ALL_PRE_STACK_GOOD, tracked_fields_ok=True, session_ok=False, session_reason="CONFIRMATIONS_NOT_TRUE")
+        result = evaluate_pre_stack(**kwargs)
+        self.assertFalse(result.ok)
+        self.assertTrue(any("SESSION_STATE_NOT_READY" in r for r in result.reasons))
 
     def test_session_not_ok_blocks(self):
         kwargs = dict(ALL_PRE_STACK_GOOD, session_ok=False, session_reason="SESSION_STALE")

@@ -27,9 +27,11 @@
 #     ground_diagnostic_params.json's TRACKED fields only (measured
 #     geometry + stable venue facts).
 #   - hil_ground_diagnostic_session.check_session_state_ready() against a
-#     separate, gitignored, timestamped session-state file for the two
-#     per-session confirmations (operator present, Wi-Fi checked) --
-#     never read from or written into the tracked JSON file.
+#     separate, gitignored, timestamped session-state file for the four
+#     per-session confirmations (floor condition, travel path clear,
+#     operator present, Wi-Fi checked) -- never read from or written
+#     into the tracked JSON file; a tracked-file value can never
+#     substitute for a session-file confirmation.
 #   - hil_ground_diagnostic_phases.evaluate_pre_stack() /
 #     evaluate_live_zero_state() for the actual pass/block decision.
 #   - run_hil_physical_preflight.sh, invoked as a read-only subprocess,
@@ -106,7 +108,7 @@ TRACKED_MISSING="$(grep -o 'TRACKED_MISSING=.*' <<<"${TRACKED_CHECK_OUTPUT}" | c
 TRACKED_UNCONFIRMED="$(grep -o 'TRACKED_UNCONFIRMED=.*' <<<"${TRACKED_CHECK_OUTPUT}" | cut -d= -f2-)"
 
 echo ""
-echo "=== PRE_STACK [3/6] Per-session confirmations (operator present, Wi-Fi checked) ==="
+echo "=== PRE_STACK [3/6] Per-session confirmations (floor condition, travel path clear, operator present, Wi-Fi checked) ==="
 SESSION_CHECK_OUTPUT="$(PYTHONPATH="${SCRIPT_DIR}" python3 hil_ground_diagnostic_session.py check --path "${SESSION_FILE}" --max-age-s "${SESSION_MAX_AGE_S}" 2>&1)"
 echo "${SESSION_CHECK_OUTPUT}"
 SESSION_OK="false"

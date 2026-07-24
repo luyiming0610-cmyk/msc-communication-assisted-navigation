@@ -1,15 +1,32 @@
 #!/usr/bin/env python3
 """Per-session runtime confirmations for the first ground diagnostic.
 
-Some safety confirmations -- operator physically present, Wi-Fi checked
-in the test area -- are true only for THIS session and must be
-re-confirmed every time a session starts. Unlike measured geometry or
-fixed venue facts, they must never be committed into the tracked
-ground_diagnostic_params.json as a permanent fact (a future session
-with nobody present must not silently inherit an old "true"). This
-module manages a small, timestamped, gitignored session-state file
-instead. No ROS/rclpy dependency -- pure logic plus a thin CLI wrapper,
-the same pattern as hil_preflight.py.
+Some safety confirmations are true only for THIS session and must be
+re-confirmed every time a session starts:
+  - floor_condition_confirmed  -- the floor can get wet, debris can
+    appear, since the last session.
+  - travel_path_clear_confirmed -- an object can be left in the path
+    since the last session.
+  - operator_present_confirmed -- a person's physical presence.
+  - wifi_checked_in_test_area  -- Wi-Fi coverage can vary day to day.
+Unlike measured geometry or genuinely fixed venue facts (test-area
+dimensions, the emergency-stop position, recorded obstacle/boundary
+locations), none of these four may ever be committed into the tracked
+ground_diagnostic_params.json as a permanent fact -- a future session
+must not silently inherit an old "true" for a condition that can change
+between sessions. This module manages a small, timestamped, gitignored
+session-state file instead. No ROS/rclpy dependency -- pure logic plus
+a thin CLI wrapper, the same pattern as hil_preflight.py.
+
+floor_condition_confirmed and travel_path_clear_confirmed were
+originally tracked as permanent facts in ground_diagnostic_params.json
+(committed once, read as true forever after). That was a genuine
+execution-time safety gap: the physical floor/path condition that day
+was never actually re-checked, only a stale committed value was read.
+Moved here 2026-07-24 to close that gap -- see
+FIELD_MEASUREMENT_FORM.md and GROUND_DIAGNOSTIC_RUNBOOK.md for the
+corresponding same-session verbal confirmations
+(FLOOR_CONDITION_CLEAR=YES, TRAVEL_PATH_CLEAR=YES) that back them.
 """
 from __future__ import annotations
 
@@ -18,7 +35,12 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-REQUIRED_SESSION_FIELDS = ("operator_present_confirmed", "wifi_checked_in_test_area")
+REQUIRED_SESSION_FIELDS = (
+    "floor_condition_confirmed",
+    "travel_path_clear_confirmed",
+    "operator_present_confirmed",
+    "wifi_checked_in_test_area",
+)
 DEFAULT_MAX_AGE_S = 4 * 3600.0
 TIMESTAMP_KEY = "session_started_utc"
 

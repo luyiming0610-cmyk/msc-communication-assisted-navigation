@@ -6,13 +6,17 @@ here) against this diagnostic's own, separate parameter file. No
 rclpy dependency.
 
 This file now holds only TRACKED configuration: measured geometry plus
-stable venue facts (floor condition, travel path, obstacle recording,
-emergency-stop position). The two genuinely per-session confirmations
-(operator present, Wi-Fi checked) were moved out to a separate,
-gitignored session-state file -- see
+stable venue facts (obstacle/boundary recording, emergency-stop
+position). All four genuinely per-session confirmations -- floor
+condition, travel path clear, operator present, Wi-Fi checked -- were
+moved out to a separate, gitignored session-state file -- see
 test_hil_ground_diagnostic_session.py -- and are deliberately NOT
 present anywhere in this file or its required_before_ground_motion
-list.
+list. floor_condition_confirmed and travel_path_clear_confirmed were
+originally tracked here too (committed once, read as permanently true
+thereafter); that was a genuine execution-time safety gap (closed
+2026-07-24) since neither was ever actually re-checked in later
+sessions -- see hil_ground_diagnostic_session.py's module docstring.
 """
 import json
 import tempfile
@@ -32,8 +36,6 @@ ALL_REQUIRED_PATHS = {
     "measured_geometry.min_boundary_clearance_m",
     "measured_geometry.test_area_length_m",
     "measured_geometry.test_area_width_m",
-    "environment.floor_condition_confirmed",
-    "environment.travel_path_clear_confirmed",
     "environment.boundaries_and_obstacles_recorded",
     "safety.emergency_stop_position_confirmed",
 }
@@ -50,13 +52,16 @@ NUMERIC_PATHS = {
 }
 
 BOOLEAN_CONFIRMATION_PATHS = {
-    "environment.floor_condition_confirmed",
-    "environment.travel_path_clear_confirmed",
     "environment.boundaries_and_obstacles_recorded",
     "safety.emergency_stop_position_confirmed",
 }
 
-SESSION_ONLY_FIELD_NAMES = ("operator_present_confirmed", "wifi_checked_in_test_area")
+SESSION_ONLY_FIELD_NAMES = (
+    "floor_condition_confirmed",
+    "travel_path_clear_confirmed",
+    "operator_present_confirmed",
+    "wifi_checked_in_test_area",
+)
 
 
 def _load():
@@ -79,11 +84,7 @@ def _all_unconfirmed_synthetic_params():
     have since been confirmed and committed."""
     params = {
         "measured_geometry": {path.split(".")[1]: "UNCONFIRMED_PHYSICAL_MEASUREMENT" for path in NUMERIC_PATHS},
-        "environment": {
-            "floor_condition_confirmed": False,
-            "travel_path_clear_confirmed": False,
-            "boundaries_and_obstacles_recorded": False,
-        },
+        "environment": {"boundaries_and_obstacles_recorded": False},
         "safety": {"emergency_stop_position_confirmed": False},
         "required_before_ground_motion": sorted(ALL_REQUIRED_PATHS),
     }
@@ -95,10 +96,10 @@ class GroundDiagnosticParamsFileTest(unittest.TestCase):
         self.assertTrue(PARAMS_PATH.is_file())
         _load()  # must not raise
 
-    def test_required_before_ground_motion_contains_exactly_the_expected_12_tracked_paths(self):
+    def test_required_before_ground_motion_contains_exactly_the_expected_10_tracked_paths(self):
         params = _load()
         self.assertEqual(set(params["required_before_ground_motion"]), ALL_REQUIRED_PATHS)
-        self.assertEqual(len(params["required_before_ground_motion"]), 12)
+        self.assertEqual(len(params["required_before_ground_motion"]), 10)
 
     def test_session_only_fields_are_not_present_anywhere_in_the_tracked_file(self):
         # operator_present_confirmed and wifi_checked_in_test_area must
@@ -118,7 +119,7 @@ class GroundDiagnosticParamsFileTest(unittest.TestCase):
                 self.assertNotIn(name, dotted_path)
 
     def test_synthetic_all_unconfirmed_params_are_blocked_on_every_path(self):
-        # A freshly-unconfirmed params dict must block on all 12 paths --
+        # A freshly-unconfirmed params dict must block on all 10 paths --
         # this is what the tracked file looked like before any
         # measurement or venue-fact confirmation was taken.
         params = _all_unconfirmed_synthetic_params()
@@ -129,9 +130,9 @@ class GroundDiagnosticParamsFileTest(unittest.TestCase):
 
     def test_synthetic_all_unconfirmed_params_numeric_only_check_flags_geometry(self):
         # check_required_params_confirmed() alone (numeric/UNCONFIRMED
-        # only) still correctly flags the 8 geometry fields; the 4
-        # boolean fields are not literally the UNCONFIRMED string, so it
-        # does not flag them -- that is exactly why
+        # only) still correctly flags the 8 geometry fields; the 2
+        # remaining boolean fields are not literally the UNCONFIRMED
+        # string, so it does not flag them -- that is exactly why
         # check_required_fields_ready() exists and is used above.
         params = _all_unconfirmed_synthetic_params()
         result = check_required_params_confirmed(params)
@@ -140,7 +141,7 @@ class GroundDiagnosticParamsFileTest(unittest.TestCase):
         self.assertEqual(result.missing_paths, ())
 
     def test_tracked_file_currently_passes_check_required_fields_ready(self):
-        # The tracked file's own 12 fields have all been measured/
+        # The tracked file's own 10 fields have all been measured/
         # confirmed -- this is the actual, current, intended state, not
         # a synthetic fixture.
         params = _load()

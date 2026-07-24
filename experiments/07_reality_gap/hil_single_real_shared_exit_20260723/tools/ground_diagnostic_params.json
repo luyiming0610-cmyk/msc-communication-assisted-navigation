@@ -1,5 +1,5 @@
 {
-    "_comment_top": "Parameter template for the first supervised low-speed HIL ground diagnostic (a bounded, exclusionary diagnostic test, NOT a formal navigation trial and NOT the formal shared-exit experiment). Deliberately a SEPARATE file from hil_frozen_params.json: it never modifies that file's formal frozen evidence, and it scopes only the small geometry set this one straight-line diagnostic actually needs (start pose, travel direction, a stop line, and boundary clearance), not the full shared-exit arena/exit/parking/search-waypoint geometry. Any field whose value is not yet backed by a real measurement is the literal string 'UNCONFIRMED_PHYSICAL_MEASUREMENT'. This file holds only TRACKED configuration -- measured geometry and stable venue facts -- checked via hil_preflight.check_required_fields_ready() against required_before_ground_motion below. Per-session runtime confirmations (operator present, Wi-Fi checked) are NOT in this file; they live in a separate, gitignored session-state file managed by hil_ground_diagnostic_session.py, checked independently every run. run_ground_diagnostic_preflight.sh runs two explicit phases -- pre-stack and live-zero-state -- combining this file's tracked-field check with the session-state check and, in the live-zero-state phase only, live ROS-graph/evidence facts that cannot exist before the physical stack is started.",
+    "_comment_top": "Parameter template for the first supervised low-speed HIL ground diagnostic (a bounded, exclusionary diagnostic test, NOT a formal navigation trial and NOT the formal shared-exit experiment). Deliberately a SEPARATE file from hil_frozen_params.json: it never modifies that file's formal frozen evidence, and it scopes only the small geometry set this one straight-line diagnostic actually needs (start pose, travel direction, a stop line, and boundary clearance), not the full shared-exit arena/exit/parking/search-waypoint geometry. Any field whose value is not yet backed by a real measurement is the literal string 'UNCONFIRMED_PHYSICAL_MEASUREMENT'. This file holds only TRACKED configuration -- measured geometry and stable venue facts -- checked via hil_preflight.check_required_fields_ready() against required_before_ground_motion below. Per-session runtime confirmations (floor condition, travel path clear, operator present, Wi-Fi checked) are NOT in this file; they live in a separate, gitignored session-state file managed by hil_ground_diagnostic_session.py, checked independently every run. run_ground_diagnostic_preflight.sh runs two explicit phases -- pre-stack and live-zero-state -- combining this file's tracked-field check with the session-state check and, in the live-zero-state phase only, live ROS-graph/evidence facts that cannot exist before the physical stack is started.",
     "schema_version": 1,
     "diagnostic_id": "first_ground_diagnostic",
     "reused_frozen_reference": {
@@ -32,9 +32,7 @@
         "test_area_width_m": 0.25
     },
     "environment": {
-        "_comment": "Boolean confirmation fields for STABLE facts about the fixed test venue -- floor condition, the travel path, and recorded obstacle/boundary locations do not vary session to session the way operator presence or Wi-Fi do, so they are tracked and committed here, not in the per-session state file (see hil_ground_diagnostic_session.py). Default false; never silently treated as true.",
-        "floor_condition_confirmed": true,
-        "travel_path_clear_confirmed": true,
+        "_comment": "boundaries_and_obstacles_recorded is a STABLE fact about the fixed test venue (the recorded locations of walls/obstacles do not change session to session), so it stays tracked here. floor_condition_confirmed and travel_path_clear_confirmed are NOT here -- both can genuinely change between sessions (something spilled, an object left in the path), so re-checking them once and committing the result as permanently true was an execution-time safety gap: a stale committed value would be read as confirmed forever after, with no actual re-check that day. Moved 2026-07-24 to the gitignored per-session state file (hil_ground_diagnostic_session.py), defaulting false every session -- see FIELD_MEASUREMENT_FORM.md and GROUND_DIAGNOSTIC_RUNBOOK.md's FLOOR_CONDITION_CLEAR=YES / TRAVEL_PATH_CLEAR=YES same-session confirmations.",
         "boundaries_and_obstacles_recorded": true
     },
     "safety": {
@@ -50,11 +48,9 @@
         "measured_geometry.min_boundary_clearance_m",
         "measured_geometry.test_area_length_m",
         "measured_geometry.test_area_width_m",
-        "environment.floor_condition_confirmed",
-        "environment.travel_path_clear_confirmed",
         "environment.boundaries_and_obstacles_recorded",
         "safety.emergency_stop_position_confirmed"
     ],
-    "_comment_required_before_ground_motion": "This list covers only TRACKED configuration -- stable venue facts and measured geometry. It intentionally excludes operator_present_confirmed and wifi_checked_in_test_area: those are per-session runtime confirmations checked separately, every run, via hil_ground_diagnostic_session.py's gitignored session-state file, never via this tracked file.",
+    "_comment_required_before_ground_motion": "This list covers only TRACKED configuration -- stable venue facts and measured geometry (10 paths). It intentionally excludes floor_condition_confirmed, travel_path_clear_confirmed, operator_present_confirmed, and wifi_checked_in_test_area: all four are per-session runtime confirmations, genuinely re-checkable every run, checked separately via hil_ground_diagnostic_session.py's gitignored session-state file, never via this tracked file. A tracked-file value can never substitute for a session-file confirmation.",
     "status": "OFFLINE_TOOLING_ONLY_NO_PHYSICAL_MEASUREMENTS_YET"
 }
