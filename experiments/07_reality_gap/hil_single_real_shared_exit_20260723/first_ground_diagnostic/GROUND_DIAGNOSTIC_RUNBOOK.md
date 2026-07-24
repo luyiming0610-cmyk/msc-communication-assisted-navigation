@@ -33,15 +33,12 @@ process.
 | WSL Window 3 -- command-evidence recorder control | Yes, whole session | Starts the WSL recorder (approved evidence root, `--duration-s 3600`); shows/stores PID + manifest path; checks recorder log/CSV growth; stops the recorder LAST via manifest/exact PID | Anything unrelated to the recorder |
 | WSL Window 4 -- command guard | Yes, whole session | Runs `hil_cmd_vel_guard.py`; shows armed/disarmed state and block reasons; must start DISARMED | Pulse publisher or verification commands |
 | WSL Window 5 -- read-only HIL verification | No | Checks topic publishers, `validity_flags`; runs WSL live-zero-state and the combined WSL+Pi gate; identifies exact PIDs during shutdown | Starting long-running control processes |
+| WSL Window 6 -- supervised motion command | No (single bounded action) | Publishes the arm command; runs exactly one bounded straight pulse; verifies/commands immediate zero; publishes the disarm command | Anything before `LIVE_ZERO_STATE_CHECK_PASS`, before the robot is on the marked ground start, and before `APPROVED_FOR_SINGLE_PULSE=YES`; `pytest`, `colcon`, any controller, `cooperative_avoider`, virtual peer, navigator, Webots, or `rosbag`; a second, automatic pulse |
 | PowerShell Window 1 -- operator transfer and host checks | No | Opens SSH sessions when instructed; performs explicit SCP copies requiring the operator's password; verifies Windows-side copied-file SHA-256 | ROS publishers or tests |
 
-**Open item, not yet resolved:** none of the nine windows above is
-described as the place to run the one-shot arm/disarm topic
-publishes and the pulse command itself (step 13/14) -- `WSL Window 4`
-explicitly excludes pulse publishing, and `WSL Window 5` is read-only
-verification only. Do not silently pick one -- confirm which window
-(or a tenth, explicitly added) is authorized for that step before it
-is ever reached.
+`WSL Window 6` is reserved exclusively for the motion command in steps
+13/14 below -- `WSL Window 4` (guard) and `WSL Window 5` (read-only
+verification) remain as defined above and never run it.
 
 ## Emergency procedure (read this before step 1, keep it visible throughout)
 
@@ -366,8 +363,14 @@ this, and do not accept step 2's confirmations as satisfying it.
 
 ## 13. Arm and issue one bounded straight pulse
 
-**Window not yet assigned -- see "Open item" in the window map above.**
-Confirm which window is authorized before this step is ever reached.
+`[WSL Window 6 -- supervised motion command]` -- used only after step
+10's `GROUND_DIAGNOSTIC_LIVE_ZERO_STATE_CHECK_PASS`, only after step 11
+(robot on the marked ground start), and only after step 12's
+`APPROVED_FOR_SINGLE_PULSE=YES`. No command may run in this window
+before that approval. Never run `pytest`, `colcon`, any controller,
+`cooperative_avoider`, virtual peer, navigator, Webots, or `rosbag`
+here. Record its exact PID for the `hil_wheel_suspension_test.py`
+invocation.
 
 ```bash
 ros2 topic pub --once /hil_guard/arm std_msgs/msg/Bool "{data: true}"
@@ -376,15 +379,20 @@ python3 hil_wheel_suspension_test.py \
     --pulse-linear-mps 0.015 --zero-hold-s 1 --pulse-s 2 --post-hold-s 1
 ```
 Reuses `hil_wheel_suspension_test.py` exactly as already tested for the
-suspended-wheel diagnostic -- no new pulse mechanism. This single
-invocation already includes the pre/post zero holds and exits on its
-own; it is never looped or re-run automatically.
+suspended-wheel diagnostic -- no new pulse mechanism. `linear.x` must
+not exceed 0.015 m/s; `angular.z` must remain exactly `0.0`; pulse
+duration is approximately 2 seconds; this single invocation already
+includes the pre/post zero holds and exits on its own -- it is never
+looped or re-run automatically, and no second pulse may be issued in
+this window for any reason.
 
 ## 14. Command immediate zero
 
-**Window not yet assigned -- same open item as step 13.**
+`[WSL Window 6 -- supervised motion command]` -- same window as step
+13; verify/command immediate zero, then disarm.
 
 ```bash
+ros2 topic echo /cmd_vel --once
 ros2 topic pub --once /hil_guard/arm std_msgs/msg/Bool "{data: false}"
 ```
 Disarms immediately regardless of any other input -- the same
@@ -402,6 +410,10 @@ sound, drift, or unexpected direction? Measured stopping clearance
 Shutdown order, by window label and exact PID (never `pkill`, always
 `kill -INT` on the exact recorded PID):
 
+0. `[WSL Window 6 -- supervised motion command]` -- confirm the pulse
+   invocation from step 13 has already exited on its own (it is a
+   single bounded command, not long-running) and disarm (step 14) has
+   already been sent before proceeding to the shutdown order below.
 1. `[WSL Window 4 -- command guard]` -- guard PID.
 2. `[WSL Window 2 -- state publisher]` -- state_publisher PID (and its
    `ros2 run` wrapper PID, if separate).
@@ -434,3 +446,4 @@ operator can later locate all data from one place:
 | WSL Window 3 -- command-evidence recorder control | | CSV / recorder.log / manifest.json: |
 | WSL Window 4 -- command guard | | (none -- console log only) |
 | WSL Window 5 -- read-only HIL verification | (not long-running) | live/combined gate output: |
+| WSL Window 6 -- supervised motion command | (not long-running -- single bounded pulse) | (none -- console log only; motion is captured in the WSL CSV / Pi JSONL evidence above) |

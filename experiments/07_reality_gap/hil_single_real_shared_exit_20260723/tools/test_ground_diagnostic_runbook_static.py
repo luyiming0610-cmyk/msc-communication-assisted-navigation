@@ -20,6 +20,7 @@ REQUIRED_WINDOW_LABELS = (
     "WSL Window 3 -- command-evidence recorder control",
     "WSL Window 4 -- command guard",
     "WSL Window 5 -- read-only HIL verification",
+    "WSL Window 6 -- supervised motion command",
     "PowerShell Window 1 -- operator transfer and host checks",
 )
 
@@ -101,16 +102,49 @@ class WindowLabelsTest(unittest.TestCase):
         for label in long_running_labels:
             self.assertIn(label, table_section)
 
-    def test_pulse_step_has_no_silently_assigned_window(self):
-        # Requirement: do not silently pick a window for the pulse step
-        # since none of the nine defined windows is authorized for it.
+    def test_pulse_step_is_assigned_to_wsl_window_6_only(self):
+        # The window-assignment gap is resolved: steps 13/14 use WSL
+        # Window 6 exclusively, never any of the other eight windows.
         step_13_section = self.text.split("## 13. Arm and issue one bounded straight pulse")[1].split(
             "## 14. Command immediate zero"
         )[0]
-        self.assertNotIn("[Pi Window", step_13_section)
-        self.assertNotIn("[WSL Window", step_13_section)
-        self.assertNotIn("[PowerShell Window", step_13_section)
-        self.assertIn("not yet assigned", step_13_section.lower())
+        step_14_section = self.text.split("## 14. Command immediate zero")[1].split("## 15.")[0]
+        for section in (step_13_section, step_14_section):
+            self.assertIn("[WSL Window 6 -- supervised motion command]", section)
+            self.assertNotIn("[Pi Window", section)
+            self.assertNotIn("[WSL Window 4", section)
+            self.assertNotIn("[WSL Window 5", section)
+            self.assertNotIn("[PowerShell Window", section)
+
+    def test_wsl_window_6_gated_on_prior_approvals(self):
+        table_section = self.text.split("## Fixed terminal/window map")[1].split("## Emergency procedure")[0]
+        window_6_row = next(line for line in table_section.splitlines() if "WSL Window 6" in line)
+        self.assertIn("LIVE_ZERO_STATE_CHECK_PASS", window_6_row)
+        self.assertIn("APPROVED_FOR_SINGLE_PULSE", window_6_row)
+
+    def test_wsl_window_6_forbidden_processes_documented(self):
+        table_section = self.text.split("## Fixed terminal/window map")[1].split("## Emergency procedure")[0]
+        window_6_row = next(line for line in table_section.splitlines() if "WSL Window 6" in line)
+        for forbidden in ("pytest", "colcon", "cooperative_avoider", "Webots", "rosbag"):
+            self.assertIn(forbidden, window_6_row)
+
+    def test_wsl_window_6_pulse_bounds_documented(self):
+        step_13_section = self.text.split("## 13. Arm and issue one bounded straight pulse")[1].split(
+            "## 14. Command immediate zero"
+        )[0]
+        normalized = " ".join(step_13_section.split())
+        self.assertIn("0.015", normalized)
+        self.assertIn("0.0", normalized)
+        self.assertIn("never looped or re-run automatically", normalized)
+        self.assertIn("no second pulse", normalized.lower())
+
+    def test_shutdown_procedure_references_wsl_window_6(self):
+        shutdown_section = self.text.split("## 16. Exact-PID reverse shutdown")[1]
+        self.assertIn("[WSL Window 6 -- supervised motion command]", shutdown_section)
+
+    def test_evidence_summary_table_lists_wsl_window_6(self):
+        table_section = self.text.split("## Window/evidence table for the run summary")[1]
+        self.assertIn("WSL Window 6 -- supervised motion command", table_section)
 
     def test_no_forbidden_provider_or_tool_wording_anywhere(self):
         for term in FORBIDDEN_TERMS:

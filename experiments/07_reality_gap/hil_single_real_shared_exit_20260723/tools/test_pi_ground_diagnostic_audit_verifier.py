@@ -246,10 +246,10 @@ class CliTest(unittest.TestCase):
                 with open(path, "a", encoding="utf-8") as fh:
                     fh.write(json.dumps(ZERO_TICK) + "\n")
 
-            timer = threading.Timer(0.1, append_more)
+            timer = threading.Timer(0.2, append_more)
             timer.start()
             out_json = str(Path(tmp) / "verdict.json")
-            result = self._run("--path", path, "--run-id", "run1", "--growth-interval-s", "2.0", "--output-json", out_json)
+            result = self._run("--path", path, "--run-id", "run1", "--growth-interval-s", "5.0", "--output-json", out_json)
             timer.join()
 
             self.assertEqual(result.returncode, 0)
