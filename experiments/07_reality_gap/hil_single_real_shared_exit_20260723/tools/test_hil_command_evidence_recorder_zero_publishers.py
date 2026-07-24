@@ -10,11 +10,13 @@ Runs under the same `-r __ns:=/pytest_isolated` namespace push used
 throughout src/epuck2_comm/test/ since 2026-07-23, as defense in depth
 even though this node never publishes anything.
 """
+import tempfile
 import unittest
+from pathlib import Path
 
 import rclpy
 
-from hil_command_evidence_recorder import _build_node
+from hil_command_evidence_recorder import CSV_FIELDS, _build_node
 
 
 class CommandEvidenceRecorderZeroPublishersTest(unittest.TestCase):
@@ -25,13 +27,26 @@ class CommandEvidenceRecorderZeroPublishersTest(unittest.TestCase):
                 "-r", "__ns:=/pytest_isolated",
             ]
         )
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._csv_path = str(Path(self._tmpdir.name) / "evidence.csv")
         _, self.RecorderClass, self.parse_args = _build_node()
-        self.args = self.parse_args(["--output-csv", "/dev/null"])
+        self.args = self.parse_args(["--output-csv", self._csv_path])
         self.node = self.RecorderClass(self.args)
 
     def tearDown(self):
+        self.node.close_csv()
         self.node.destroy_node()
         rclpy.shutdown()
+        self._tmpdir.cleanup()
+
+    def test_csv_exists_with_header_immediately_after_construction(self):
+        # The specific regression this project hit live 2026-07-24:
+        # the CSV must exist (and be a valid, header-only file) the
+        # instant the node is constructed, not only once the run ends.
+        self.assertTrue(Path(self._csv_path).is_file())
+        with open(self._csv_path, encoding="utf-8") as fh:
+            header = fh.readline().strip().split(",")
+        self.assertEqual(header, CSV_FIELDS)
 
     def test_recorder_creates_zero_publishers(self):
         # Every rclpy Node automatically gets two standard

@@ -40,11 +40,26 @@ cmd_start() {
     csv_path="${out_dir}/command_evidence.csv"
     log_path="${out_dir}/recorder.log"
 
-    python3 "${SCRIPT_DIR}/hil_command_evidence_recorder.py" \
+    # setsid detaches the recorder into its own session (new session
+    # leader, no controlling terminal) and disown removes it from this
+    # shell's job table -- both are required, not just `&` alone.
+    # Found 2026-07-24: when this script itself is invoked as a single
+    # one-shot command (e.g. `wsl.exe ... -- bash -lc "run_hil_command_
+    # evidence_recorder.sh start ..."`), the invoking shell's own
+    # session ends immediately after this function returns; a plain
+    # `&` background job is still a member of that session and gets
+    # torn down with it (observed: the recorder process and its log
+    # file both vanished within about a second, before the first
+    # buffered log line could flush to disk). `setsid` breaks that
+    # session membership so the recorder survives the invoking shell's
+    # exit; `< /dev/null` additionally detaches stdin so nothing about
+    # the invoking terminal can signal it either.
+    setsid python3 "${SCRIPT_DIR}/hil_command_evidence_recorder.py" \
         --output-csv "${csv_path}" \
         "$@" \
-        > "${log_path}" 2>&1 &
+        < /dev/null > "${log_path}" 2>&1 &
     pid=$!
+    disown 2>/dev/null || true
 
     manifest="${out_dir}/manifest.json"
     python3 - "$manifest" "$pid" "$csv_path" "$log_path" <<'PYEOF'

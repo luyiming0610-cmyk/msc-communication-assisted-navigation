@@ -17,13 +17,26 @@ audits' preconditions for any future powered session:
   - /epuck_bridge/status (std_msgs/String, JSON payload)
 
 Never publishes anything (verified by
-test_hil_command_evidence_recorder_zero_publishers.py). Every callback
-does the minimum possible work (build one small dict, append to an
-in-memory list) and returns immediately; ALL CSV writing happens once,
-at shutdown -- mirrors hil_targeted_validity_diagnostic_recorder.py's
-established pattern in this project, so the recorder's own I/O cannot
-introduce a periodic disturbance or delay delivery of a genuine
-command event.
+test_hil_command_evidence_recorder_zero_publishers.py).
+
+CSV writing is INCREMENTAL, not batched at shutdown (changed
+2026-07-24 after a real powered-session activation attempt found the
+file simply did not exist while the recorder was running, contrary to
+COMMAND_EVIDENCE_ACTIVATION.md's expectation that it could be watched
+"growing" mid-session -- see
+command_evidence_activation_20260724/SUMMARY.md for the full incident).
+The CSV is created and its header written immediately at startup; each
+row is written to the file object as soon as its event arrives, and
+the file is flushed to disk at a bounded interval (default 1.0s,
+`--flush-interval-s`) rather than after every single row -- this keeps
+the recorder's own I/O cost low (no `os.fsync` at all; a plain
+`flush()` merely asks the OS to accept the buffered writes, it does
+not force a physical disk write) while still guaranteeing the file is
+valid and inspectable at essentially any point during a run, not only
+at the end. The file remains a valid, parseable CSV after a SIGINT, a
+duration timeout, or a normal shutdown, because closing the file
+handle in the `finally` block always flushes whatever was buffered
+since the last periodic flush.
 
 Every recorded row carries local_time_ns (time.time_ns(), wall clock)
 and local_monotonic_ns (time.monotonic_ns(), immune to wall-clock
@@ -99,13 +112,58 @@ def parse_bridge_status_json(data: str) -> dict:
     return payload
 
 
-def write_rows_csv(path: str, rows: list) -> None:
-    """Writes every buffered row in ONE call, at shutdown."""
-    with open(path, "w", encoding="utf-8", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=CSV_FIELDS)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
+DEFAULT_FLUSH_INTERVAL_S = 1.0
+
+
+class CommandEvidenceCsvWriter:
+    """Incremental CSV writer: opens the file and writes the header
+    immediately at construction, writes each row as it arrives, and
+    flushes to disk at a bounded interval rather than after every row.
+
+    Never calls os.fsync -- a plain file.flush() is sufficient (it
+    hands buffered data to the OS; the OS's own write-back handles the
+    physical disk write on its own schedule) and far cheaper than
+    forcing a physical write on every single message.
+
+    Deliberately not a dataclass / not frozen: it owns a live file
+    handle and a monotonic flush clock, both mutable by design.
+    """
+
+    def __init__(self, path: str, flush_interval_s: float = DEFAULT_FLUSH_INTERVAL_S):
+        self._path = path
+        self._flush_interval_s = float(flush_interval_s)
+        self._fh = open(path, "w", encoding="utf-8", newline="")
+        self._writer = csv.DictWriter(self._fh, fieldnames=CSV_FIELDS)
+        self._writer.writeheader()
+        self._fh.flush()
+        self._last_flush_monotonic = time.monotonic()
+        self._row_count = 0
+        self._closed = False
+
+    @property
+    def row_count(self) -> int:
+        return self._row_count
+
+    @property
+    def path(self) -> str:
+        return self._path
+
+    def write_row(self, row: dict, *, now_monotonic: Optional[float] = None) -> None:
+        if self._closed:
+            raise ValueError("cannot write to a closed CommandEvidenceCsvWriter")
+        self._writer.writerow(row)
+        self._row_count += 1
+        now = now_monotonic if now_monotonic is not None else time.monotonic()
+        if now - self._last_flush_monotonic >= self._flush_interval_s:
+            self._fh.flush()
+            self._last_flush_monotonic = now
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._fh.flush()
+        self._fh.close()
+        self._closed = True
 
 
 @dataclass(frozen=True)
@@ -166,7 +224,12 @@ def _build_node():
         def __init__(self, args):
             super().__init__("hil_command_evidence_recorder")
             self.args = args
-            self.rows: list = []
+            # Opens the file and writes the header immediately -- the
+            # CSV exists and is a valid (header-only) file from this
+            # point forward, not only once the run ends.
+            self._csv_writer = CommandEvidenceCsvWriter(
+                args.output_csv, flush_interval_s=args.flush_interval_s
+            )
 
             self.create_subscription(
                 Twist, args.upstream_cmd_vel_topic, self._on_upstream_cmd_vel, 20
@@ -203,7 +266,7 @@ def _build_node():
             return verify_required_command_topics_present(topics, required_topics=required)
 
         def _append(self, **kwargs) -> None:
-            self.rows.append(
+            self._csv_writer.write_row(
                 build_row(
                     local_time_ns=time.time_ns(),
                     local_monotonic_ns=time.monotonic_ns(),
@@ -243,9 +306,10 @@ def _build_node():
                 bridge_rx_count=fields.get("rx_count"),
             )
 
-        def flush(self, path: str) -> int:
-            write_rows_csv(path, self.rows)
-            return len(self.rows)
+        def close_csv(self) -> int:
+            row_count = self._csv_writer.row_count
+            self._csv_writer.close()
+            return row_count
 
     def parse_args(argv):
         parser = argparse.ArgumentParser()
@@ -256,6 +320,14 @@ def _build_node():
         parser.add_argument("--bridge-status-topic", default="/epuck_bridge/status")
         parser.add_argument("--output-csv", required=True)
         parser.add_argument("--duration-s", type=float, default=3600.0)
+        parser.add_argument(
+            "--flush-interval-s",
+            type=float,
+            default=DEFAULT_FLUSH_INTERVAL_S,
+            help="How often (seconds) the CSV is flushed to disk. Never fsync'd; a "
+            "conservative periodic flush() is sufficient and far cheaper than "
+            "flushing after every row.",
+        )
         return parser.parse_args(argv)
 
     return rclpy, CommandEvidenceRecorder, parse_args
@@ -280,6 +352,13 @@ def main(argv=None):
             f"topic(s) not resolvable as expected: missing={verify_result.missing} "
             f"wrong_type={verify_result.wrong_type}"
         )
+        # The CSV writer was already opened (header-only, zero rows) in
+        # the constructor, before this check ran -- must still be
+        # closed properly even on this early-refusal path.
+        try:
+            node.close_csv()
+        except Exception:
+            pass
         try:
             node.destroy_node()
         except Exception:
@@ -298,7 +377,7 @@ def main(argv=None):
     except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
         pass
     finally:
-        count = node.flush(args.output_csv)
+        count = node.close_csv()
         node.get_logger().warn(
             f"HIL_COMMAND_EVIDENCE_RECORDER_DONE rows={count} output={args.output_csv}"
         )
