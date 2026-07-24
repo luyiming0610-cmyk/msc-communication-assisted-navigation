@@ -59,6 +59,9 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_sync_epuck2_comm_logic"
     "test_hil_cmd_vel_guard"
     "test_hil_integration_offline_topic_isolation"
+    "test_ground_diagnostic_params"
+    "test_analyze_ground_diagnostic"
+    "test_run_ground_diagnostic_preflight_static"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
     "test_pi_epuck_tcp_server_sensors_audited"

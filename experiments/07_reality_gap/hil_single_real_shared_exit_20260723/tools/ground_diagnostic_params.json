@@ -1,0 +1,41 @@
+{
+    "_comment_top": "Parameter template for the first supervised low-speed HIL ground diagnostic (a bounded, exclusionary diagnostic test, NOT a formal navigation trial and NOT the formal shared-exit experiment). Deliberately a SEPARATE file from hil_frozen_params.json: it never modifies that file's formal frozen evidence, and it scopes only the small geometry set this one straight-line diagnostic actually needs (start pose, travel direction, a stop line, and boundary clearance), not the full shared-exit arena/exit/parking/search-waypoint geometry. Any field whose value is not yet backed by a real measurement is the literal string 'UNCONFIRMED_PHYSICAL_MEASUREMENT'. The diagnostic preflight (run_ground_diagnostic_preflight.sh) reuses hil_preflight.check_required_params_confirmed() against this file's own required_before_ground_motion list and MUST refuse to proceed while any such field remains unconfirmed.",
+    "schema_version": 1,
+    "diagnostic_id": "first_ground_diagnostic",
+    "reused_frozen_reference": {
+        "_comment": "Read-only references to already-confirmed values recorded elsewhere. Never duplicated as separately-editable numbers here, and never re-derived or re-measured -- copied for traceability only.",
+        "guard_hard_linear_cap_mps": 0.02,
+        "guard_hard_linear_cap_source": "hil_frozen_params.json hil_guard_limits.max_linear_speed_mps (confirmed, unchanged by this diagnostic)",
+        "suspended_wheel_tested_pulse_mps": 0.015,
+        "suspended_wheel_tested_pulse_source": "suspended_wheel_diagnostic_20260723/SUMMARY.md (SUSPENDED_WHEEL_DIAGNOSTIC_TEST_PASS)",
+        "suspended_wheel_angular_value_excluded_note": "angular_suspension_diagnostic_20260723/SUMMARY.md's temporary +-0.1 rad/s value is explicitly NOT reused here or anywhere in this diagnostic -- ground angular motion is prohibited for this first test (see diagnostic_command_limits.angular_speed_prohibited below), and that suspended-wheel value has never been and must never be written into hil_frozen_params.json's max_angular_speed_rps as a ground limit."
+    },
+    "diagnostic_command_limits": {
+        "_comment": "Reuses hil_wheel_suspension_test.py exactly as already built and tested for the suspended-wheel diagnostic -- no new pulse-generation mechanism. angular is not a tunable field here: it is fixed at 0.0 and prohibited, enforced independently by both this file and hil_cmd_vel_guard.py's own --max-angular-speed-rps 0.0 CLI argument at runbook execution time.",
+        "requested_linear_speed_mps": 0.015,
+        "max_linear_speed_mps": 0.02,
+        "max_angular_speed_rps": 0.0,
+        "angular_speed_prohibited": true,
+        "zero_hold_s": 1.0,
+        "pulse_s": 2.0,
+        "post_hold_s": 1.0
+    },
+    "measured_geometry": {
+        "_comment": "The minimum geometry this straight-line diagnostic needs -- deliberately smaller than hil_frozen_params.json's field_geometry (no exit/parking/search-waypoint fields; this test never approaches or searches for an exit). All UNCONFIRMED until the field-measurement form is completed.",
+        "start_x_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "start_y_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "start_yaw_rad": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "travel_direction": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "stop_line_distance_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
+        "min_boundary_clearance_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT"
+    },
+    "required_before_ground_motion": [
+        "measured_geometry.start_x_m",
+        "measured_geometry.start_y_m",
+        "measured_geometry.start_yaw_rad",
+        "measured_geometry.travel_direction",
+        "measured_geometry.stop_line_distance_m",
+        "measured_geometry.min_boundary_clearance_m"
+    ],
+    "status": "OFFLINE_TOOLING_ONLY_NO_PHYSICAL_MEASUREMENTS_YET"
+}
