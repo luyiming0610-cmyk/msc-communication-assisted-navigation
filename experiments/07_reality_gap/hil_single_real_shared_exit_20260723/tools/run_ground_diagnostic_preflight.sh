@@ -40,7 +40,23 @@
 # silently passes, and never treats a missing verdict as "proven
 # nonzero" either.
 #
+# Found 2026-07-24 during the first live attempt against this design:
+# the verdict computation was an inline heredoc unpacking 20 positional
+# arguments via `sys.argv[1:20]` -- an off-by-one slice that silently
+# dropped the last argument and crashed with "not enough values to
+# unpack". No test exercised that heredoc's actual argv plumbing (only
+# the underlying evaluate_* functions were called directly in Python),
+# so the bug went undetected until a real run reached it. Extracted to
+# hil_live_zero_state_verdict.py with named --flags instead of
+# positional arguments (removing the whole class of argument-count/
+# off-by-one bugs), and covered by
+# test_hil_live_zero_state_verdict.py, which invokes it as a real
+# subprocess with a realistic argument list.
+#
 # Reuses existing tooling rather than duplicating it:
+#   - hil_live_zero_state_verdict.py for the live-zero-state verdict
+#     computation itself (a thin CLI over the same evaluate_*
+#     functions below).
 #   - hil_preflight.check_required_fields_ready() against
 #     ground_diagnostic_params.json's TRACKED fields only (measured
 #     geometry + stable venue facts).
@@ -428,68 +444,27 @@ fi
 
 echo ""
 echo "=== LIVE_ZERO_STATE verdict (WSL side + Pi audit combined) ==="
-VERDICT_OUTPUT="$(PYTHONPATH="${SCRIPT_DIR}" python3 - \
-    "${VALIDITY_FLAGS_VALUE}" "${BRIDGE_CONNECTED}" "${WSL_CSV_GROWING}" \
-    "${GUARD_SOLE_PUBLISHER}" "${GUARD_ARMED}" "${CMD_VEL_ALL_ZERO}" "${UPSTREAM_ZERO_OR_ABSENT}" \
-    "${FORBIDDEN_FOUND}" "${WSL_EVIDENCE_ALL_ZERO}" \
-    "${PI_VERDICT_AVAILABLE}" "${PI_VERDICT_MALFORMED}" "${PI_VERDICT_OK}" "${PI_VERDICT_REASONS}" \
-    "${PI_VERDICT_RUN_ID}" "${PI_VERDICT_GENERATED_AT}" "${PI_VERDICT_JSONL_PATH}" \
-    "${RUN_ID}" "${WSL_CSV_PATH}" "${PI_JSONL_PATH}" "${PI_VERDICT_MAX_AGE_S}" <<'PYEOF'
-import ast
-import sys
-
-from hil_ground_diagnostic_phases import evaluate_combined_gate, evaluate_wsl_live_state
-
-(flags, bridge, wsl_growing, sole_pub, armed, cmd_vel_zero, upstream_zero,
- forbidden, wsl_zero, pi_available, pi_malformed, pi_ok, pi_reasons, pi_run_id,
- pi_generated_at, pi_jsonl_path, wsl_run_id, wsl_evidence_path,
- expected_pi_jsonl_path, pi_max_age_s) = sys.argv[1:20]
-
-
-def as_bool(s):
-    return s == "true"
-
-
-def as_list(s):
-    try:
-        return tuple(ast.literal_eval(s))
-    except (ValueError, SyntaxError):
-        return ()
-
-
-wsl_result = evaluate_wsl_live_state(
-    validity_flags=int(flags) if flags.strip().isdigit() else None,
-    bridge_connected=as_bool(bridge),
-    wsl_csv_growing=as_bool(wsl_growing),
-    guard_sole_publisher=as_bool(sole_pub),
-    guard_armed=as_bool(armed),
-    cmd_vel_all_zero=as_bool(cmd_vel_zero),
-    upstream_zero_or_absent=as_bool(upstream_zero),
-    forbidden_process_found=as_bool(forbidden),
-    wsl_evidence_all_zero=as_bool(wsl_zero),
-)
-
-result = evaluate_combined_gate(
-    wsl_result=wsl_result,
-    pi_verdict_ok=as_bool(pi_ok),
-    pi_verdict_reasons=as_list(pi_reasons),
-    pi_verdict_available=as_bool(pi_available),
-    pi_verdict_malformed=as_bool(pi_malformed),
-    wsl_run_id=wsl_run_id or None,
-    pi_run_id=pi_run_id or None,
-    wsl_evidence_path=wsl_evidence_path,
-    pi_evidence_path=pi_jsonl_path or None,
-    expected_pi_evidence_path=expected_pi_jsonl_path or None,
-    pi_verdict_generated_at_utc=pi_generated_at or None,
-    pi_verdict_max_age_s=float(pi_max_age_s),
-)
-if result.ok:
-    print("LIVE_ZERO_STATE_VERDICT=PASS")
-else:
-    print("LIVE_ZERO_STATE_VERDICT=BLOCKED")
-    print(f"REASONS={list(result.reasons)}")
-PYEOF
-)"
+VERDICT_OUTPUT="$(PYTHONPATH="${SCRIPT_DIR}" python3 "${SCRIPT_DIR}/hil_live_zero_state_verdict.py" \
+    --validity-flags "${VALIDITY_FLAGS_VALUE}" \
+    --bridge-connected "${BRIDGE_CONNECTED}" \
+    --wsl-csv-growing "${WSL_CSV_GROWING}" \
+    --guard-sole-publisher "${GUARD_SOLE_PUBLISHER}" \
+    --guard-armed "${GUARD_ARMED}" \
+    --cmd-vel-all-zero "${CMD_VEL_ALL_ZERO}" \
+    --upstream-zero-or-absent "${UPSTREAM_ZERO_OR_ABSENT}" \
+    --forbidden-process-found "${FORBIDDEN_FOUND}" \
+    --wsl-evidence-all-zero "${WSL_EVIDENCE_ALL_ZERO}" \
+    --pi-verdict-available "${PI_VERDICT_AVAILABLE}" \
+    --pi-verdict-malformed "${PI_VERDICT_MALFORMED}" \
+    --pi-verdict-ok "${PI_VERDICT_OK}" \
+    --pi-verdict-reasons "${PI_VERDICT_REASONS}" \
+    --pi-run-id "${PI_VERDICT_RUN_ID}" \
+    --pi-verdict-generated-at "${PI_VERDICT_GENERATED_AT}" \
+    --pi-jsonl-path "${PI_VERDICT_JSONL_PATH}" \
+    --wsl-run-id "${RUN_ID}" \
+    --wsl-evidence-path "${WSL_CSV_PATH}" \
+    --expected-pi-jsonl-path "${PI_JSONL_PATH}" \
+    --pi-verdict-max-age-s "${PI_VERDICT_MAX_AGE_S}" 2>&1)"
 echo "${VERDICT_OUTPUT}"
 
 echo ""
