@@ -57,6 +57,32 @@ def check_required_params_confirmed(params: dict) -> ParamCheckResult:
     return ParamCheckResult(ok=ok, unconfirmed_paths=tuple(unconfirmed), missing_paths=tuple(missing))
 
 
+def check_required_fields_ready(params: dict) -> ParamCheckResult:
+    """Like check_required_params_confirmed(), but also aware of
+    boolean confirmation fields (added for the first ground diagnostic,
+    which mixes numeric UNCONFIRMED_PHYSICAL_MEASUREMENT geometry
+    fields with boolean "has this been checked/recorded" confirmation
+    fields in the same required_before_ground_motion list). A path is
+    NOT ready if it is missing, still the literal UNCONFIRMED string, or
+    a boolean that is still `False` -- there is no default that counts
+    as ready. check_required_params_confirmed() itself is unchanged and
+    still used as-is wherever only numeric fields are involved.
+    """
+    required = params.get("required_before_ground_motion", [])
+    unconfirmed: list[str] = []
+    missing: list[str] = []
+    for dotted_path in required:
+        value, found = _resolve(params, dotted_path)
+        if not found:
+            missing.append(dotted_path)
+        elif value == UNCONFIRMED:
+            unconfirmed.append(dotted_path)
+        elif isinstance(value, bool) and value is False:
+            unconfirmed.append(dotted_path)
+    ok = not unconfirmed and not missing
+    return ParamCheckResult(ok=ok, unconfirmed_paths=tuple(unconfirmed), missing_paths=tuple(missing))
+
+
 @dataclass(frozen=True)
 class NamespaceCheckResult:
     ok: bool

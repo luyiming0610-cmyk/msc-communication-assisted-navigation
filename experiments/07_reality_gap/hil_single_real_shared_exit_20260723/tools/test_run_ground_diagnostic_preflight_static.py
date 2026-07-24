@@ -68,7 +68,7 @@ class PreflightNeverPublishesOrStartsAProcessTest(unittest.TestCase):
 
     def test_reuses_existing_preflight_scripts_rather_than_duplicating_their_checks(self):
         self.assertIn("run_hil_physical_preflight.sh", self.text)
-        self.assertIn("check_required_params_confirmed", self.text)
+        self.assertIn("check_required_fields_ready", self.text)
 
     def test_shell_syntax_is_valid_for_every_new_script(self):
         for script_name in SHELL_SCRIPTS_TO_SYNTAX_CHECK:

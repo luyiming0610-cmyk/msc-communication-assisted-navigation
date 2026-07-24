@@ -2,8 +2,10 @@
 # First-ground-diagnostic preflight -- STRICTLY READ-ONLY, check-only.
 # Never starts a process, never publishes a message. Reuses existing
 # tooling rather than duplicating it:
-#   - hil_preflight.check_required_params_confirmed() (imported, not
-#     reimplemented) against ground_diagnostic_params.json.
+#   - hil_preflight.check_required_fields_ready() (imported, not
+#     reimplemented) against ground_diagnostic_params.json -- aware of
+#     both UNCONFIRMED_PHYSICAL_MEASUREMENT numeric fields and boolean
+#     confirmation fields in required_before_ground_motion.
 #   - run_hil_physical_preflight.sh, invoked as a read-only subprocess,
 #     for device reachability / driver / bridge / validity_flags /
 #     residual-process checks.
@@ -63,11 +65,11 @@ else
 import json
 import sys
 
-from hil_preflight import check_required_params_confirmed
+from hil_preflight import check_required_fields_ready
 
 with open(sys.argv[1], encoding="utf-8") as fh:
     params = json.load(fh)
-result = check_required_params_confirmed(params)
+result = check_required_fields_ready(params)
 if result.ok:
     print("MEASUREMENTS_CHECK=PASS")
 else:
