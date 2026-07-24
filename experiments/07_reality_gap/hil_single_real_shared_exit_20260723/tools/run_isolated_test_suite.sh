@@ -62,6 +62,8 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_ground_diagnostic_params"
     "test_analyze_ground_diagnostic"
     "test_run_ground_diagnostic_preflight_static"
+    "test_hil_ground_diagnostic_session"
+    "test_hil_ground_diagnostic_phases"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
     "test_pi_epuck_tcp_server_sensors_audited"

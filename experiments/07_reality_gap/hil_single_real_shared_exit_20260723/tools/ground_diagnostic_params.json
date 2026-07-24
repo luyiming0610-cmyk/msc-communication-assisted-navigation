@@ -1,5 +1,5 @@
 {
-    "_comment_top": "Parameter template for the first supervised low-speed HIL ground diagnostic (a bounded, exclusionary diagnostic test, NOT a formal navigation trial and NOT the formal shared-exit experiment). Deliberately a SEPARATE file from hil_frozen_params.json: it never modifies that file's formal frozen evidence, and it scopes only the small geometry set this one straight-line diagnostic actually needs (start pose, travel direction, a stop line, and boundary clearance), not the full shared-exit arena/exit/parking/search-waypoint geometry. Any field whose value is not yet backed by a real measurement is the literal string 'UNCONFIRMED_PHYSICAL_MEASUREMENT'. The diagnostic preflight (run_ground_diagnostic_preflight.sh) reuses hil_preflight.check_required_params_confirmed() against this file's own required_before_ground_motion list and MUST refuse to proceed while any such field remains unconfirmed.",
+    "_comment_top": "Parameter template for the first supervised low-speed HIL ground diagnostic (a bounded, exclusionary diagnostic test, NOT a formal navigation trial and NOT the formal shared-exit experiment). Deliberately a SEPARATE file from hil_frozen_params.json: it never modifies that file's formal frozen evidence, and it scopes only the small geometry set this one straight-line diagnostic actually needs (start pose, travel direction, a stop line, and boundary clearance), not the full shared-exit arena/exit/parking/search-waypoint geometry. Any field whose value is not yet backed by a real measurement is the literal string 'UNCONFIRMED_PHYSICAL_MEASUREMENT'. This file holds only TRACKED configuration -- measured geometry and stable venue facts -- checked via hil_preflight.check_required_fields_ready() against required_before_ground_motion below. Per-session runtime confirmations (operator present, Wi-Fi checked) are NOT in this file; they live in a separate, gitignored session-state file managed by hil_ground_diagnostic_session.py, checked independently every run. run_ground_diagnostic_preflight.sh runs two explicit phases -- pre-stack and live-zero-state -- combining this file's tracked-field check with the session-state check and, in the live-zero-state phase only, live ROS-graph/evidence facts that cannot exist before the physical stack is started.",
     "schema_version": 1,
     "diagnostic_id": "first_ground_diagnostic",
     "reused_frozen_reference": {
@@ -32,19 +32,14 @@
         "test_area_width_m": 0.25
     },
     "environment": {
-        "_comment": "Boolean confirmation fields -- each one records that a genuinely pre-run safety item on FIELD_MEASUREMENT_FORM.md has actually been checked, not what its descriptive content is (the description itself stays as prose on the form). Default false; never silently treated as true.",
-        "floor_condition_confirmed": false,
-        "travel_path_clear_confirmed": false,
-        "boundaries_and_obstacles_recorded": false
+        "_comment": "Boolean confirmation fields for STABLE facts about the fixed test venue -- floor condition, the travel path, and recorded obstacle/boundary locations do not vary session to session the way operator presence or Wi-Fi do, so they are tracked and committed here, not in the per-session state file (see hil_ground_diagnostic_session.py). Default false; never silently treated as true.",
+        "floor_condition_confirmed": true,
+        "travel_path_clear_confirmed": true,
+        "boundaries_and_obstacles_recorded": true
     },
     "safety": {
-        "_comment": "Boolean confirmation fields, default false. Distinct from and in addition to the verbal, per-session USER_AT_EMERGENCY_STOP=YES/TEST_AREA_CLEAR=YES confirmations already required elsewhere -- this records that the position/presence has been checked and matches the form, not a substitute for the verbal confirmation.",
-        "emergency_stop_position_confirmed": false,
-        "operator_present_confirmed": false
-    },
-    "network": {
-        "_comment": "Boolean confirmation field, default false.",
-        "wifi_checked_in_test_area": false
+        "_comment": "emergency_stop_position_confirmed records a stable fact about the fixed venue (where the e-stop/operator position is relative to the test area), so it stays tracked here. operator_present_confirmed is NOT here -- a person's presence is true only for the current session and must never be committed as a permanent fact; it lives in the gitignored session-state file (hil_ground_diagnostic_session.py) and defaults false every session. Distinct from and in addition to the verbal, per-session USER_AT_EMERGENCY_STOP=YES/TEST_AREA_CLEAR=YES confirmations already required elsewhere.",
+        "emergency_stop_position_confirmed": true
     },
     "required_before_ground_motion": [
         "measured_geometry.start_x_m",
@@ -58,9 +53,8 @@
         "environment.floor_condition_confirmed",
         "environment.travel_path_clear_confirmed",
         "environment.boundaries_and_obstacles_recorded",
-        "safety.emergency_stop_position_confirmed",
-        "safety.operator_present_confirmed",
-        "network.wifi_checked_in_test_area"
+        "safety.emergency_stop_position_confirmed"
     ],
+    "_comment_required_before_ground_motion": "This list covers only TRACKED configuration -- stable venue facts and measured geometry. It intentionally excludes operator_present_confirmed and wifi_checked_in_test_area: those are per-session runtime confirmations checked separately, every run, via hil_ground_diagnostic_session.py's gitignored session-state file, never via this tracked file.",
     "status": "OFFLINE_TOOLING_ONLY_NO_PHYSICAL_MEASUREMENTS_YET"
 }

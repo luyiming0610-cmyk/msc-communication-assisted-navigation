@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Static proof that run_ground_diagnostic_preflight.sh's check-only
-mode can never publish a message or start a physical/HIL process, plus
+modes can never publish a message or start a physical/HIL process, plus
 shell syntax checks for every new script this diagnostic added. No
-rclpy dependency; no shell script is executed with side effects here
-(bash -n only parses, it does not run anything).
+rclpy dependency. Most checks are purely static (bash -n only parses,
+it does not run anything); the one exception
+(test_requires_an_explicit_mode_argument_no_default) actually invokes
+the script with no/an invalid mode argument, which this script's mode
+check rejects immediately -- before sourcing anything ROS-related is
+even reached in a way that touches the graph, and before any process,
+network, or ros2 CLI call -- so it remains a zero-side-effect run.
 """
 import re
 import subprocess
@@ -69,6 +74,36 @@ class PreflightNeverPublishesOrStartsAProcessTest(unittest.TestCase):
     def test_reuses_existing_preflight_scripts_rather_than_duplicating_their_checks(self):
         self.assertIn("run_hil_physical_preflight.sh", self.text)
         self.assertIn("check_required_fields_ready", self.text)
+        self.assertIn("hil_ground_diagnostic_session", self.text)
+        self.assertIn("hil_ground_diagnostic_phases", self.text)
+        self.assertIn("analyze_ground_diagnostic", self.text)
+
+    def test_requires_an_explicit_mode_argument_no_default(self):
+        # No mode, or an unrecognized mode, must exit nonzero with a
+        # usage message -- never silently fall back to one phase.
+        result = subprocess.run(["bash", str(PREFLIGHT_SCRIPT)], capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("USAGE", (result.stdout + result.stderr))
+
+        result = subprocess.run(["bash", str(PREFLIGHT_SCRIPT), "bogus-mode"], capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("USAGE", (result.stdout + result.stderr))
+
+    def test_both_explicit_phases_are_present(self):
+        self.assertIn('"pre-stack"', self.text)
+        self.assertIn('"live-zero-state"', self.text)
+        self.assertIn("GROUND_DIAGNOSTIC_PRE_STACK_CHECK_PASS", self.text)
+        self.assertIn("GROUND_DIAGNOSTIC_PRE_STACK_CHECK_BLOCKED", self.text)
+        self.assertIn("GROUND_DIAGNOSTIC_LIVE_ZERO_STATE_CHECK_PASS", self.text)
+        self.assertIn("GROUND_DIAGNOSTIC_LIVE_ZERO_STATE_CHECK_BLOCKED", self.text)
+
+    def test_pre_stack_phase_never_requires_validity_flags_bridge_or_guard(self):
+        # The circular-dependency fix: the pre-stack code path (text
+        # before the live-zero-state phase begins) must not itself gate
+        # on any live-stack-only fact.
+        pre_stack_text = self.text.split('if [[ "${MODE}" == "live-zero-state" ]]; then')[0]
+        for forbidden in ("VALIDITY_FLAGS_NOT_7", "BRIDGE_NOT_CONNECTED", "GUARD_ARMED"):
+            self.assertNotIn(forbidden, pre_stack_text)
 
     def test_shell_syntax_is_valid_for_every_new_script(self):
         for script_name in SHELL_SCRIPTS_TO_SYNTAX_CHECK:

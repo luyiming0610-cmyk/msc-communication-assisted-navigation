@@ -39,3 +39,9 @@ Thumbs.db
 /experiments/05_objective5_impairment_matrix/bags/
 /experiments/10_cooperative_exit_navigation_20260720/bags/
 /experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_formal_20260721/
+
+# First ground diagnostic: per-session runtime confirmations (operator
+# present, Wi-Fi checked), timestamped and re-confirmed every session --
+# must never be committed as a permanent fact. Managed by
+# hil_ground_diagnostic_session.py; see FIELD_MEASUREMENT_FORM.md.
+/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/ground_diagnostic_session_state.json

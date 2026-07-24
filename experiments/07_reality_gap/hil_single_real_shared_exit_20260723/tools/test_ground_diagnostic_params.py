@@ -5,13 +5,14 @@ hil_preflight.check_required_fields_ready() (neither reimplemented
 here) against this diagnostic's own, separate parameter file. No
 rclpy dependency.
 
-required_before_ground_motion mixes numeric UNCONFIRMED_PHYSICAL_MEASUREMENT
-geometry fields with boolean pre-run safety-confirmation fields
-(environment/safety/network sections). The actual gate used by
-run_ground_diagnostic_preflight.sh is check_required_fields_ready(),
-which is boolean-aware; check_required_params_confirmed() remains as
-originally written (numeric/UNCONFIRMED-only) and is exercised here
-only to confirm it still behaves as before on the numeric fields.
+This file now holds only TRACKED configuration: measured geometry plus
+stable venue facts (floor condition, travel path, obstacle recording,
+emergency-stop position). The two genuinely per-session confirmations
+(operator present, Wi-Fi checked) were moved out to a separate,
+gitignored session-state file -- see
+test_hil_ground_diagnostic_session.py -- and are deliberately NOT
+present anywhere in this file or its required_before_ground_motion
+list.
 """
 import json
 import tempfile
@@ -35,11 +36,9 @@ ALL_REQUIRED_PATHS = {
     "environment.travel_path_clear_confirmed",
     "environment.boundaries_and_obstacles_recorded",
     "safety.emergency_stop_position_confirmed",
-    "safety.operator_present_confirmed",
-    "network.wifi_checked_in_test_area",
 }
 
-NUMERIC_UNCONFIRMED_PATHS = {
+NUMERIC_PATHS = {
     "measured_geometry.start_x_m",
     "measured_geometry.start_y_m",
     "measured_geometry.start_yaw_rad",
@@ -55,9 +54,9 @@ BOOLEAN_CONFIRMATION_PATHS = {
     "environment.travel_path_clear_confirmed",
     "environment.boundaries_and_obstacles_recorded",
     "safety.emergency_stop_position_confirmed",
-    "safety.operator_present_confirmed",
-    "network.wifi_checked_in_test_area",
 }
+
+SESSION_ONLY_FIELD_NAMES = ("operator_present_confirmed", "wifi_checked_in_test_area")
 
 
 def _load():
@@ -73,56 +72,92 @@ def _set_path(params, dotted_path, value):
     node[parts[-1]] = value
 
 
+def _all_unconfirmed_synthetic_params():
+    """A fresh, synthetic params dict with every required path still
+    unconfirmed -- used instead of the live file so these tests stay
+    valid regardless of whether the tracked file's real measurements
+    have since been confirmed and committed."""
+    params = {
+        "measured_geometry": {path.split(".")[1]: "UNCONFIRMED_PHYSICAL_MEASUREMENT" for path in NUMERIC_PATHS},
+        "environment": {
+            "floor_condition_confirmed": False,
+            "travel_path_clear_confirmed": False,
+            "boundaries_and_obstacles_recorded": False,
+        },
+        "safety": {"emergency_stop_position_confirmed": False},
+        "required_before_ground_motion": sorted(ALL_REQUIRED_PATHS),
+    }
+    return params
+
+
 class GroundDiagnosticParamsFileTest(unittest.TestCase):
     def test_file_exists_and_is_valid_json(self):
         self.assertTrue(PARAMS_PATH.is_file())
         _load()  # must not raise
 
-    def test_required_before_ground_motion_contains_exactly_the_expected_14_paths(self):
+    def test_required_before_ground_motion_contains_exactly_the_expected_12_tracked_paths(self):
         params = _load()
         self.assertEqual(set(params["required_before_ground_motion"]), ALL_REQUIRED_PATHS)
-        self.assertEqual(len(params["required_before_ground_motion"]), 14)
+        self.assertEqual(len(params["required_before_ground_motion"]), 12)
 
-    def test_currently_blocked_because_measurements_are_unconfirmed(self):
-        # Honest, current-state check with the original, numeric-only
-        # function: unconfirmed numeric fields are flagged; the boolean
-        # fields are not literally the UNCONFIRMED string, so this
-        # function alone does not flag them -- that is exactly why
-        # check_required_fields_ready() exists and is used below.
+    def test_session_only_fields_are_not_present_anywhere_in_the_tracked_file(self):
+        # operator_present_confirmed and wifi_checked_in_test_area must
+        # never be committed here as a permanent fact -- they live only
+        # in the gitignored session-state file. Checked structurally
+        # (as actual JSON keys), not as a raw substring search, since
+        # the field names legitimately appear in _comment prose
+        # explaining why they are absent from this file.
         params = _load()
-        result = check_required_params_confirmed(params)
-        self.assertFalse(result.ok)
-        self.assertEqual(set(result.unconfirmed_paths), NUMERIC_UNCONFIRMED_PATHS)
-        self.assertEqual(result.missing_paths, ())
+        self.assertNotIn("network", params)
+        for section_name in ("environment", "safety"):
+            section = params.get(section_name, {})
+            for name in SESSION_ONLY_FIELD_NAMES:
+                self.assertNotIn(name, section, f"{name} must not be a key under {section_name}")
+        for dotted_path in params["required_before_ground_motion"]:
+            for name in SESSION_ONLY_FIELD_NAMES:
+                self.assertNotIn(name, dotted_path)
 
-    def test_fields_ready_currently_blocked_on_every_required_path(self):
-        # As shipped (no field measurements taken, all confirmations
-        # false), the boolean-aware gate used by the actual preflight
-        # script must block on all 14 paths, not just the 6 original
-        # geometry fields.
-        params = _load()
+    def test_synthetic_all_unconfirmed_params_are_blocked_on_every_path(self):
+        # A freshly-unconfirmed params dict must block on all 12 paths --
+        # this is what the tracked file looked like before any
+        # measurement or venue-fact confirmation was taken.
+        params = _all_unconfirmed_synthetic_params()
         result = check_required_fields_ready(params)
         self.assertFalse(result.ok)
         self.assertEqual(set(result.unconfirmed_paths), ALL_REQUIRED_PATHS)
         self.assertEqual(result.missing_paths, ())
 
-    def test_passes_once_every_required_field_is_confirmed(self):
+    def test_synthetic_all_unconfirmed_params_numeric_only_check_flags_geometry(self):
+        # check_required_params_confirmed() alone (numeric/UNCONFIRMED
+        # only) still correctly flags the 8 geometry fields; the 4
+        # boolean fields are not literally the UNCONFIRMED string, so it
+        # does not flag them -- that is exactly why
+        # check_required_fields_ready() exists and is used above.
+        params = _all_unconfirmed_synthetic_params()
+        result = check_required_params_confirmed(params)
+        self.assertFalse(result.ok)
+        self.assertEqual(set(result.unconfirmed_paths), NUMERIC_PATHS)
+        self.assertEqual(result.missing_paths, ())
+
+    def test_tracked_file_currently_passes_check_required_fields_ready(self):
+        # The tracked file's own 12 fields have all been measured/
+        # confirmed -- this is the actual, current, intended state, not
+        # a synthetic fixture.
         params = _load()
+        result = check_required_fields_ready(params)
+        self.assertTrue(result.ok, f"expected tracked file fully confirmed, got unconfirmed={result.unconfirmed_paths}")
+
+    def test_passes_once_every_required_field_is_confirmed(self):
+        params = _all_unconfirmed_synthetic_params()
         for dotted_path in params["required_before_ground_motion"]:
             value = True if dotted_path in BOOLEAN_CONFIRMATION_PATHS else 1.0
             _set_path(params, dotted_path, value)
         result = check_required_fields_ready(params)
         self.assertTrue(result.ok)
 
-    def test_each_new_numeric_field_blocks_alone_when_unconfirmed(self):
-        # One at a time: confirm every other required field, leave just
-        # this one at UNCONFIRMED_PHYSICAL_MEASUREMENT, and confirm it
-        # alone is enough to block.
-        for target in NUMERIC_UNCONFIRMED_PATHS & {
-            "measured_geometry.test_area_length_m",
-            "measured_geometry.test_area_width_m",
-        }:
-            params = _load()
+    def test_each_numeric_field_blocks_alone_when_unconfirmed(self):
+        for target in {"measured_geometry.test_area_length_m", "measured_geometry.test_area_width_m"}:
+            params = _all_unconfirmed_synthetic_params()
             for dotted_path in params["required_before_ground_motion"]:
                 if dotted_path == target:
                     continue
@@ -132,13 +167,9 @@ class GroundDiagnosticParamsFileTest(unittest.TestCase):
             self.assertFalse(result.ok, f"expected block with {target} unconfirmed")
             self.assertEqual(result.unconfirmed_paths, (target,))
 
-    def test_each_new_boolean_field_blocks_alone_when_false(self):
-        # One at a time: confirm every other required field, leave just
-        # this one boolean false, and confirm it alone is enough to
-        # block -- this is the core of the fix (a False confirmation
-        # must block just as surely as an UNCONFIRMED measurement).
+    def test_each_boolean_field_blocks_alone_when_false(self):
         for target in BOOLEAN_CONFIRMATION_PATHS:
-            params = _load()
+            params = _all_unconfirmed_synthetic_params()
             for dotted_path in params["required_before_ground_motion"]:
                 if dotted_path == target:
                     continue
@@ -148,11 +179,9 @@ class GroundDiagnosticParamsFileTest(unittest.TestCase):
             self.assertFalse(result.ok, f"expected block with {target} still false")
             self.assertEqual(result.unconfirmed_paths, (target,))
 
-    def test_each_new_boolean_field_passes_once_true(self):
-        # Symmetric check: with every other field confirmed and this
-        # one flipped from false to true, overall result is ok.
+    def test_each_boolean_field_passes_once_true(self):
         for target in BOOLEAN_CONFIRMATION_PATHS:
-            params = _load()
+            params = _all_unconfirmed_synthetic_params()
             for dotted_path in params["required_before_ground_motion"]:
                 value = True if dotted_path in BOOLEAN_CONFIRMATION_PATHS else 1.0
                 _set_path(params, dotted_path, value)
