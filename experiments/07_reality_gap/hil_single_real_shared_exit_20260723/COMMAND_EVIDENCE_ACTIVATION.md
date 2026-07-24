@@ -73,8 +73,27 @@ Currently **not deployed**. The Pi still runs the original, unaudited
 
 ## Part 3 activation: WSL-side continuous command-evidence recorder
 
-Currently **implemented and tested offline, never run against a live
-bridge/guard**. To activate in a future session:
+**Status updated 2026-07-24, after a real powered-session activation
+attempt.** That attempt found two real bugs in what this section
+previously described, both now fixed and covered by new tests (see
+`command_evidence_activation_20260724/SUMMARY.md` for the incident):
+
+1. `run_hil_command_evidence_recorder.sh start` backgrounded the
+   recorder with a plain `&`; when invoked as a single one-shot shell
+   command (exactly how it must be invoked from a separate controlling
+   terminal via SSH/WSL), the process did not survive the invoking
+   shell exiting -- it and its log both vanished within about a
+   second. Fixed with `setsid ... < /dev/null` + `disown`.
+2. The CSV was, at that point, only written once at shutdown
+   (in-memory buffering for the whole run) -- there was no file at all
+   to inspect while the recorder was running, contrary to what this
+   document said below. **Fixed**: the CSV file and its header are now
+   created immediately at construction, each row is written to disk as
+   it arrives, and the file is flushed at a bounded interval (default
+   1.0s, `--flush-interval-s`, never `os.fsync`) -- it is now a valid,
+   growing, parseable file at essentially any point during a run.
+
+To activate in a future session:
 
 1. Start the recorder BEFORE any guard or controller:
    ```bash
@@ -84,6 +103,7 @@ bridge/guard**. To activate in a future session:
        --arm-topic /hil_guard/arm \
        --state-topic /epuck1/state \
        --bridge-status-topic /epuck_bridge/status \
+       --flush-interval-s 1 \
        --duration-s 3600
    ```
    This prints `HIL_COMMAND_EVIDENCE_RECORDER_STARTED pid=<PID>
@@ -95,16 +115,21 @@ bridge/guard**. To activate in a future session:
    expected (see `hil_command_evidence_recorder.py`'s
    `verify_required_command_topics_present` for exactly what this
    does and does not prove).
-2. Proceed with the rest of the session (guard, controller, virtual
+2. **Now actually verifiable, unlike before the fix**: confirm the CSV
+   is growing during the session --
+   `wc -l <output_dir>/command_evidence.csv` should show more than
+   just the header line once any subscribed topic has produced a
+   message, and its row count should keep increasing on repeated checks.
+3. Proceed with the rest of the session (guard, controller, virtual
    peer, etc.) as normal.
-3. Stop the recorder LAST, after every other motion process:
+4. Stop the recorder LAST, after every other motion process:
    ```bash
    bash tools/run_hil_command_evidence_recorder.sh stop <manifest.json>
    ```
    This sends exactly one SIGINT to the exact recorded PID, waits up
    to 10s, then SHA-256-verifies the produced CSV and records the hash
    and row count back into the manifest.
-4. Preserve `<output_dir>/command_evidence.csv`,
+5. Preserve `<output_dir>/command_evidence.csv`,
    `<output_dir>/recorder.log`, and `<output_dir>/manifest.json`
    (with its `csv_sha256` field) as that session's evidence.
 
