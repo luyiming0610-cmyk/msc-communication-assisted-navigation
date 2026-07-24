@@ -103,8 +103,11 @@ handling below).
 | Stationary communication/health diagnostics | **Complete** (this document's 4 consolidated sources) |
 | Field geometry | **Not frozen** -- `hil_frozen_params.json`'s `field_geometry.*` remain `UNCONFIRMED_PHYSICAL_MEASUREMENT` |
 | Ground angular cap | **Not confirmed** -- `max_angular_speed_rps` remains `UNCONFIRMED_PHYSICAL_MEASUREMENT`; the two suspended-wheel values above were explicitly test-scoped, never adopted as this |
-| Ground motion | **Not yet authorized** |
-| `UNEXPECTED_PHYSICAL_MOTION` safety incident (2026-07-23) | **Audited, root cause NOT_MEASURABLE, not solved** -- see `safety_incident_unexpected_motion_20260723/SUMMARY.md`. Added binding preconditions to `HIL_SAFETY_CHECKLIST.md` for any future powered session, including Pi-side per-command logging, which is **not yet implemented** (blocking) |
+| Ground motion / first ground-motion pilot | **Not yet authorized** -- field geometry and the first ground pilot remain the two outstanding items before any ground trial; the command-evidence chain being active is a precondition for that pilot, not a substitute for it |
+| `UNEXPECTED_PHYSICAL_MOTION` safety incident (2026-07-23) | **Audited, root cause NOT_MEASURABLE, not solved** -- see `safety_incident_unexpected_motion_20260723/SUMMARY.md`. Added binding preconditions to `HIL_SAFETY_CHECKLIST.md` for any future powered session |
+| Command-evidence chain (Pi audit + WSL recorder) | **PASS** -- `command_evidence_activation_pass_20260724/SUMMARY.md`. Suspended, zero-motion validation only, not a ground trial |
+| Computer-to-e-puck zero-command delivery and auditing | **VERIFIED** -- guard confirmed sole `/cmd_vel` publisher and `armed=False` throughout; Pi JSONL (34,458 records) and WSL CSV (22,812 rows) both independently confirmed zero nonzero commands for the entire session |
+| First ground-motion pilot | **Still outstanding** -- not yet authorized; command-evidence chain being active is a precondition for it, not a substitute |
 
 ## Topic-contract accuracy check (finding only -- not implemented)
 
