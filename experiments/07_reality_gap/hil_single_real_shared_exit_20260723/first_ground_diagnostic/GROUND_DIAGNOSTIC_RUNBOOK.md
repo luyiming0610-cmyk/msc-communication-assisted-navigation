@@ -150,17 +150,41 @@ manifest path recorded.
 
 ## 8. Confirm both evidence files are growing
 
+`run_ground_diagnostic_preflight.sh live-zero-state`, run from WSL,
+cannot read the Pi's local command-audit JSONL by a plain path -- the
+Pi and WSL share no filesystem, only a network connection (found
+2026-07-24 during the first live attempt; see
+`hil_ground_diagnostic_phases.py`'s module docstring). The Pi side of
+the evidence must be verified separately, **on the Pi itself**, using
+`pi_ground_diagnostic_audit_verifier.py`:
+
 ```bash
-GROUND_DIAGNOSTIC_PI_JSONL=/home/pi/real_robot_avoidance_v1/command_audit_<NEW_UTC_TIMESTAMP>.jsonl \
+python3 pi_ground_diagnostic_audit_verifier.py \
+    --path /home/pi/real_robot_avoidance_v1/command_audit_<NEW_UTC_TIMESTAMP>.jsonl \
+    --run-id <RUN_ID> \
+    --output-json /home/pi/real_robot_avoidance_v1/pi_audit_verdict_<RUN_ID>.json
+```
+`<RUN_ID>` must be the same identifier used for both the Pi JSONL and
+WSL CSV paths this session (e.g. the shared `<NEW_UTC_TIMESTAMP>`).
+Copy the resulting verdict JSON back so it is reachable from WSL (the
+exact transfer mechanism -- shared mount, `scp`, pasting its contents
+-- is an operator decision; this diagnostic does not automate it),
+then run the WSL-side check:
+
+```bash
 GROUND_DIAGNOSTIC_WSL_CSV=<output_dir>/command_evidence.csv \
+GROUND_DIAGNOSTIC_RUN_ID=<RUN_ID> \
+GROUND_DIAGNOSTIC_PI_AUDIT_VERDICT=<path to the copied verdict JSON> \
   bash run_ground_diagnostic_preflight.sh live-zero-state
 ```
-(The Pi-side JSONL row count must be checked over SSH separately if
-this script is run from WSL only; see the live-zero-state script's
-exact non-growth failure condition either side would report. This
-phase is expected to still report `GROUND_DIAGNOSTIC_LIVE_ZERO_STATE_CHECK_BLOCKED`
-at this point -- the guard has not started yet -- this step is only to
-confirm evidence growth, not a stop point by itself.)
+This phase is expected to still report
+`GROUND_DIAGNOSTIC_LIVE_ZERO_STATE_CHECK_BLOCKED` at this point -- the
+guard has not started yet -- this step is only to confirm both
+evidence streams are growing and zero-only, not a stop point by
+itself. Without `GROUND_DIAGNOSTIC_PI_AUDIT_VERDICT`, the check reports
+`PI_LIVE_AUDIT_NOT_AVAILABLE` and blocks -- it never silently passes,
+and a missing/unreachable Pi verdict is never treated as "proven
+nonzero" either.
 
 ## 9. Guard started DISARMED, diagnostic-only limits
 
@@ -184,8 +208,13 @@ Verify startup log shows `armed=False`.
 ```bash
 ros2 topic info /cmd_vel -v
 ros2 topic echo /cmd_vel --once
-GROUND_DIAGNOSTIC_PI_JSONL=/home/pi/real_robot_avoidance_v1/command_audit_<NEW_UTC_TIMESTAMP>.jsonl \
+```
+Re-run the Pi-side verifier (step 8) once more to get a fresh verdict
+(a stale one is rejected -- default max age 300s), copy it back, then:
+```bash
 GROUND_DIAGNOSTIC_WSL_CSV=<output_dir>/command_evidence.csv \
+GROUND_DIAGNOSTIC_RUN_ID=<RUN_ID> \
+GROUND_DIAGNOSTIC_PI_AUDIT_VERDICT=<path to the freshly copied verdict JSON> \
   bash run_ground_diagnostic_preflight.sh live-zero-state
 ```
 Sole publisher must be `hil_cmd_vel_guard`; output must be exactly
