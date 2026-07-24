@@ -22,14 +22,14 @@
     },
     "measured_geometry": {
         "_comment": "The minimum geometry this straight-line diagnostic needs -- deliberately smaller than hil_frozen_params.json's field_geometry (no exit/parking/search-waypoint fields; this test never approaches or searches for an exit). All UNCONFIRMED until the field-measurement form is completed. No minimum dimension or threshold is asserted anywhere in this file -- these are recorded measurements only, never compared against an invented number.",
-        "start_x_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
-        "start_y_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
-        "start_yaw_rad": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
-        "travel_direction": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
-        "stop_line_distance_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
-        "min_boundary_clearance_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
-        "test_area_length_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT",
-        "test_area_width_m": "UNCONFIRMED_PHYSICAL_MEASUREMENT"
+        "start_x_m": 0.25,
+        "start_y_m": 0.125,
+        "start_yaw_rad": 0.0,
+        "travel_direction": "forward_along_length",
+        "stop_line_distance_m": 0.10,
+        "min_boundary_clearance_m": 0.10,
+        "test_area_length_m": 0.65,
+        "test_area_width_m": 0.25
     },
     "environment": {
         "_comment": "Boolean confirmation fields -- each one records that a genuinely pre-run safety item on FIELD_MEASUREMENT_FORM.md has actually been checked, not what its descriptive content is (the description itself stays as prose on the form). Default false; never silently treated as true.",
