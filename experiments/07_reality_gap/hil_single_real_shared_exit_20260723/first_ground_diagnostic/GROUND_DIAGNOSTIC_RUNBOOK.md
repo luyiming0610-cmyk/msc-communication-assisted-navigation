@@ -35,16 +35,36 @@ otherwise.
   how the two prior incidents were handled; the same discipline applies
   here.
 
-## Step 0: preflight (repeat before proceeding, and again at step 10)
+## Step -1: initialize the per-session confirmation file (start of every session)
 
 ```bash
-bash run_ground_diagnostic_preflight.sh
+python3 hil_ground_diagnostic_session.py init --path ground_diagnostic_session_state.json
+```
+Always resets to a fresh timestamp with all four confirmations `false`
+-- never reuse a file from an earlier session (`GROUND_DIAGNOSTIC_PRE_STACK_CHECK`
+below rejects it once older than 4 hours). After the physical checks in
+step 2 below, set each confirmed field:
+```bash
+python3 hil_ground_diagnostic_session.py set --path ground_diagnostic_session_state.json --field floor_condition_confirmed
+python3 hil_ground_diagnostic_session.py set --path ground_diagnostic_session_state.json --field travel_path_clear_confirmed
+python3 hil_ground_diagnostic_session.py set --path ground_diagnostic_session_state.json --field operator_present_confirmed
+python3 hil_ground_diagnostic_session.py set --path ground_diagnostic_session_state.json --field wifi_checked_in_test_area
 ```
 
-Read-only; starts nothing. Must report `GROUND_DIAGNOSTIC_PREFLIGHT_PASS`
-before continuing past any stop point below. If it reports
-`GROUND_DIAGNOSTIC_PREFLIGHT_BLOCKED`, the printed reason says exactly
-what is missing -- do not proceed on a guess.
+## Step 0: pre-stack preflight (repeat before proceeding, and again after step 9)
+
+```bash
+bash run_ground_diagnostic_preflight.sh pre-stack
+```
+
+Read-only; starts nothing. Must report
+`GROUND_DIAGNOSTIC_PRE_STACK_CHECK_PASS` before continuing past any
+stop point below -- this requires both the tracked geometry/venue
+fields in `ground_diagnostic_params.json` AND all four session-file
+confirmations above to be true; a tracked value can never substitute
+for a session-file confirmation. If it reports
+`GROUND_DIAGNOSTIC_PRE_STACK_CHECK_BLOCKED`, the printed reason says
+exactly what is missing -- do not proceed on a guess.
 
 ## 1. Robot powered off, placed at the measured start pose
 
@@ -60,14 +80,21 @@ ROBOT_ON_STAND=YES
 WHEELS_CLEAR_OF_GROUND=YES
 USER_AT_EMERGENCY_STOP=YES
 TEST_AREA_CLEAR=YES
+FLOOR_CONDITION_CLEAR=YES
+TRAVEL_PATH_CLEAR=YES
 ```
 Note: for this diagnostic the robot is placed on the GROUND per step 1
-above, but these four confirmations (inherited unchanged from
-`../HIL_SAFETY_CHECKLIST.md`) are still required verbatim before any
-process starts -- "wheels clear of ground" here means confirmed clear
-of unintended obstructions at the ground-contact points, not
+above, but these six confirmations are still required verbatim before
+any process starts -- "wheels clear of ground" here means confirmed
+clear of unintended obstructions at the ground-contact points, not
 suspended; the wheels-suspended requirement applies only during
-bring-up (steps 3-6 below), per step 11.
+bring-up (steps 3-6 below), per step 11. The first four are inherited
+unchanged from `../HIL_SAFETY_CHECKLIST.md`. `FLOOR_CONDITION_CLEAR`
+and `TRAVEL_PATH_CLEAR` are explicit and separate from `TEST_AREA_CLEAR`
+-- neither may be inferred or set automatically from it; each must be
+its own, distinct confirmation, then recorded via `hil_ground_diagnostic_session.py
+set --field floor_condition_confirmed` / `--field travel_path_clear_confirmed`
+per Step -1 above.
 
 ## 3. Pi driver
 
@@ -126,11 +153,14 @@ manifest path recorded.
 ```bash
 GROUND_DIAGNOSTIC_PI_JSONL=/home/pi/real_robot_avoidance_v1/command_audit_<NEW_UTC_TIMESTAMP>.jsonl \
 GROUND_DIAGNOSTIC_WSL_CSV=<output_dir>/command_evidence.csv \
-  bash run_ground_diagnostic_preflight.sh
+  bash run_ground_diagnostic_preflight.sh live-zero-state
 ```
 (The Pi-side JSONL row count must be checked over SSH separately if
-this script is run from WSL only; see step 0's script for the exact
-non-growth failure condition either side would report.)
+this script is run from WSL only; see the live-zero-state script's
+exact non-growth failure condition either side would report. This
+phase is expected to still report `GROUND_DIAGNOSTIC_LIVE_ZERO_STATE_CHECK_BLOCKED`
+at this point -- the guard has not started yet -- this step is only to
+confirm evidence growth, not a stop point by itself.)
 
 ## 9. Guard started DISARMED, diagnostic-only limits
 
@@ -149,16 +179,19 @@ frozen guard cap; `max_angular_speed_rps` is fixed at `0.0` --
 prohibited for this test, never the suspended-wheel angular value).
 Verify startup log shows `armed=False`.
 
-## 10. Confirm sole publisher and zero output (STOP POINT -- re-run step 0)
+## 10. Confirm sole publisher and zero output (STOP POINT -- re-run live-zero-state)
 
 ```bash
 ros2 topic info /cmd_vel -v
 ros2 topic echo /cmd_vel --once
-bash run_ground_diagnostic_preflight.sh
+GROUND_DIAGNOSTIC_PI_JSONL=/home/pi/real_robot_avoidance_v1/command_audit_<NEW_UTC_TIMESTAMP>.jsonl \
+GROUND_DIAGNOSTIC_WSL_CSV=<output_dir>/command_evidence.csv \
+  bash run_ground_diagnostic_preflight.sh live-zero-state
 ```
 Sole publisher must be `hil_cmd_vel_guard`; output must be exactly
 zero on every field; the preflight re-run must report
-`GROUND_DIAGNOSTIC_PREFLIGHT_PASS`. Do not proceed otherwise.
+`GROUND_DIAGNOSTIC_LIVE_ZERO_STATE_CHECK_PASS`. Do not proceed
+otherwise.
 
 ## 11. Wheels placed on ground only after zero checks pass
 
@@ -169,7 +202,7 @@ actually bears weight for the first time this session.
 ## 12. Explicit human approval immediately before motion (STOP POINT)
 
 Require an explicit, separate, verbatim confirmation from the user at
-this exact point -- distinct from step 2's four confirmations -- e.g.
+this exact point -- distinct from step 2's six confirmations -- e.g.
 `APPROVED_FOR_SINGLE_PULSE=YES`. Do not issue the pulse command without
 this, and do not accept step 2's confirmations as satisfying it.
 

@@ -20,7 +20,7 @@ documentation only and are never read by the preflight gate.
 | Usable test-area length (m) | 0.65 | `measured_geometry.test_area_length_m` |
 | Usable test-area width (m) | 0.25 | `measured_geometry.test_area_width_m` |
 | Floor material and condition | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Floor condition checked and acceptable for the diagnostic | true | `environment.floor_condition_confirmed` |
+| Floor condition checked and acceptable for the diagnostic | (per-session, see note) | session file: `floor_condition_confirmed` (`hil_ground_diagnostic_session.py`, not this JSON file) |
 | Coordinate origin marker (description/location) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 | Start x (m) | 0.25 | `measured_geometry.start_x_m` |
 | Start y (m) | 0.125 | `measured_geometry.start_y_m` |
@@ -28,7 +28,7 @@ documentation only and are never read by the preflight gate.
 | Intended travel direction | forward_along_length | `measured_geometry.travel_direction` |
 | Stop-line distance from start (m) | 0.10 | `measured_geometry.stop_line_distance_m` |
 | Minimum boundary clearance (m) | 0.10 | `measured_geometry.min_boundary_clearance_m` |
-| Intended travel path checked clear of any obstruction | true | `environment.travel_path_clear_confirmed` |
+| Intended travel path checked clear of any obstruction | (per-session, see note) | session file: `travel_path_clear_confirmed` (`hil_ground_diagnostic_session.py`, not this JSON file) |
 | Wall and obstacle locations | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 | Wall and obstacle locations recorded | true | `environment.boundaries_and_obstacles_recorded` |
 | Emergency-stop operator position | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
@@ -70,27 +70,37 @@ documentation only and are never read by the preflight gate.
   records that the check was actually done. Both must be filled in --
   the confirmation row must never be set `true` just because the
   descriptive row has text in it.
-- Operator presence and the Wi-Fi check are different in kind from the
-  other four confirmations: they are true only for the current session
-  (a future session may have nobody present, or unchecked Wi-Fi) and
-  must never be committed into `ground_diagnostic_params.json` as a
-  permanent fact. They are tracked in a separate, gitignored,
-  timestamped session-state file instead -- run
-  `python3 hil_ground_diagnostic_session.py init --path <path>` at the
-  start of every session (always resets both to `false` with a fresh
-  timestamp) and `... set --path <path> --field <name>` once each is
-  actually confirmed. A stale session file is never silently reused.
+- Floor condition, travel path clear, operator presence, and the
+  Wi-Fi check are different in kind from the two remaining tracked
+  confirmations (obstacle/boundary recording, emergency-stop
+  position): all four are true only for the current session (the floor
+  or path can change since the last session; a future session may have
+  nobody present, or unchecked Wi-Fi) and must never be committed into
+  `ground_diagnostic_params.json` as a permanent fact. floor_condition_confirmed
+  and travel_path_clear_confirmed were originally tracked there
+  (committed once, read as permanently true thereafter); that was a
+  genuine execution-time safety gap, closed 2026-07-24. All four are
+  tracked in a separate, gitignored, timestamped session-state file
+  instead -- run `python3 hil_ground_diagnostic_session.py init --path <path>`
+  at the start of every session (always resets all four to `false` with
+  a fresh timestamp) and `... set --path <path> --field <name>` once
+  each is actually confirmed. A stale session file is never silently
+  reused. None of the four may be set from another -- in particular,
+  `TRAVEL_PATH_CLEAR` may never be inferred or set automatically from
+  `TEST_AREA_CLEAR`; each is its own explicit confirmation.
 - This form intentionally does not include exit location, parking
   zone, or search-waypoint fields -- this diagnostic never uses them
   (see `FIRST_GROUND_DIAGNOSTIC_SPEC.md`'s exclusion list). Those
   remain the formal shared-exit experiment's own, separate,
   still-outstanding measurements in `hil_frozen_params.json`.
-- Once every tracked field above (measured geometry plus the four
-  stable-venue confirmations) is a real, confirmed value, transfer them
-  into `../tools/ground_diagnostic_params.json` at the exact path
-  shown. Separately, confirm operator presence and the Wi-Fi check for
-  the current session via `hil_ground_diagnostic_session.py` (see
-  above) -- these are never transferred into the JSON file. Then run
+- Once every tracked field above (measured geometry plus the two
+  remaining stable-venue confirmations) is a real, confirmed value,
+  transfer them into `../tools/ground_diagnostic_params.json` at the
+  exact path shown. Separately, confirm all four per-session fields
+  (floor condition, travel path clear, operator presence, Wi-Fi check)
+  for the current session via `hil_ground_diagnostic_session.py` (see
+  above) -- none of the four are ever transferred into the JSON file.
+  Then run
   `run_ground_diagnostic_preflight.sh pre-stack`, which reports
   `GROUND_DIAGNOSTIC_PRE_STACK_CHECK_PASS` only once both the tracked
   file and the session file are fully confirmed. A second phase,
