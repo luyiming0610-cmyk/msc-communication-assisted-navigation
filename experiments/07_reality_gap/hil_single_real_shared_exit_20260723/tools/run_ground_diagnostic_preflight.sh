@@ -320,33 +320,45 @@ fi
 echo ""
 echo "=== LIVE_ZERO_STATE [3/5] Pi audit verdict (produced separately, on the Pi, by pi_ground_diagnostic_audit_verifier.py) ==="
 PI_VERDICT_AVAILABLE="false"
+PI_VERDICT_MALFORMED="false"
 PI_VERDICT_OK="false"
 PI_VERDICT_REASONS="[]"
 PI_VERDICT_RUN_ID=""
 PI_VERDICT_GENERATED_AT=""
+PI_VERDICT_JSONL_PATH=""
 if [[ -n "${PI_AUDIT_VERDICT_PATH}" && -f "${PI_AUDIT_VERDICT_PATH}" ]]; then
     echo "PI_AUDIT_VERDICT_FILE_FOUND(${PI_AUDIT_VERDICT_PATH})"
     cat "${PI_AUDIT_VERDICT_PATH}"
-    PI_VERDICT_JSON="$(cat "${PI_AUDIT_VERDICT_PATH}")"
     PI_VERDICT_FIELDS="$(python3 - "${PI_AUDIT_VERDICT_PATH}" <<'PYEOF'
 import json
 import sys
 
-with open(sys.argv[1], encoding="utf-8") as fh:
-    verdict = json.load(fh)
-print("available=true")
-print(f"ok={'true' if verdict.get('ok') else 'false'}")
-print(f"reasons={verdict.get('reasons', [])}")
-print(f"run_id={verdict.get('run_id')}")
-print(f"generated_at_utc={verdict.get('generated_at_utc')}")
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        verdict = json.load(fh)
+except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
+    print("malformed=true")
+    print(f"malformed_reason={exc}")
+else:
+    print("malformed=false")
+    print(f"ok={'true' if verdict.get('ok') else 'false'}")
+    print(f"reasons={verdict.get('reasons', [])}")
+    print(f"run_id={verdict.get('run_id')}")
+    print(f"generated_at_utc={verdict.get('generated_at_utc')}")
+    print(f"jsonl_path={verdict.get('jsonl_path')}")
 PYEOF
 )"
     echo "${PI_VERDICT_FIELDS}"
     PI_VERDICT_AVAILABLE="true"
-    [[ "${PI_VERDICT_FIELDS}" == *"ok=true"* ]] && PI_VERDICT_OK="true"
-    PI_VERDICT_REASONS="$(grep -o 'reasons=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
-    PI_VERDICT_RUN_ID="$(grep -o 'run_id=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
-    PI_VERDICT_GENERATED_AT="$(grep -o 'generated_at_utc=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
+    if [[ "${PI_VERDICT_FIELDS}" == *"malformed=true"* ]]; then
+        PI_VERDICT_MALFORMED="true"
+    else
+        [[ "${PI_VERDICT_FIELDS}" == *"ok=true"* ]] && PI_VERDICT_OK="true"
+        PI_VERDICT_REASONS="$(grep -o 'reasons=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
+        PI_VERDICT_RUN_ID="$(grep -o 'run_id=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
+        PI_VERDICT_GENERATED_AT="$(grep -o 'generated_at_utc=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
+        PI_VERDICT_JSONL_PATH="$(grep -o 'jsonl_path=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
+    fi
 else
     echo "PI_AUDIT_VERDICT=NOT_AVAILABLE(set GROUND_DIAGNOSTIC_PI_AUDIT_VERDICT to a verdict JSON produced by pi_ground_diagnostic_audit_verifier.py on the Pi)"
 fi
@@ -420,16 +432,18 @@ VERDICT_OUTPUT="$(PYTHONPATH="${SCRIPT_DIR}" python3 - \
     "${VALIDITY_FLAGS_VALUE}" "${BRIDGE_CONNECTED}" "${WSL_CSV_GROWING}" \
     "${GUARD_SOLE_PUBLISHER}" "${GUARD_ARMED}" "${CMD_VEL_ALL_ZERO}" "${UPSTREAM_ZERO_OR_ABSENT}" \
     "${FORBIDDEN_FOUND}" "${WSL_EVIDENCE_ALL_ZERO}" \
-    "${PI_VERDICT_AVAILABLE}" "${PI_VERDICT_OK}" "${PI_VERDICT_REASONS}" "${PI_VERDICT_RUN_ID}" \
-    "${PI_VERDICT_GENERATED_AT}" "${RUN_ID}" "${WSL_CSV_PATH}" "${PI_VERDICT_MAX_AGE_S}" <<'PYEOF'
+    "${PI_VERDICT_AVAILABLE}" "${PI_VERDICT_MALFORMED}" "${PI_VERDICT_OK}" "${PI_VERDICT_REASONS}" \
+    "${PI_VERDICT_RUN_ID}" "${PI_VERDICT_GENERATED_AT}" "${PI_VERDICT_JSONL_PATH}" \
+    "${RUN_ID}" "${WSL_CSV_PATH}" "${PI_JSONL_PATH}" "${PI_VERDICT_MAX_AGE_S}" <<'PYEOF'
 import ast
 import sys
 
 from hil_ground_diagnostic_phases import evaluate_combined_gate, evaluate_wsl_live_state
 
 (flags, bridge, wsl_growing, sole_pub, armed, cmd_vel_zero, upstream_zero,
- forbidden, wsl_zero, pi_available, pi_ok, pi_reasons, pi_run_id,
- pi_generated_at, wsl_run_id, wsl_evidence_path, pi_max_age_s) = sys.argv[1:18]
+ forbidden, wsl_zero, pi_available, pi_malformed, pi_ok, pi_reasons, pi_run_id,
+ pi_generated_at, pi_jsonl_path, wsl_run_id, wsl_evidence_path,
+ expected_pi_jsonl_path, pi_max_age_s) = sys.argv[1:20]
 
 
 def as_bool(s):
@@ -460,9 +474,12 @@ result = evaluate_combined_gate(
     pi_verdict_ok=as_bool(pi_ok),
     pi_verdict_reasons=as_list(pi_reasons),
     pi_verdict_available=as_bool(pi_available),
+    pi_verdict_malformed=as_bool(pi_malformed),
     wsl_run_id=wsl_run_id or None,
     pi_run_id=pi_run_id or None,
     wsl_evidence_path=wsl_evidence_path,
+    pi_evidence_path=pi_jsonl_path or None,
+    expected_pi_evidence_path=expected_pi_jsonl_path or None,
     pi_verdict_generated_at_utc=pi_generated_at or None,
     pi_verdict_max_age_s=float(pi_max_age_s),
 )

@@ -130,29 +130,37 @@ def evaluate_combined_gate(
     pi_verdict_ok: bool,
     pi_verdict_reasons: tuple = (),
     pi_verdict_available: bool = True,
+    pi_verdict_malformed: bool = False,
     wsl_run_id: str,
     pi_run_id: Optional[str] = None,
     wsl_evidence_path: str,
     pi_evidence_path: Optional[str] = None,
+    expected_pi_evidence_path: Optional[str] = None,
     pi_verdict_generated_at_utc: Optional[str] = None,
     pi_verdict_max_age_s: float = 300.0,
     now: Optional[datetime] = None,
 ) -> PhaseResult:
     """PASSes only when the WSL live verdict passes, the Pi audit
-    verdict passes, both share the same run identifier and evidence
-    path, and the Pi verdict is fresh. A missing/unreachable Pi verdict
-    (pi_verdict_available=False) is its own distinct reason -- never
-    silently treated as either a pass or as "proven nonzero".
+    verdict passes, both share the same run identifier, the Pi
+    verdict's own recorded jsonl_path matches the expected path (when
+    given), and the Pi verdict is fresh. A missing/unreachable Pi
+    verdict (pi_verdict_available=False) or a malformed one
+    (pi_verdict_malformed=True) is its own distinct reason -- neither
+    is ever silently treated as a pass, nor as "proven nonzero".
     """
     reasons = list(wsl_result.reasons)
 
     if not pi_verdict_available:
         reasons.append("PI_LIVE_AUDIT_NOT_AVAILABLE")
+    elif pi_verdict_malformed:
+        reasons.append("PI_VERDICT_MALFORMED")
     else:
         if not pi_verdict_ok:
             reasons.extend(f"PI_LIVE_AUDIT:{r}" for r in pi_verdict_reasons)
         if pi_run_id != wsl_run_id:
             reasons.append(f"RUN_ID_MISMATCH(wsl={wsl_run_id},pi={pi_run_id})")
+        if expected_pi_evidence_path is not None and pi_evidence_path != expected_pi_evidence_path:
+            reasons.append(f"PI_EVIDENCE_PATH_MISMATCH(expected={expected_pi_evidence_path},got={pi_evidence_path})")
         if pi_verdict_generated_at_utc is None:
             reasons.append("PI_VERDICT_MISSING_TIMESTAMP")
         else:
@@ -167,11 +175,11 @@ def evaluate_combined_gate(
             except (TypeError, ValueError):
                 reasons.append("PI_VERDICT_UNPARSEABLE_TIMESTAMP")
 
-    # wsl_evidence_path/pi_evidence_path are accepted so callers always
-    # pass both paths explicitly for traceability in logs, even though
-    # today only the run_id is compared for matching (the Pi and WSL
-    # evidence paths are never expected to be textually equal -- they
-    # live on different machines).
-    _ = (wsl_evidence_path, pi_evidence_path)
+    # wsl_evidence_path is accepted so callers always pass it explicitly
+    # for traceability in logs, even though it is never compared here
+    # (the Pi and WSL evidence paths are never expected to be textually
+    # equal -- they live on different machines; only the Pi verdict's
+    # own path is checked, against expected_pi_evidence_path).
+    _ = wsl_evidence_path
 
     return PhaseResult(ok=not reasons, reasons=tuple(reasons))

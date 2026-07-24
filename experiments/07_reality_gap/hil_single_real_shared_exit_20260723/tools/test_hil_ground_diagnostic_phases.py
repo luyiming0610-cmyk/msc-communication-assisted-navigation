@@ -163,6 +163,16 @@ class EvaluateWslLiveStateTest(unittest.TestCase):
         self.assertFalse(result.ok)
         self.assertIn("WSL_CSV_NOT_GROWING", result.reasons)
 
+    def test_recorder_exiting_early_blocks_the_live_gate(self):
+        # If the WSL command-evidence recorder exits (duration timeout
+        # or otherwise) before the pulse step, its CSV stops growing --
+        # this is exactly what evaluate_wsl_live_state must catch, so
+        # the run cannot proceed as if the recorder were still active.
+        kwargs = dict(ALL_WSL_LIVE_STATE_GOOD, wsl_csv_growing=False)
+        result = evaluate_wsl_live_state(**kwargs)
+        self.assertFalse(result.ok, "an exited recorder (non-growing CSV) must block the live gate")
+        self.assertIn("WSL_CSV_NOT_GROWING", result.reasons)
+
     def test_blocks_unless_guard_is_sole_cmd_vel_publisher(self):
         kwargs = dict(ALL_WSL_LIVE_STATE_GOOD, guard_sole_publisher=False)
         result = evaluate_wsl_live_state(**kwargs)
@@ -292,6 +302,60 @@ class EvaluateCombinedGateTest(unittest.TestCase):
         result = evaluate_combined_gate(**kwargs)
         self.assertFalse(result.ok)
         self.assertIn("PI_VERDICT_UNPARSEABLE_TIMESTAMP", result.reasons)
+
+    def test_malformed_pi_verdict_blocks_with_its_own_distinct_reason(self):
+        # A malformed verdict file (unparseable JSON) must never be
+        # silently treated as available/ok, and must never be
+        # mislabeled as "proven nonzero" either.
+        kwargs = dict(self._good_combined_kwargs(), pi_verdict_malformed=True)
+        result = evaluate_combined_gate(**kwargs)
+        self.assertFalse(result.ok)
+        self.assertIn("PI_VERDICT_MALFORMED", result.reasons)
+        self.assertFalse(any("NONZERO" in r for r in result.reasons))
+
+    def test_malformed_takes_priority_over_other_pi_checks(self):
+        # When malformed, run-id/path/staleness checks are skipped
+        # (there is nothing trustworthy to compare) -- only the single
+        # MALFORMED reason is reported for the Pi side.
+        kwargs = dict(
+            self._good_combined_kwargs(),
+            pi_verdict_malformed=True,
+            pi_run_id="mismatched",
+            pi_verdict_generated_at_utc=None,
+        )
+        result = evaluate_combined_gate(**kwargs)
+        self.assertFalse(result.ok)
+        self.assertIn("PI_VERDICT_MALFORMED", result.reasons)
+        self.assertFalse(any("RUN_ID_MISMATCH" in r for r in result.reasons))
+        self.assertFalse(any("MISSING_TIMESTAMP" in r for r in result.reasons))
+
+    def test_pi_evidence_path_mismatch_blocks(self):
+        kwargs = dict(
+            self._good_combined_kwargs(),
+            expected_pi_evidence_path="/home/pi/real_robot_avoidance_v1/command_audit_20260724_153950.jsonl",
+            pi_evidence_path="/home/pi/real_robot_avoidance_v1/command_audit_WRONG.jsonl",
+        )
+        result = evaluate_combined_gate(**kwargs)
+        self.assertFalse(result.ok)
+        self.assertTrue(any("PI_EVIDENCE_PATH_MISMATCH" in r for r in result.reasons))
+
+    def test_pi_evidence_path_match_passes(self):
+        kwargs = dict(
+            self._good_combined_kwargs(),
+            expected_pi_evidence_path="/home/pi/real_robot_avoidance_v1/command_audit_20260724_153950.jsonl",
+            pi_evidence_path="/home/pi/real_robot_avoidance_v1/command_audit_20260724_153950.jsonl",
+        )
+        result = evaluate_combined_gate(**kwargs)
+        self.assertTrue(result.ok)
+
+    def test_no_expected_path_given_skips_the_path_check(self):
+        # Backward-compatible: when the caller does not supply an
+        # expected path (expected_pi_evidence_path=None, the default),
+        # the check is simply not applied -- not treated as a mismatch.
+        kwargs = dict(self._good_combined_kwargs(), pi_evidence_path="/anything/at/all.jsonl")
+        kwargs["expected_pi_evidence_path"] = None
+        result = evaluate_combined_gate(**kwargs)
+        self.assertTrue(result.ok)
 
 
 if __name__ == "__main__":
