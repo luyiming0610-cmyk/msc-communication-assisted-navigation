@@ -8,6 +8,13 @@ directory `experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools
 unless stated otherwise, and that ROS2 Humble + this workspace are
 sourced.
 
+**Before any formal shared-exit trial (steps 6-7 below), the first
+supervised low-speed ground diagnostic must be run and pass** -- see
+`first_ground_diagnostic/FIRST_GROUND_DIAGNOSTIC_SPEC.md` and
+`first_ground_diagnostic/GROUND_DIAGNOSTIC_RUNBOOK.md` for its own
+separate, bounded, straight-line-only procedure. It is prepared offline
+as of 2026-07-24 and has not been run.
+
 ## 1. Offline checks (no hardware, no network)
 
 **Since the second 2026-07-23 `UNEXPECTED_PHYSICAL_MOTION` incident

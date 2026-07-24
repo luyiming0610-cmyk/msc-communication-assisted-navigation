@@ -138,6 +138,21 @@ confirmed, in this session, not assumed from an earlier one:
    more than once, not a single snapshot) immediately before ground
    placement.
 
+## First ground diagnostic (prepared offline, not yet run)
+
+The first time the robot is commanded to move while actually bearing
+weight on the ground must be the bounded, low-speed, straight-line-only
+diagnostic specified in
+`first_ground_diagnostic/FIRST_GROUND_DIAGNOSTIC_SPEC.md` -- not a
+formal navigation trial. **Emergency procedure for this and every
+future powered session** (also stated in
+`first_ground_diagnostic/GROUND_DIAGNOSTIC_RUNBOOK.md`): on any
+unexpected sound or motion, cut hardware power first -- software
+(Ctrl+C, the arm-disarm topic) is a secondary measure only, never the
+first response. Do not run further diagnostic commands while motion
+continues. Preserve the WSL CSV and Pi JSONL exactly as they are. Mark
+the run `EXCLUDED` pending analysis, never `PASS`.
+
 Only once all four hold simultaneously may the robot be placed on the
 ground. See `pi_command_audit/PROVENANCE.md` and
 `tools/run_hil_command_evidence_recorder.sh` for exactly how items 1
