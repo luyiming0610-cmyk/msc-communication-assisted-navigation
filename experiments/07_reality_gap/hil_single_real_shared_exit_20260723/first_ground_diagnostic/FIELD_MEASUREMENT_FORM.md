@@ -20,7 +20,7 @@ documentation only and are never read by the preflight gate.
 | Usable test-area length (m) | 0.65 | `measured_geometry.test_area_length_m` |
 | Usable test-area width (m) | 0.25 | `measured_geometry.test_area_width_m` |
 | Floor material and condition | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Floor condition checked and acceptable for the diagnostic | false | `environment.floor_condition_confirmed` |
+| Floor condition checked and acceptable for the diagnostic | true | `environment.floor_condition_confirmed` |
 | Coordinate origin marker (description/location) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 | Start x (m) | 0.25 | `measured_geometry.start_x_m` |
 | Start y (m) | 0.125 | `measured_geometry.start_y_m` |
@@ -28,14 +28,14 @@ documentation only and are never read by the preflight gate.
 | Intended travel direction | forward_along_length | `measured_geometry.travel_direction` |
 | Stop-line distance from start (m) | 0.10 | `measured_geometry.stop_line_distance_m` |
 | Minimum boundary clearance (m) | 0.10 | `measured_geometry.min_boundary_clearance_m` |
-| Intended travel path checked clear of any obstruction | false | `environment.travel_path_clear_confirmed` |
+| Intended travel path checked clear of any obstruction | true | `environment.travel_path_clear_confirmed` |
 | Wall and obstacle locations | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Wall and obstacle locations recorded | false | `environment.boundaries_and_obstacles_recorded` |
+| Wall and obstacle locations recorded | true | `environment.boundaries_and_obstacles_recorded` |
 | Emergency-stop operator position | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Emergency-stop operator position checked | false | `safety.emergency_stop_position_confirmed` |
-| Operator present at the emergency stop, confirmed | false | `safety.operator_present_confirmed` |
+| Emergency-stop operator position checked | true | `safety.emergency_stop_position_confirmed` |
+| Operator present at the emergency stop, confirmed | (per-session, see note) | session file: `operator_present_confirmed` (`hil_ground_diagnostic_session.py`, not this JSON file) |
 | Wi-Fi observation | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Wi-Fi checked in the test area | false | `network.wifi_checked_in_test_area` |
+| Wi-Fi checked in the test area | (per-session, see note) | session file: `wifi_checked_in_test_area` (`hil_ground_diagnostic_session.py`, not this JSON file) |
 | Measured stopping clearance (m, post-run) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only -- post-run, never a preflight gate) |
 | Observer | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 
@@ -70,16 +70,30 @@ documentation only and are never read by the preflight gate.
   records that the check was actually done. Both must be filled in --
   the confirmation row must never be set `true` just because the
   descriptive row has text in it.
+- Operator presence and the Wi-Fi check are different in kind from the
+  other four confirmations: they are true only for the current session
+  (a future session may have nobody present, or unchecked Wi-Fi) and
+  must never be committed into `ground_diagnostic_params.json` as a
+  permanent fact. They are tracked in a separate, gitignored,
+  timestamped session-state file instead -- run
+  `python3 hil_ground_diagnostic_session.py init --path <path>` at the
+  start of every session (always resets both to `false` with a fresh
+  timestamp) and `... set --path <path> --field <name>` once each is
+  actually confirmed. A stale session file is never silently reused.
 - This form intentionally does not include exit location, parking
   zone, or search-waypoint fields -- this diagnostic never uses them
   (see `FIRST_GROUND_DIAGNOSTIC_SPEC.md`'s exclusion list). Those
   remain the formal shared-exit experiment's own, separate,
   still-outstanding measurements in `hil_frozen_params.json`.
-- Once every field with a parameter path above is a real, confirmed
-  value (no numeric field still `UNCONFIRMED_PHYSICAL_MEASUREMENT`, no
-  confirmation field still `false`), transfer them into
-  `../tools/ground_diagnostic_params.json` at the exact path shown and
-  re-run `run_ground_diagnostic_preflight.sh` -- it will report
-  `GROUND_DIAGNOSTIC_PREFLIGHT_PASS` only once every
-  `required_before_ground_motion` path in that file is confirmed (every
-  numeric field measured, every confirmation field `true`).
+- Once every tracked field above (measured geometry plus the four
+  stable-venue confirmations) is a real, confirmed value, transfer them
+  into `../tools/ground_diagnostic_params.json` at the exact path
+  shown. Separately, confirm operator presence and the Wi-Fi check for
+  the current session via `hil_ground_diagnostic_session.py` (see
+  above) -- these are never transferred into the JSON file. Then run
+  `run_ground_diagnostic_preflight.sh pre-stack`, which reports
+  `GROUND_DIAGNOSTIC_PRE_STACK_CHECK_PASS` only once both the tracked
+  file and the session file are fully confirmed. A second phase,
+  `run_ground_diagnostic_preflight.sh live-zero-state`, is checked only
+  after the physical stack is brought up (see
+  `GROUND_DIAGNOSTIC_RUNBOOK.md`).
