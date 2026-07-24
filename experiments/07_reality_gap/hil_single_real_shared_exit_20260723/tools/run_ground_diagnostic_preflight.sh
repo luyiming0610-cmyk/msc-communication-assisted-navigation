@@ -12,15 +12,33 @@
 #   live-zero-state   -- checkable only once the whole stack is up and the
 #                        guard is confirmed DISARMED with wheels still
 #                        suspended. Requires validity_flags==7, bridge
-#                        connected, both evidence files growing with
-#                        zero-only recorded commands, and the guard as
-#                        sole, disarmed /cmd_vel publisher outputting zero.
+#                        connected, the WSL evidence file growing with
+#                        zero-only recorded commands, the guard as
+#                        sole/disarmed /cmd_vel publisher outputting
+#                        zero, AND a separately-produced Pi audit
+#                        verdict (see below) that also passes, shares
+#                        the same run identifier, and is fresh.
 #
 # The previous single-phase design required validity_flags==7 even before
 # bring-up, which can never be true pre-bring-up -- a circular dependency.
 # Splitting into two phases (each delegated to a pure, unit-tested
 # decision function in hil_ground_diagnostic_phases.py) removes that
 # circularity without weakening either check.
+#
+# Found 2026-07-24 during the first live attempt: live-zero-state
+# previously tried to read the Pi's local command-audit JSONL by a
+# plain path, but the WSL machine this script runs on shares no
+# filesystem with the Pi -- only a network connection -- so that file
+# was never actually reachable from here, and the check failed closed
+# for a structural reason that looked like a real safety block. The
+# Pi's own evidence is now verified ON THE PI ITSELF by
+# pi_ground_diagnostic_audit_verifier.py, which writes a small,
+# timestamped, machine-readable verdict JSON; that file must be copied
+# back (or its path made reachable, e.g. a synced/shared location) and
+# passed here via GROUND_DIAGNOSTIC_PI_AUDIT_VERDICT. Without it, this
+# phase reports PI_LIVE_AUDIT_NOT_AVAILABLE and blocks -- never
+# silently passes, and never treats a missing verdict as "proven
+# nonzero" either.
 #
 # Reuses existing tooling rather than duplicating it:
 #   - hil_preflight.check_required_fields_ready() against
@@ -33,15 +51,18 @@
 #     into the tracked JSON file; a tracked-file value can never
 #     substitute for a session-file confirmation.
 #   - hil_ground_diagnostic_phases.evaluate_pre_stack() /
-#     evaluate_live_zero_state() for the actual pass/block decision.
+#     evaluate_wsl_live_state() / evaluate_combined_gate() for the
+#     actual pass/block decisions.
 #   - run_hil_physical_preflight.sh, invoked as a read-only subprocess,
 #     for device reachability / driver / bridge / validity_flags /
 #     residual-process facts (each phase uses only the subset of its
 #     output that applies to that phase).
 #   - analyze_ground_diagnostic.load_wsl_csv_rows /
-#     load_pi_jsonl_records / find_nonzero_command_window /
-#     compute_pi_command_maxima, reused (not reimplemented) for the
-#     live-zero-state "all recorded commands zero" check.
+#     find_nonzero_command_window, reused (not reimplemented) for the
+#     WSL-side "all recorded commands zero" check. Pi-side JSONL
+#     parsing is reused via pi_ground_diagnostic_audit_verifier.py,
+#     which itself reuses analyze_ground_diagnostic.load_pi_jsonl_records
+#     / compute_pi_command_maxima.
 set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -61,6 +82,9 @@ SESSION_FILE="${GROUND_DIAGNOSTIC_SESSION:-${SCRIPT_DIR}/ground_diagnostic_sessi
 SESSION_MAX_AGE_S="${GROUND_DIAGNOSTIC_SESSION_MAX_AGE_S:-14400}"
 PI_JSONL_PATH="${GROUND_DIAGNOSTIC_PI_JSONL:-}"
 WSL_CSV_PATH="${GROUND_DIAGNOSTIC_WSL_CSV:-}"
+RUN_ID="${GROUND_DIAGNOSTIC_RUN_ID:-}"
+PI_AUDIT_VERDICT_PATH="${GROUND_DIAGNOSTIC_PI_AUDIT_VERDICT:-}"
+PI_VERDICT_MAX_AGE_S="${GROUND_DIAGNOSTIC_PI_VERDICT_MAX_AGE_S:-300}"
 STATE_TOPIC="${HIL_STATE_TOPIC:-/epuck1/state}"
 UPSTREAM_TOPIC="${HIL_UPSTREAM_CMD_VEL_TOPIC:-/cmd_vel_unguarded}"
 GUARDED_TOPIC="${HIL_GUARDED_CMD_VEL_TOPIC:-/cmd_vel}"
@@ -253,7 +277,7 @@ if [[ "${PHYSICAL_PREFLIGHT_OUTPUT}" == *"BRIDGE_STATUS=CONNECTED"* ]]; then
 fi
 
 echo ""
-echo "=== LIVE_ZERO_STATE [2/4] Pi and WSL evidence streams active, growing, zero-only ==="
+echo "=== LIVE_ZERO_STATE [2/5] WSL evidence stream active, growing, zero-only ==="
 WSL_CSV_GROWING="false"
 WSL_EVIDENCE_ALL_ZERO="false"
 if [[ -n "${WSL_CSV_PATH}" && -f "${WSL_CSV_PATH}" ]]; then
@@ -266,71 +290,69 @@ if [[ -n "${WSL_CSV_PATH}" && -f "${WSL_CSV_PATH}" ]]; then
     else
         echo "WSL_CSV_NOT_GROWING(${N1}->${N2})"
     fi
-else
-    echo "WSL_CSV=NOT_STARTED_OR_NOT_PROVIDED"
-fi
 
-PI_JSONL_GROWING="false"
-PI_EVIDENCE_ALL_ZERO="false"
-if [[ -n "${PI_JSONL_PATH}" && -f "${PI_JSONL_PATH}" ]]; then
-    N1="$(wc -l < "${PI_JSONL_PATH}" 2>/dev/null || echo 0)"
-    sleep 1
-    N2="$(wc -l < "${PI_JSONL_PATH}" 2>/dev/null || echo 0)"
-    if [[ "${N2}" -gt "${N1}" ]]; then
-        echo "PI_JSONL_GROWING(${N1}->${N2})"
-        PI_JSONL_GROWING="true"
-    else
-        echo "PI_JSONL_NOT_GROWING(${N1}->${N2})"
-    fi
-else
-    echo "PI_JSONL=NOT_STARTED_OR_NOT_PROVIDED"
-fi
-
-if [[ -n "${WSL_CSV_PATH}" && -f "${WSL_CSV_PATH}" ]] || [[ -n "${PI_JSONL_PATH}" && -f "${PI_JSONL_PATH}" ]]; then
-    ZERO_CHECK_OUTPUT="$(PYTHONPATH="${SCRIPT_DIR}" python3 - "${WSL_CSV_PATH}" "${GUARDED_TOPIC}" "${UPSTREAM_TOPIC}" "${PI_JSONL_PATH}" <<'PYEOF'
+    ZERO_CHECK_OUTPUT="$(PYTHONPATH="${SCRIPT_DIR}" python3 - "${WSL_CSV_PATH}" "${GUARDED_TOPIC}" "${UPSTREAM_TOPIC}" <<'PYEOF'
 import sys
 
-from analyze_ground_diagnostic import (
-    compute_pi_command_maxima,
-    find_nonzero_command_window,
-    load_pi_jsonl_records,
-    load_wsl_csv_rows,
-)
+from analyze_ground_diagnostic import find_nonzero_command_window, load_wsl_csv_rows
 
-wsl_csv_path, guarded_topic, upstream_topic, pi_jsonl_path = sys.argv[1:5]
+wsl_csv_path, guarded_topic, upstream_topic = sys.argv[1:4]
 
 wsl_all_zero = True
-if wsl_csv_path:
-    try:
-        rows = load_wsl_csv_rows(wsl_csv_path)
-        for topic in (guarded_topic, upstream_topic):
-            window = find_nonzero_command_window(rows, topic)
-            if window.first_time_ns is not None:
-                wsl_all_zero = False
-    except FileNotFoundError:
-        wsl_all_zero = False
-
-pi_all_zero = True
-if pi_jsonl_path:
-    try:
-        records = load_pi_jsonl_records(pi_jsonl_path)
-        maxima = compute_pi_command_maxima(records)
-        if maxima.nonzero_received_count != 0 or maxima.nonzero_applied_count != 0:
-            pi_all_zero = False
-    except FileNotFoundError:
-        pi_all_zero = False
+try:
+    rows = load_wsl_csv_rows(wsl_csv_path)
+    for topic in (guarded_topic, upstream_topic):
+        window = find_nonzero_command_window(rows, topic)
+        if window.first_time_ns is not None:
+            wsl_all_zero = False
+except FileNotFoundError:
+    wsl_all_zero = False
 
 print(f"WSL_EVIDENCE_ALL_ZERO={'true' if wsl_all_zero else 'false'}")
-print(f"PI_EVIDENCE_ALL_ZERO={'true' if pi_all_zero else 'false'}")
 PYEOF
 )"
     echo "${ZERO_CHECK_OUTPUT}"
     [[ "${ZERO_CHECK_OUTPUT}" == *"WSL_EVIDENCE_ALL_ZERO=true"* ]] && WSL_EVIDENCE_ALL_ZERO="true"
-    [[ "${ZERO_CHECK_OUTPUT}" == *"PI_EVIDENCE_ALL_ZERO=true"* ]] && PI_EVIDENCE_ALL_ZERO="true"
+else
+    echo "WSL_CSV=NOT_STARTED_OR_NOT_PROVIDED"
 fi
 
 echo ""
-echo "=== LIVE_ZERO_STATE [3/4] Guard identity, armed state, /cmd_vel + upstream zero ==="
+echo "=== LIVE_ZERO_STATE [3/5] Pi audit verdict (produced separately, on the Pi, by pi_ground_diagnostic_audit_verifier.py) ==="
+PI_VERDICT_AVAILABLE="false"
+PI_VERDICT_OK="false"
+PI_VERDICT_REASONS="[]"
+PI_VERDICT_RUN_ID=""
+PI_VERDICT_GENERATED_AT=""
+if [[ -n "${PI_AUDIT_VERDICT_PATH}" && -f "${PI_AUDIT_VERDICT_PATH}" ]]; then
+    echo "PI_AUDIT_VERDICT_FILE_FOUND(${PI_AUDIT_VERDICT_PATH})"
+    cat "${PI_AUDIT_VERDICT_PATH}"
+    PI_VERDICT_JSON="$(cat "${PI_AUDIT_VERDICT_PATH}")"
+    PI_VERDICT_FIELDS="$(python3 - "${PI_AUDIT_VERDICT_PATH}" <<'PYEOF'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    verdict = json.load(fh)
+print("available=true")
+print(f"ok={'true' if verdict.get('ok') else 'false'}")
+print(f"reasons={verdict.get('reasons', [])}")
+print(f"run_id={verdict.get('run_id')}")
+print(f"generated_at_utc={verdict.get('generated_at_utc')}")
+PYEOF
+)"
+    echo "${PI_VERDICT_FIELDS}"
+    PI_VERDICT_AVAILABLE="true"
+    [[ "${PI_VERDICT_FIELDS}" == *"ok=true"* ]] && PI_VERDICT_OK="true"
+    PI_VERDICT_REASONS="$(grep -o 'reasons=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
+    PI_VERDICT_RUN_ID="$(grep -o 'run_id=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
+    PI_VERDICT_GENERATED_AT="$(grep -o 'generated_at_utc=.*' <<<"${PI_VERDICT_FIELDS}" | cut -d= -f2-)"
+else
+    echo "PI_AUDIT_VERDICT=NOT_AVAILABLE(set GROUND_DIAGNOSTIC_PI_AUDIT_VERDICT to a verdict JSON produced by pi_ground_diagnostic_audit_verifier.py on the Pi)"
+fi
+
+echo ""
+echo "=== LIVE_ZERO_STATE [4/5] Guard identity, armed state, /cmd_vel + upstream zero ==="
 GUARD_PID="$(pgrep -af hil_cmd_vel_guard 2>/dev/null | grep -v 'pgrep -af' || true)"
 GUARD_SOLE_PUBLISHER="false"
 GUARD_ARMED="true"
@@ -381,7 +403,7 @@ else
 fi
 
 echo ""
-echo "=== LIVE_ZERO_STATE [4/4] No controller/virtual-peer/navigator/Webots/pytest/colcon/rosbag process ==="
+echo "=== LIVE_ZERO_STATE [5/5] No controller/virtual-peer/navigator/Webots/pytest/colcon/rosbag process ==="
 RESIDUAL_FORBIDDEN="$(pgrep -af -- "${FORBIDDEN_PATTERN}" 2>/dev/null | grep -v 'pgrep -af' || true)"
 FORBIDDEN_FOUND="false"
 if [[ -n "${RESIDUAL_FORBIDDEN}" ]]; then
@@ -393,35 +415,56 @@ else
 fi
 
 echo ""
-echo "=== LIVE_ZERO_STATE verdict ==="
+echo "=== LIVE_ZERO_STATE verdict (WSL side + Pi audit combined) ==="
 VERDICT_OUTPUT="$(PYTHONPATH="${SCRIPT_DIR}" python3 - \
-    "${VALIDITY_FLAGS_VALUE}" "${BRIDGE_CONNECTED}" "${WSL_CSV_GROWING}" "${PI_JSONL_GROWING}" \
+    "${VALIDITY_FLAGS_VALUE}" "${BRIDGE_CONNECTED}" "${WSL_CSV_GROWING}" \
     "${GUARD_SOLE_PUBLISHER}" "${GUARD_ARMED}" "${CMD_VEL_ALL_ZERO}" "${UPSTREAM_ZERO_OR_ABSENT}" \
-    "${FORBIDDEN_FOUND}" "${WSL_EVIDENCE_ALL_ZERO}" "${PI_EVIDENCE_ALL_ZERO}" <<'PYEOF'
+    "${FORBIDDEN_FOUND}" "${WSL_EVIDENCE_ALL_ZERO}" \
+    "${PI_VERDICT_AVAILABLE}" "${PI_VERDICT_OK}" "${PI_VERDICT_REASONS}" "${PI_VERDICT_RUN_ID}" \
+    "${PI_VERDICT_GENERATED_AT}" "${RUN_ID}" "${WSL_CSV_PATH}" "${PI_VERDICT_MAX_AGE_S}" <<'PYEOF'
+import ast
 import sys
 
-from hil_ground_diagnostic_phases import evaluate_live_zero_state
+from hil_ground_diagnostic_phases import evaluate_combined_gate, evaluate_wsl_live_state
 
-(flags, bridge, wsl_growing, pi_growing, sole_pub, armed,
- cmd_vel_zero, upstream_zero, forbidden, wsl_zero, pi_zero) = sys.argv[1:12]
+(flags, bridge, wsl_growing, sole_pub, armed, cmd_vel_zero, upstream_zero,
+ forbidden, wsl_zero, pi_available, pi_ok, pi_reasons, pi_run_id,
+ pi_generated_at, wsl_run_id, wsl_evidence_path, pi_max_age_s) = sys.argv[1:18]
 
 
 def as_bool(s):
     return s == "true"
 
 
-result = evaluate_live_zero_state(
+def as_list(s):
+    try:
+        return tuple(ast.literal_eval(s))
+    except (ValueError, SyntaxError):
+        return ()
+
+
+wsl_result = evaluate_wsl_live_state(
     validity_flags=int(flags) if flags.strip().isdigit() else None,
     bridge_connected=as_bool(bridge),
     wsl_csv_growing=as_bool(wsl_growing),
-    pi_jsonl_growing=as_bool(pi_growing),
     guard_sole_publisher=as_bool(sole_pub),
     guard_armed=as_bool(armed),
     cmd_vel_all_zero=as_bool(cmd_vel_zero),
     upstream_zero_or_absent=as_bool(upstream_zero),
     forbidden_process_found=as_bool(forbidden),
     wsl_evidence_all_zero=as_bool(wsl_zero),
-    pi_evidence_all_zero=as_bool(pi_zero),
+)
+
+result = evaluate_combined_gate(
+    wsl_result=wsl_result,
+    pi_verdict_ok=as_bool(pi_ok),
+    pi_verdict_reasons=as_list(pi_reasons),
+    pi_verdict_available=as_bool(pi_available),
+    wsl_run_id=wsl_run_id or None,
+    pi_run_id=pi_run_id or None,
+    wsl_evidence_path=wsl_evidence_path,
+    pi_verdict_generated_at_utc=pi_generated_at or None,
+    pi_verdict_max_age_s=float(pi_max_age_s),
 )
 if result.ok:
     print("LIVE_ZERO_STATE_VERDICT=PASS")

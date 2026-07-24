@@ -65,6 +65,7 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_hil_ground_diagnostic_session"
     "test_hil_ground_diagnostic_phases"
     "test_hil_ground_diagnostic_source_identity"
+    "test_pi_ground_diagnostic_audit_verifier"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
     "test_pi_epuck_tcp_server_sensors_audited"
