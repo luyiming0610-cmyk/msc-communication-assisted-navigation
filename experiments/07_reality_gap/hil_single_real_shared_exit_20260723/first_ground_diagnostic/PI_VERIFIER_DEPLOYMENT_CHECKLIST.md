@@ -1,8 +1,13 @@
 # Pi verifier deployment checklist (prepared, not executed)
 
 One command at a time, operator-executed. This checklist is only
-prepared here -- it has not been run, and nothing on this list starts
-a physical process, ROS node, or hardware interaction. It deploys
+prepared here -- it has not been run. Deployment here means **file
+transfer and Python compile verification only** -- it must not start
+ROS, the driver, the server, the bridge, the guard, or any controller.
+The Pi itself must be powered on and reachable for the SSH/SCP/hash/
+`py_compile` steps below to work at all (an earlier version of this
+checklist incorrectly required `PI_POWERED_OFF=YES`, which is
+inconsistent with those same steps -- corrected here). It deploys
 exactly the reviewed, two-file, hash-pinned unit documented in
 `GROUND_DIAGNOSTIC_RUNBOOK.md` step 8:
 
@@ -13,12 +18,48 @@ exactly the reviewed, two-file, hash-pinned unit documented in
 
 **Precondition, verbatim from the operator, before step 1:**
 ```
-ROBOT_POWERED_OFF=YES
-PI_POWERED_OFF=YES
+ROBOT_ON_STAND=YES
+WHEELS_CLEAR_OF_GROUND=YES
+USER_AT_EMERGENCY_STOP=YES
+PHYSICAL_MOTION_STACK_STOPPED=YES
+PI_POWERED_ON_AND_REACHABLE=YES
 ```
-This checklist copies files only -- there is no reason for either the
-robot or the Pi to be powered on during file preparation, and doing so
-is not authorized by this checklist.
+The robot stays physically secured on its stand, wheels clear of the
+ground, throughout deployment -- the Pi being powered on for file
+transfer is not authorization to place the robot on the ground or to
+bring up any part of the motion stack. `PHYSICAL_MOTION_STACK_STOPPED=YES`
+means none of the following processes is running, on either machine,
+for the whole duration of this checklist:
+```
+epuck_ros2_driver
+pi_epuck_tcp_server_sensors
+pi_epuck_tcp_server_sensors_audited
+wsl_epuck_tcp_bridge_sensors
+state_publisher
+hil_cmd_vel_guard
+cooperative_avoider
+hil_virtual_peer
+goal_navigator
+hil_topic_adapter
+rosbag
+```
+Verify this before step 1 and re-verify before step 3 (the copy) and
+step 5 (`py_compile`) -- if any of these processes is found running at
+any point, stop immediately and do not continue this checklist.
+
+## 0. Confirm none of the listed processes is running
+
+`[Pi Window 3 -- Pi read-only verification]`:
+```bash
+ssh pi@<PI_IP> "pgrep -af '[e]puck_ros2_driver|[p]i_epuck_tcp_server_sensors|[p]i_epuck_tcp_server_sensors_audited' || echo PI_SIDE_CLEAN"
+```
+`[WSL Window 5 -- read-only HIL verification]`:
+```bash
+pgrep -af '[w]sl_epuck_tcp_bridge_sensors|[s]tate_publisher|[h]il_cmd_vel_guard|[c]ooperative_avoider|[h]il_virtual_peer|[g]oal_navigator|[h]il_topic_adapter|[r]osbag'
+```
+Expected: `PI_SIDE_CLEAN` and no output from the second command. Stop
+and report if either check finds a match -- do not proceed while any
+listed process is running.
 
 ## 1. Compute local (repository-side) hashes to confirm against the table above
 
@@ -42,6 +83,9 @@ different destination name or resolve the conflict before continuing.
 
 ## 3. Copy both files together, in one command
 
+Re-verify step 0 (none of the listed processes running) immediately
+before this step.
+
 `[PowerShell Window 1 -- operator transfer and host checks]` -- one
 explicit, interactive SCP invocation, password entered manually:
 ```bash
@@ -61,6 +105,9 @@ if either does not match -- treat this as a failed, not a retried,
 deployment; do not silently re-copy and re-check.
 
 ## 5. Confirm both files are syntactically valid Python -- no ROS process
+
+Re-verify step 0 (none of the listed processes running) immediately
+before this step.
 
 `[PowerShell Window 1 -- operator transfer and host checks]`:
 ```bash
