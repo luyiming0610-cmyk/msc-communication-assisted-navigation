@@ -5,13 +5,20 @@ for the two file-I/O helpers. No ROS, no physical process."""
 import csv
 import os
 import tempfile
+import time
 import unittest
 
+from analyze_ground_diagnostic import load_wsl_csv_rows
+from hil_command_evidence_recorder import CommandEvidenceCsvWriter, build_row
 from hil_repeatability_pose_readiness import (
+    DEFAULT_MAX_POSE_SAMPLE_STALENESS_S,
+    RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S,
+    STATE_TOPIC_PUBLISH_PERIOD_S,
     compute_pose_readiness_facts,
     csv_header_has_pose_columns,
     evaluate_repeatability_pose_readiness,
     is_csv_growing,
+    worst_case_on_disk_pose_sample_age_s,
 )
 
 STATE_TOPIC = "/epuck1/state"
@@ -199,6 +206,164 @@ class IsCsvGrowingTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write("topic,local_time_ns\n")
             self.assertFalse(is_csv_growing(path, wait_s=0.05))
+
+
+class FlushFreshnessIncompatibilityTest(unittest.TestCase):
+    """Deterministic reproduction of the timing incompatibility found
+    live in SRGRB_20260727_02 Trial 1 Attempt 1 (classified INVALID,
+    reason POSE_READINESS_FLUSH_FRESHNESS_INCOMPATIBLE, observed age
+    1.078s against a 1.0s flush interval and a 1.0s threshold).
+
+    Uses the REAL CommandEvidenceCsvWriter (with an injected monotonic
+    clock -- no real sleep, fully deterministic) and the REAL
+    load_wsl_csv_rows/compute_pose_readiness_facts/
+    evaluate_repeatability_pose_readiness -- not a synthetic shortcut --
+    so this exercises the actual write/flush/read path.
+
+    Mechanism: the writer flushes only when a WRITE arrives at/after
+    flush_interval_s has elapsed since the last flush (not a
+    background timer). Between two consecutive flushes, the freshest
+    sample actually readable on disk stays fixed at the last flush's
+    own row; a check happening near the end of that window sees an
+    age approaching flush_interval_s itself, even under perfectly
+    healthy conditions. A small, explicitly-modeled, realistic
+    check-execution overhead (CSV parse time, interpreter startup,
+    ordinary clock/scheduling jitter -- all present in the live
+    failure, none of them a sensor/bridge fault) is added on top,
+    matching the observed ~0.078s excess over the flush interval.
+    """
+
+    REALISTIC_CHECK_OVERHEAD_S = 0.08
+
+    def _simulate_and_check(self, flush_interval_s):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "command_evidence.csv")
+            writer = CommandEvidenceCsvWriter(path, flush_interval_s=flush_interval_s)
+            t0 = time.monotonic()
+
+            # Write clearly more than one flush_interval_s worth of
+            # 10Hz-spaced rows (state_publisher's frozen production
+            # rate) -- extra margin (not landing exactly on the
+            # trigger boundary) avoids floating-point cancellation
+            # error when adding a small delta to t0's real, large
+            # monotonic value. Read back which row actually got
+            # flushed rather than assuming it analytically, so the
+            # test is robust to exactly where the real trigger lands.
+            # Row timestamps (local_time_ns) are anchored to the SAME
+            # base (t0) as now_monotonic below and as the freshness
+            # check's own now_ns -- all three must share one time
+            # base, or the computed "age" is meaningless.
+            n_writes = max(2, round(flush_interval_s / STATE_TOPIC_PUBLISH_PERIOD_S) + 2)
+            for i in range(1, n_writes + 1):
+                logical_t = i * STATE_TOPIC_PUBLISH_PERIOD_S
+                row = build_row(
+                    local_time_ns=int((t0 + logical_t) * 1e9),
+                    local_monotonic_ns=int((t0 + logical_t) * 1e9),
+                    topic=STATE_TOPIC,
+                    validity_flags=7,
+                    state_x_m=0.25,
+                    state_y_m=0.125,
+                    state_yaw_rad=0.0,
+                )
+                writer.write_row(row, now_monotonic=t0 + logical_t)
+
+            wsl_rows_before_close = load_wsl_csv_rows(path)
+            writer.close()
+
+        self.assertTrue(wsl_rows_before_close, "no row was flushed before close() -- test construction is broken")
+        flushed_row_time_ns = max(r["local_time_ns"] for r in wsl_rows_before_close)
+
+        # The worst case within this flush cycle: just before the
+        # NEXT flush would be due, plus realistic check overhead.
+        now_ns = flushed_row_time_ns + int((flush_interval_s - 0.001 + self.REALISTIC_CHECK_OVERHEAD_S) * 1e9)
+        facts = compute_pose_readiness_facts(wsl_rows_before_close, STATE_TOPIC, GUARDED_TOPIC, UPSTREAM_TOPIC, now_ns)
+        result = evaluate_repeatability_pose_readiness(
+            csv_exists=True, csv_growing=True, header_has_pose_columns=True, **facts
+        )
+        return result, facts
+
+    def test_flush_interval_equal_to_staleness_threshold_can_spuriously_block(self):
+        result, facts = self._simulate_and_check(flush_interval_s=1.0)
+        self.assertFalse(result.ok)
+        self.assertTrue(any(r.startswith("LATEST_POSE_SAMPLE_STALE") for r in result.reasons))
+        self.assertGreater(facts["latest_valid_pose_sample_age_s"], DEFAULT_MAX_POSE_SAMPLE_STALENESS_S)
+        # Matches the magnitude actually observed live (1.078s).
+        self.assertAlmostEqual(facts["latest_valid_pose_sample_age_s"], 1.079, places=2)
+
+    def test_recommended_flush_interval_leaves_comfortable_margin(self):
+        result, facts = self._simulate_and_check(flush_interval_s=RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.reasons, ())
+        self.assertLess(facts["latest_valid_pose_sample_age_s"], DEFAULT_MAX_POSE_SAMPLE_STALENESS_S / 2)
+
+    def test_worst_case_formula_matches_the_simulation(self):
+        # The documented pure-arithmetic bound (buffering only, no
+        # overhead) must agree with what the real writer/reader path
+        # actually produces once the added overhead is subtracted back
+        # out.
+        _, facts = self._simulate_and_check(flush_interval_s=1.0)
+        buffering_only_age = facts["latest_valid_pose_sample_age_s"] - self.REALISTIC_CHECK_OVERHEAD_S
+        self.assertAlmostEqual(buffering_only_age, worst_case_on_disk_pose_sample_age_s(1.0), places=2)
+
+
+class ProductionRepeatabilitySettingsTest(unittest.TestCase):
+    """Proves the selected production recorder settings
+    (RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S) repeatedly pass
+    freshness across multiple check timings within a flush cycle, and
+    that genuinely stale pose data (a dead sensor/bridge, not a
+    buffering artifact) still correctly blocks even with the new,
+    smaller flush interval."""
+
+    def _facts_at(self, flush_interval_s, extra_wait_s):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "command_evidence.csv")
+            writer = CommandEvidenceCsvWriter(path, flush_interval_s=flush_interval_s)
+            t0 = time.monotonic()
+            n_writes = max(2, round(flush_interval_s / STATE_TOPIC_PUBLISH_PERIOD_S) + 2)
+            for i in range(1, n_writes + 1):
+                logical_t = i * STATE_TOPIC_PUBLISH_PERIOD_S
+                row = build_row(
+                    local_time_ns=int((t0 + logical_t) * 1e9),
+                    local_monotonic_ns=int((t0 + logical_t) * 1e9),
+                    topic=STATE_TOPIC,
+                    validity_flags=7,
+                    state_x_m=0.25,
+                    state_y_m=0.125,
+                    state_yaw_rad=0.0,
+                )
+                writer.write_row(row, now_monotonic=t0 + logical_t)
+            wsl_rows = load_wsl_csv_rows(path)
+            writer.close()
+        self.assertTrue(wsl_rows, "no row was flushed before close() -- test construction is broken")
+        flushed_row_time_ns = max(r["local_time_ns"] for r in wsl_rows)
+        now_ns = flushed_row_time_ns + int(extra_wait_s * 1e9)
+        facts = compute_pose_readiness_facts(wsl_rows, STATE_TOPIC, GUARDED_TOPIC, UPSTREAM_TOPIC, now_ns)
+        return facts
+
+    def test_recommended_settings_pass_at_many_check_timings_within_a_cycle(self):
+        # 0%, 25%, 50%, 75%, and 99% through the flush cycle, each plus
+        # the same realistic check overhead used above -- all must pass.
+        overhead_s = 0.08
+        for fraction in (0.0, 0.25, 0.5, 0.75, 0.99):
+            with self.subTest(fraction=fraction):
+                extra_wait_s = fraction * RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S + overhead_s
+                facts = self._facts_at(RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S, extra_wait_s)
+                result = evaluate_repeatability_pose_readiness(
+                    csv_exists=True, csv_growing=True, header_has_pose_columns=True, **facts
+                )
+                self.assertTrue(result.ok, f"unexpectedly blocked at fraction={fraction}: {result.reasons}")
+
+    def test_genuinely_stale_pose_data_still_blocks_with_recommended_settings(self):
+        # A dead sensor/bridge (no new samples for well beyond even a
+        # generous multiple of the flush interval) must still be
+        # caught -- the smaller flush interval must not silently widen
+        # what counts as "fresh enough".
+        facts = self._facts_at(RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S, extra_wait_s=5.0)
+        result = evaluate_repeatability_pose_readiness(
+            csv_exists=True, csv_growing=True, header_has_pose_columns=True, **facts
+        )
+        self.assertFalse(result.ok)
+        self.assertTrue(any(r.startswith("LATEST_POSE_SAMPLE_STALE") for r in result.reasons))
 
 
 if __name__ == "__main__":

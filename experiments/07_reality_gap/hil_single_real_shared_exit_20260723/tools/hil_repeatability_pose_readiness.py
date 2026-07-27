@@ -49,6 +49,63 @@ DEFAULT_REQUIRED_VALIDITY_FLAGS = 7
 DEFAULT_GROWTH_WAIT_S = 1.5
 REQUIRED_POSE_COLUMNS = ("state_x_m", "state_y_m", "state_yaw_rad")
 
+# Frozen production relationship between the recorder's CSV flush
+# interval and this gate's own max_pose_sample_staleness_s, added
+# 2026-07-27 after SRGRB_20260727_02 Trial 1 Attempt 1 was classified
+# INVALID (POSE_READINESS_FLUSH_FRESHNESS_INCOMPATIBLE, observed age
+# 1.078s against a 1.0s flush interval and a 1.0s staleness
+# threshold). hil_command_evidence_recorder.py's CommandEvidenceCsvWriter
+# flushes only when a WRITE arrives at/after flush_interval_s has
+# elapsed since the last flush (not on a background timer) -- so
+# between two consecutive flushes, the freshest sample actually
+# readable on disk stays fixed at that last flush's own row, and its
+# age (as measured by a check happening near the end of that window)
+# approaches flush_interval_s itself even under perfectly healthy
+# conditions. A flush_interval_s equal to (or close to)
+# max_pose_sample_staleness_s therefore leaves ZERO margin: on top of
+# that intrinsic buffering lag, the ordinary, unavoidable overhead of
+# actually running the check (this module's own CSV parse time, which
+# grows with file size; Python interpreter/import startup; ordinary
+# clock/scheduling jitter -- none of them a sensor, bridge, or
+# connectivity fault) is enough to push the observed age over the
+# threshold, exactly as seen live.
+#
+# state_publisher's frozen publish rate for every ground-diagnostic and
+# repeatability run is 10.0 Hz (period 0.1 s -- GROUND_DIAGNOSTIC_RUNBOOK.md
+# step 6, `-p mode:=periodic`'s own default) -- recorded here for
+# traceability, even though the buffering-lag bound below depends only
+# on flush_interval_s, not on the state topic's own rate (any rate at
+# least as fast as one write per flush_interval_s reproduces the same
+# bound). Repeatability trials must start the recorder with a flush
+# interval comfortably below max_pose_sample_staleness_s --
+# RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S below leaves roughly 70%
+# margin even after adding a realistic check-execution overhead
+# (worst_case_on_disk_pose_sample_age_s(0.2) == 0.2s against a 1.0s
+# threshold, plus overhead still well under 1.0s), verified
+# live-conditions-faithfully in test_hil_repeatability_pose_readiness.py's
+# FlushFreshnessIncompatibilityTest. This is a PARAMETER CHOICE for how
+# the recorder is invoked for repeatability trials (--flush-interval-s),
+# not a code change to state_publisher, the protocol, controller,
+# bridge, or guard, and does not alter this gate's own
+# max_pose_sample_staleness_s safety rule.
+STATE_TOPIC_PUBLISH_PERIOD_S = 0.1
+RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S = 0.2
+
+
+def worst_case_on_disk_pose_sample_age_s(flush_interval_s: float) -> float:
+    """Worst-case age (seconds) of the freshest pose sample actually
+    readable on disk, purely from the recorder's own flush buffering --
+    not a sensor/bridge/connectivity measure, and not including any
+    check-execution overhead on top (see the module docstring above and
+    FlushFreshnessIncompatibilityTest for why real overhead matters
+    too). The recorder's CommandEvidenceCsvWriter flushes only when a
+    write arrives at/after flush_interval_s has elapsed since the last
+    flush (not on a background timer); between two consecutive
+    flushes, the on-disk freshest sample's age approaches
+    flush_interval_s itself as the check moment approaches the next
+    flush boundary. Pure arithmetic, no I/O."""
+    return flush_interval_s
+
 
 @dataclass(frozen=True)
 class RepeatabilityPoseReadinessResult:
