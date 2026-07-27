@@ -1,7 +1,7 @@
 {
-  "_comment": "Tracked (committed) attempts manifest for batch SRGRB_20260727_02, the replacement batch after SRGRB_20260727 was closed BATCH_ABORTED_EXCLUDED (see ../SRGRB_20260727/BATCH_SUMMARY.md). Filesystem slug is srgrb_20260727_02 -- never srgrb_SRGRB_20260727_02. Trial 1 Attempt 1 is INVALID: the repeatability pose-readiness gate spuriously BLOCKED (LATEST_POSE_SAMPLE_STALE) due to a recorder flush-interval/staleness-threshold incompatibility -- a procedural/instrumentation issue, not a motion or safety failure -- classified INVALID per the approved retry policy (procedural/instrumentation issues are retriable, up to 3 attempts per slot). classification=PENDING (used for a not-yet-run attempt) is a PLANNING STATE ONLY, not a result -- hil_repeatability_batch_aggregator.py's VALID_CLASSIFICATIONS is exactly VALID/INVALID/EXCLUDED, so a manifest containing any PENDING entry cannot be fed to the aggregator at all. verification_json_path is relative to this manifest's own directory, resolved by hil_repeatability_batch_aggregator.py against the manifest file's location, never the process's current working directory. Each attempt's own execution_head records the exact commit the physical stack was (or will be) brought up against for that specific attempt -- read for traceability only, not read or validated by the aggregator itself; it is per-attempt because a code fix (like the flush-interval fix after attempt 1) can land between attempts within the same batch.",
+  "_comment": "Tracked (committed) attempts manifest for batch SRGRB_20260727_02, the replacement batch after SRGRB_20260727 was closed BATCH_ABORTED_EXCLUDED (see ../SRGRB_20260727/BATCH_SUMMARY.md). Filesystem slug is srgrb_20260727_02 -- never srgrb_SRGRB_20260727_02. Trial 1 Attempt 1 is INVALID: the repeatability pose-readiness gate spuriously BLOCKED (LATEST_POSE_SAMPLE_STALE) due to a recorder flush-interval/staleness-threshold incompatibility -- a procedural/instrumentation issue, not a motion or safety failure -- classified INVALID per the approved retry policy (procedural/instrumentation issues are retriable, up to 3 attempts per slot). classification=PENDING (used for a not-yet-run attempt) is a PLANNING STATE ONLY, not a result -- hil_repeatability_batch_aggregator.py's VALID_CLASSIFICATIONS is exactly VALID/INVALID/EXCLUDED, so a manifest containing any PENDING entry cannot be fed to the aggregator at all. verification_json_path is relative to this manifest's own directory, resolved by hil_repeatability_batch_aggregator.py against the manifest file's location, never the process's current working directory. original_spec_commit is the specification commit this batch was originally approved under and never changes once the batch starts. Each attempt's own spec_commit is the specification commit actually in effect for that attempt (can differ from original_spec_commit if a spec revision landed between attempts), and execution_code_commit is the actual code commit the physical stack was (or will be) brought up against for that attempt -- both are optional, purely informational, never validated for format, and never affect batch_status/slot-filling/statistics. Neither is ever named 'execution_head' -- an earlier version of this file used that name for attempt 2 but set it to a documentation/registration commit (4d77759) rather than the actual code commit intended for that attempt (8515dbb), a real identity mismatch found and corrected 2026-07-27 before Attempt 2 was ever started. Attempt 1's identity fields are preserved unchanged from its own historical record (it genuinely ran at execution_code_commit 9288198, under spec_commit 16dd56d -- no spec revision had landed yet at that point), only renamed here for schema consistency -- this is not a rewrite of its execution history.",
   "batch_id": "SRGRB_20260727_02",
-  "spec_commit": "16dd56d87ea88f72de4e50da3434f7ffbffe7a59",
+  "original_spec_commit": "16dd56d87ea88f72de4e50da3434f7ffbffe7a59",
   "attempts": [
     {
       "trial": 1,
@@ -10,7 +10,8 @@
       "classification": "INVALID",
       "reason": "POSE_READINESS_FLUSH_FRESHNESS_INCOMPATIBLE",
       "verification_json_path": "trial1_attempt1_20260727_143309/post_run_verification.json",
-      "execution_head": "9288198d3416e7d931cd682b72d51108dbbb1d8e"
+      "spec_commit": "16dd56d87ea88f72de4e50da3434f7ffbffe7a59",
+      "execution_code_commit": "9288198d3416e7d931cd682b72d51108dbbb1d8e"
     },
     {
       "trial": 1,
@@ -19,7 +20,8 @@
       "classification": "PENDING",
       "reason": null,
       "verification_json_path": "trial1_attempt2_20260727_153600/post_run_verification.json",
-      "execution_head": "4d777590d7189fedaffb105eddfd5003ea1cb40e"
+      "spec_commit": "4d777590d7189fedaffb105eddfd5003ea1cb40e",
+      "execution_code_commit": "8515dbb0cc6dba30dfc342bb215d453ce3b6286c"
     }
   ]
 }
