@@ -1,14 +1,20 @@
-# SINGLE_ROBOT_GROUND_REPEATABILITY_BASELINE -- specification (DRAFT, not yet approved)
+# SINGLE_ROBOT_GROUND_REPEATABILITY_BASELINE -- specification (`READY_FOR_PHYSICAL_APPROVAL`)
 
-**Status: offline design only. No physical process, no batch `RUN_ID`,
-and no evidence collection has occurred as part of preparing this
-document or its supporting tooling.** Prepared 2026-07-27, revised the
-same day after a correction pass, following the accepted
+**Status: `READY_FOR_PHYSICAL_APPROVAL`.** Both readiness gaps this
+status depends on -- (A) the repeatability-specific pre-pulse
+pose-evidence gate and (B) the batch aggregation tooling -- are now
+implemented, tested, and passing (see section 11). **This
+status means the design and tooling are ready for a human to approve
+Trial 1 -- it does NOT mean data collection has started.** No physical
+process has run, no batch `RUN_ID` has been created, and no evidence
+has been collected as part of preparing this document or its
+supporting tooling. Prepared 2026-07-27, revised twice the same day
+after two correction passes, following the accepted
 `EXCLUSIONARY_GROUND_DIAGNOSTIC_PASS` record for RUN_ID
 `20260727_102033` (closed at commit `39c99bc`). This document does not
 authorize starting any process -- it requires separate, explicit human
-approval before Trial 1, and again before each subsequent trial (see
-"Safety stop points" below).
+approval before Trial 1, and again before each subsequent attempt (see
+section 9, "Safety stop points").
 
 **Classification: `EXCLUSIONARY_REPEATABILITY_BASELINE`.** This is
 **not** cooperative navigation, **not** a shared-exit trial, and
@@ -49,8 +55,8 @@ re-derived or re-measured for this experiment:
 | Zero-hold before pulse | 1.0 s | `hil_wheel_suspension_test.py --zero-hold-s`, reused unchanged |
 | Pulse duration | 2.0 s | `hil_wheel_suspension_test.py --pulse-s`, reused unchanged |
 | Zero-hold after pulse | 1.0 s | `hil_wheel_suspension_test.py --post-hold-s`, reused unchanged |
-| Nominal expected travel | requested speed x pulse duration = 0.015 m/s x 2.0 s = **0.03 m nominal** -- a planning estimate only, **not a displacement acceptance tolerance** (see section 9) | derived, not separately measured |
-| Planned sample size | `5` valid trials (see section 6 for the completion rule) | this document |
+| Nominal expected travel | requested speed x pulse duration = 0.015 m/s x 2.0 s = **0.03 m nominal** -- a planning estimate only, **not a displacement acceptance tolerance** (see section 5) | derived, not separately measured |
+| Planned sample size | `5` valid trials (see section 5 for the completion rule) | this document |
 
 Per requirement 6: linear speed stays at or below 0.015 m/s and
 `angular.z` stays exactly `0.0` for every trial. No trial may request a
@@ -59,7 +65,7 @@ separately approved safety review -- out of scope for this document.
 
 ## 3. Trial protocol
 
-- **Planned sample: 5 valid trials** (see section 6's completion
+- **Planned sample: 5 valid trials** (see section 5's completion
   rule), run **sequentially, one at a time**, never batched or
   automated. Trial `k+1` does not begin until trial `k`'s full
   shutdown, evidence closeout, and manual return-to-start are complete
@@ -67,19 +73,22 @@ separately approved safety review -- out of scope for this document.
   attempt.
 - Each attempt repeats the **entire** `GROUND_DIAGNOSTIC_RUNBOOK.md`
   sequence unchanged (steps -1 through 17: session init, pre-stack,
-  physical confirmations, full bring-up, live-zero-state gate, ground
-  placement, second zero recheck, explicit per-trial
-  `APPROVED_FOR_SINGLE_PULSE=YES`, one pulse, immediate zero, human
-  observation, exact-PID shutdown, then the offline post-run verifier
-  with `--require-motion-metrics true`) -- with a fresh `RUN_ID` and
-  fresh evidence paths every time. No step is skipped or assumed still
-  valid from a previous attempt (e.g., a previous attempt's
-  `LIVE_ZERO_STATE_CHECK_PASS` does not carry over).
+  physical confirmations, full bring-up, live-zero-state gate,
+  **the repeatability pose-readiness gate (new step 10a, section 11.A --
+  required after `LIVE_ZERO_STATE_CHECK_PASS` and before ground
+  placement)**, ground placement, second zero recheck, explicit
+  per-trial `APPROVED_FOR_SINGLE_PULSE=YES`, one pulse, immediate zero,
+  human observation, exact-PID shutdown, then the offline post-run
+  verifier with `--require-motion-metrics true`) -- with a fresh
+  `RUN_ID` and fresh evidence paths every time. No step is skipped or
+  assumed still valid from a previous attempt (e.g., a previous
+  attempt's `LIVE_ZERO_STATE_CHECK_PASS` and
+  `REPEATABILITY_POSE_READINESS_PASS` do not carry over).
 - Between attempts: the robot is moved back to the exact marked start
   pose **manually, by hand**, only while every motion command is
   confirmed zero and the guard is confirmed `DISARMED`. This is a
   physical action, not a terminal command, and is itself a stop point
-  (see section 8) -- the operator must confirm the guard's disarmed
+  (see section 9) -- the operator must confirm the guard's disarmed
   state via the same read-only checks used in step 10 of the runbook
   before touching the robot.
 - This is a **single-condition** batch: no virtual peer, no paired
@@ -116,7 +125,7 @@ collection, per requirement 7)
     existing emergency procedure already requires.
   - A trial slot that exhausts its retry budget without producing a
     `VALID` attempt is reported as `UNFILLED`, counted against the
-    batch's completion rule (section 6), never silently substituted
+    batch's completion rule (section 5), never silently substituted
     with a different slot's data.
   - This policy is a proposal only -- it is not authorized for use
     until approved separately from the rest of this document, since it
@@ -129,6 +138,11 @@ collection, per requirement 7)
 ALL of these hold; if any fails, the attempt is recorded as `INVALID`,
 never silently discarded and never averaged in)
 
+- `REPEATABILITY_POSE_READINESS_PASS` (section 11.A --
+  `hil_repeatability_pose_readiness.py`) was achieved before ground
+  placement, after `LIVE_ZERO_STATE_CHECK_PASS` -- this is a
+  precondition for even attempting the pulse, checked separately from
+  (and in addition to) the criteria below.
 - `evaluate_verdict()` (unchanged, reused exactly) returns `PASS` for
   the attempt's own evidence, via the packaged
   `ground_diagnostic_post_run_verifier.py --require-motion-metrics true`.
@@ -221,10 +235,18 @@ WSL evidence root:           /home/eamon/epuck_comm_bags/srgrb_<BATCH_ID>_trial<
                                             run with --require-motion-metrics true)
 ```
 
-Tracked (committed), gitignored raw evidence excluded exactly as
-before. Every attempt directory is committed, including `INVALID` and
-`EXCLUDED` ones -- per requirement 7, nothing is overwritten or
-silently dropped:
+**Raw vs. tracked, stated explicitly:** the raw WSL command-evidence
+CSV, the raw Pi command-audit JSONL, and `recorder.log` all remain
+**local to the WSL/Pi filesystems and gitignored, exactly as for every
+prior ground-diagnostic run** -- never committed. The **only** files
+this experiment tracks (commits) per attempt are the two already-used
+derived artifacts (`SUMMARY.md`, `post_run_verification.json`); at the
+batch level, the only tracked files are the two derived aggregation
+outputs (`BATCH_SUMMARY.md`, `batch_summary.json`). Every attempt
+directory shown below is committed, including `INVALID` and `EXCLUDED`
+ones -- per requirement 7, nothing is overwritten or silently dropped
+-- but only its derived `SUMMARY.md` and `post_run_verification.json`,
+never its raw CSV/JSONL:
 
 ```
 experiments/07_reality_gap/hil_single_real_shared_exit_20260723/
@@ -290,10 +312,13 @@ batch statistic (per requirement 10)
    and update the retry-policy bookkeeping in section 4.
 3. When all 5 trial slots are filled (`BATCH_COMPLETE`) or the batch
    is otherwise ended (retry budget exhausted on an unfilled slot, or
-   an `EXCLUDED` attempt per section 4): compute min/max/mean/stddev
-   per metric in section 7 across valid attempts only, write
-   `BATCH_SUMMARY.md` + `batch_summary.json`, explicitly labelled
-   `BATCH_COMPLETE` or `INCOMPLETE_BATCH, n_valid=<k>/5`.
+   an `EXCLUDED` attempt per section 4): add every attempt to the
+   explicit attempts manifest (section 11.B's schema) and run
+   `hil_repeatability_batch_aggregator.py` against it, producing
+   `batch_summary.json` + `BATCH_SUMMARY.md` with `BATCH_COMPLETE`,
+   `INCOMPLETE_BATCH`, `BATCH_ABORTED_EXCLUDED`, or
+   `BATCH_INVALID_PROTOCOL` and the descriptive statistics (section
+   11.B) across valid attempts only.
 4. This analysis plan produces no new acceptance-rule function and
    does not touch `evaluate_verdict()` -- it only aggregates
    already-computed per-attempt verdicts and metrics.
@@ -306,17 +331,22 @@ in full)
 2. Before Trial 1's physical bring-up: the same six verbal
    confirmations already required (`GROUND_DIAGNOSTIC_RUNBOOK.md`
    step 2).
-3. Before each attempt's pulse: a **separate, per-attempt**
+3. After `LIVE_ZERO_STATE_CHECK_PASS` and before ground placement:
+   `REPEATABILITY_POSE_READINESS_PASS` (section 11.A), read-only,
+   checked fresh for every attempt -- a `BLOCKED` result here stops
+   that attempt before the robot is ever placed on the ground, exactly
+   like a `LIVE_ZERO_STATE_CHECK_BLOCKED` result would.
+4. Before each attempt's pulse: a **separate, per-attempt**
    `APPROVED_FOR_SINGLE_PULSE=YES`, never inferred from an earlier
    attempt's approval (runbook step 12, repeated in full every
    attempt).
-4. After each attempt's shutdown, before manually returning the robot
+5. After each attempt's shutdown, before manually returning the robot
    to the start marker: explicit confirmation that all motion commands
    are zero and the guard is `DISARMED`.
-5. Before starting the *next* attempt's bring-up (whether a new trial
+6. Before starting the *next* attempt's bring-up (whether a new trial
    slot or a retry): explicit approval to proceed with that specific
    attempt.
-6. Any safety-abort criterion (section 5) ends the attempt and the
+7. Any safety-abort criterion (section 5) ends the attempt and the
    entire remaining batch immediately, and ends the retry policy for
    the whole batch (section 4) -- remaining trials are not attempted
    "to complete the set."
@@ -335,8 +365,7 @@ is proposed, it will define its own naming convention (e.g. a
 own specification document, without requiring any change to this
 one's evidence layout.
 
-## 11. Minimal new offline tooling (implemented and tested this
-correction pass; mandatory per requirement 1, not optional)
+## 11. Minimal new offline tooling (both readiness gaps now closed)
 
 **Reusable as-is, no change:** the measured area, coordinate
 convention, marked start point, `hil_cmd_vel_guard.py`,
@@ -344,11 +373,14 @@ convention, marked start point, `hil_cmd_vel_guard.py`,
 `state_publisher.py`, the Pi audit server and
 `pi_ground_diagnostic_audit_verifier.py`, `hil_wheel_suspension_test.py`,
 `hil_ground_diagnostic_session.py`, `hil_frozen_params.json`,
-`ground_diagnostic_params.json`'s measured geometry, and the entire
+`ground_diagnostic_params.json`'s measured geometry, the existing
+`hil_ground_diagnostic_phases.py` live-zero-state acceptance rules
+(`evaluate_wsl_live_state()`/`evaluate_combined_gate()`, entirely
+unchanged by section 11.A below), and the entire
 `GROUND_DIAGNOSTIC_RUNBOOK.md` procedure.
 
-**Implemented (additive only, no protocol/controller/guard/bridge
-change):**
+**Pose-instrumented motion metrics (implemented, first correction
+pass; additive only, no protocol/controller/guard/bridge change):**
 
 - `hil_command_evidence_recorder.py`: three additive CSV columns,
   `state_x_m`/`state_y_m`/`state_yaw_rad`, appended to `CSV_FIELDS`
@@ -364,10 +396,11 @@ change):**
   converts `state_x_m`/`state_y_m`/`state_yaw_rad` to float when the
   columns are present (`.get()`-based, so their absence in an
   old-format CSV is not an error). `count_nonzero_pulses()`/
-  `PulseWindow` moved here (from `ground_diagnostic_post_run_verifier.py`,
-  unchanged behavior) so the new motion-metrics module can reuse pulse
-  detection without a circular import.
-- `hil_motion_repeatability_metrics.py` (new, pure, no ROS): computes
+  `PulseWindow` live here (moved from
+  `ground_diagnostic_post_run_verifier.py`, unchanged behavior) so
+  every module that needs single-pulse detection shares one
+  implementation without a circular import.
+- `hil_motion_repeatability_metrics.py` (pure, no ROS): computes
   longitudinal/lateral displacement (rotated into the frozen
   `start_yaw_rad` frame), final yaw error (correctly wrapped to
   `[-pi, pi]`), and stop-line clearance, from the three new columns
@@ -385,6 +418,84 @@ change):**
   feed `evaluate_verdict()` and never change `diagnostic_verdict`,
   satisfying requirement 9's prohibition on inventing a PASS tolerance.
 
+### 11.A -- Repeatability-specific pre-pulse pose-evidence gate
+(implemented, second correction pass)
+
+`hil_repeatability_pose_readiness.py` (pure, no ROS at all -- reads
+only the recorder's own CSV file from disk, never a ROS topic):
+
+- `evaluate_repeatability_pose_readiness()`: pure boolean/count facts
+  in, `REPEATABILITY_POSE_READINESS_PASS`/`_BLOCKED` + reasons out.
+  Blocks unless: the CSV exists and is (recently observed) growing;
+  its header contains `state_x_m`/`state_y_m`/`state_yaw_rad`; at
+  least 2 of the most recent state-topic rows have finite values for
+  all three pose fields; those valid samples' timestamps are ordered;
+  the latest valid pose sample is no older than
+  `max_pose_sample_staleness_s` (default 1.0 s, the same staleness
+  rule `hil_motion_repeatability_metrics.py` uses); `validity_flags==7`;
+  and neither the guarded nor the upstream command's last recorded
+  value is nonzero.
+- `compute_pose_readiness_facts()`: pure, derives every one of those
+  counts/booleans from an already-loaded row list plus a caller-supplied
+  `now_ns` -- fully deterministic and testable, never reads the system
+  clock itself.
+- `csv_header_has_pose_columns()` / `is_csv_growing()`: the only two
+  facts that need real file I/O (a header read, and a
+  before/after-a-real-wait size comparison) -- both strictly read-only,
+  no write, no ROS.
+- This gate is **entirely separate** from, and does not weaken or
+  change, `hil_ground_diagnostic_phases.evaluate_wsl_live_state()`/
+  `evaluate_combined_gate()` -- those remain the binding live-zero-state
+  rules for every ground diagnostic, including this one. This gate is
+  required in addition, only for
+  `SINGLE_ROBOT_GROUND_REPEATABILITY_BASELINE`, after
+  `LIVE_ZERO_STATE_CHECK_PASS` and before ground placement (section 3,
+  section 9 step 3). A historical or future non-repeatability run
+  never invokes this module, so its CSV (which may lack the pose
+  columns) is entirely unaffected.
+
+### 11.B -- Batch aggregation tooling (implemented, second correction
+pass)
+
+`hil_repeatability_batch_aggregator.py` (pure, offline, read-only):
+
+- CLI: `--batch-id`, `--spec-commit`, `--attempts-manifest` (an
+  explicit JSON file listing every attempt -- the aggregator never
+  scans a directory and silently selects files), `--output-json`,
+  `--output-md`.
+- Manifest schema: `{"batch_id", "spec_commit", "attempts": [{"trial",
+  "attempt", "run_id", "classification", "reason",
+  "verification_json_path"}, ...]}` -- see the module's own docstring
+  and `test_hil_repeatability_batch_aggregator.py` for worked examples.
+- Validates: unique `run_id` across all attempts; unique
+  (trial, attempt) pairs; `trial` in `1..5`; attempt numbers per slot
+  contiguous starting at 1 (an omitted attempt number is a manifest
+  error, not silently tolerated); each referenced
+  `post_run_verification.json` parses (a malformed one is reported,
+  never crashes the aggregator); each `VALID`-classified attempt's own
+  verification JSON actually shows `integrity_ok=true`,
+  `diagnostic_verdict=PASS`, `motion_metrics_required=true`, and
+  `motion_metrics_ok=true` -- a manifest that claims `VALID` without
+  the evidence backing it up does not fill the slot, and is flagged.
+- Enforces: exactly one `VALID` attempt fills each trial slot (a
+  second one is a protocol violation); `BATCH_COMPLETE` only at 5/5
+  filled slots, else `INCOMPLETE_BATCH`; any `EXCLUDED` attempt (that
+  is properly the last entry) yields `BATCH_ABORTED_EXCLUDED`; a 4th
+  attempt at any slot, or an `EXCLUDED` attempt with further attempts
+  listed after it, yields `BATCH_INVALID_PROTOCOL`.
+- Computes min/max/mean/**sample** standard deviation (`n-1`
+  denominator) per metric in section 7 across `VALID` attempts only --
+  every descriptive-stats dict has exactly the keys `n`/`min`/`max`/
+  `mean`/`sample_stddev`, nothing inferential (no confidence interval,
+  no p-value, no hypothesis test) anywhere in its output, checked by a
+  dedicated test.
+- Every `INVALID`/`EXCLUDED` attempt and its reason appears in both
+  `batch_summary.json` and `BATCH_SUMMARY.md`, never omitted.
+- Changes nothing about `evaluate_verdict()`, any acceptance threshold,
+  the recorder, guard, bridge, controller, protocol, or geometry --
+  purely an aggregation layer over already-produced verification JSON
+  files.
+
 **Backward compatibility, verified:** re-running
 `ground_diagnostic_post_run_verifier.py` (with `--require-motion-metrics`
 left at its default `false`) against the already-accepted RUN_ID
@@ -392,13 +503,9 @@ left at its default `false`) against the already-accepted RUN_ID
 reproduces `INTEGRITY_OK=true`, `VERDICT=PASS`, `REASONS=[]`, and the
 already-reconciled `68/12112` mismatch count unchanged;
 `motion_metrics.available=False` (`reason=NO_POSE_SAMPLES_AVAILABLE`),
-`motion_metrics_ok=true` (not required for historical evidence).
-
-**Not yet implemented, deliberately out of scope for this document:**
-`BATCH_SUMMARY.md`/`batch_summary.json` generation tooling (section 6's
-proposed format) -- to be built, if approved, before the batch starts,
-as its own small aggregation script over already-produced
-`post_run_verification.json` files; produces no new acceptance logic.
+`motion_metrics_ok=true` (not required for historical evidence). The
+new 11.A gate is never invoked for that (or any other) historical,
+non-repeatability run.
 
 ## 12. Explicitly not authorized by this document
 
