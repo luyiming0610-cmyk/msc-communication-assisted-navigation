@@ -57,22 +57,61 @@ topic never existed).
 
 ## Evidence
 
-**No raw evidence exists for this attempt.** The recorder crashed
-before writing any CSV row; the frozen evidence root
-(`/home/eamon/epuck_comm_bags/srgrb_20260727_trial1_attempt1_20260727_131437/`)
-was never created and remains absent, preserved exactly as found at
-the moment of the crash. The auto-generated directory the wrapper
-mistakenly created
-(`/home/eamon/epuck_comm_bags/hil_command_evidence_20260727_124840/`)
-contains only `manifest.json` (recording PID `876` and the wrong,
-never-actually-used `csv_path`) and `recorder.log` (the Python
-traceback) -- both preserved unmodified, left in place as the record
-of the crash, not deleted or "cleaned up." No Pi JSONL was ever
-produced (the audited server never received a single command). No
-`post_run_verification.json` exists for this attempt --
-`ground_diagnostic_post_run_verifier.py` was never run against it,
-since there is no evidence to verify. All of the above remains local
-and gitignored, exactly as for every other attempt's raw evidence.
+**Corrected 2026-07-27, following a read-only evidence audit performed
+before creating a replacement batch:** the original version of this
+section stated "no raw evidence exists for this attempt" and "no Pi
+JSONL was ever produced" -- both **incorrect**. The WSL-side recorder
+crash does not imply the independently-running Pi audited server
+produced nothing; the audit below checked every relevant path
+directly rather than assuming.
+
+**WSL side (unchanged from the original report, now re-confirmed):**
+- The frozen evidence root
+  (`/home/eamon/epuck_comm_bags/srgrb_20260727_trial1_attempt1_20260727_131437/`)
+  was never created and remains absent -- confirmed again by direct
+  `ls` (`No such file or directory`).
+- The auto-generated directory the wrapper mistakenly created
+  (`/home/eamon/epuck_comm_bags/hil_command_evidence_20260727_124840/`)
+  contains only `manifest.json` (recording PID `876` and the wrong,
+  never-actually-used `csv_path`) and `recorder.log` (the Python
+  `FileNotFoundError` traceback) -- both preserved unmodified,
+  confirmed byte-for-byte unchanged since the crash. **No
+  `command_evidence.csv` exists anywhere** -- the recorder's CSV
+  writer opens the file before writing anything else, so the crash
+  (which happened at that exact `open()` call) means zero CSV bytes
+  were ever written, at this or any other path.
+
+**Pi side (corrected -- this file DOES exist):**
+`/home/pi/real_robot_avoidance_v1/command_audit_20260727_131437.jsonl`
+exists: **22,978 lines, 4,492,732 bytes**, last modified
+`2026-07-27 13:55` (UTC, Pi clock), SHA-256
+`ed0107b489088c383340b5f804321df51d831627af3673d35181f0012a1ad96c`.
+This is produced by the audited Pi command server (PID `1125`), which
+ran and logged independently of the WSL recorder for the entire time
+between its own startup and its shutdown as part of this attempt's
+exact-PID sequence above -- the two processes' evidence streams are
+independent, and the WSL-side crash never stopped the Pi side from
+operating and logging normally.
+
+**What was checked and what was not:** existence, size, line count,
+and SHA-256 were confirmed by direct read-only inspection. The
+JSONL's actual record content was **not** analyzed as part of this
+correction (out of scope for this audit) -- no claim is made here
+about whether it contains only zero/idle-state records or anything
+else. This does not change the independently-confirmed operational
+facts already established live: the guard was never started, no arm
+command was ever sent, the robot was never placed on the ground, and
+no pulse or motion was observed at any point. `command_audit_20260727_131437.jsonl`
+remains on the Pi, untouched, local, and gitignored -- not committed,
+not deleted, not truncated, not renamed.
+
+No `post_run_verification.json` exists for this attempt --
+`ground_diagnostic_post_run_verifier.py` was never run against it (it
+requires all three of the WSL CSV, Pi JSONL, and Pi verdict JSON,
+and neither the WSL CSV nor a Pi verdict JSON exists). All raw
+evidence referenced above remains local and gitignored, exactly as
+for every other attempt's raw evidence -- nothing raw is committed
+here or anywhere in this repository.
 
 ## Fix applied offline, after full shutdown
 
