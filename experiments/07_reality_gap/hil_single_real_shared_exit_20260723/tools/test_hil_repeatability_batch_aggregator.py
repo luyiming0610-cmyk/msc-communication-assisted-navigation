@@ -360,5 +360,60 @@ class DescriptiveStatsOnlyTest(AggregatorFixtureBase):
             self.assertEqual(set(metric_stats.keys()), {"n", "min", "max", "mean", "sample_stddev"})
 
 
+class PerAttemptIdentityFieldsTest(AggregatorFixtureBase):
+    """spec_commit/execution_code_commit are optional, per-attempt,
+    purely informational identity fields -- added after a real
+    identity mismatch (SRGRB_20260727_02: a field named
+    "execution_head" was set to a documentation/registration commit
+    instead of the actual code commit an attempt would run against).
+    Must be preserved end-to-end into to_dict(), never validated for
+    format, and never affect batch_status/slot-filling/stats."""
+
+    def test_spec_commit_and_execution_code_commit_pass_through_to_dict(self):
+        path = self._write_verification("t1a1.json", "20260721_100000")
+        attempts = [
+            {
+                "trial": 1,
+                "attempt": 1,
+                "run_id": "20260721_100000",
+                "classification": "VALID",
+                "reason": None,
+                "verification_json_path": path,
+                "spec_commit": "4d777590d7189fedaffb105eddfd5003ea1cb40e",
+                "execution_code_commit": "8515dbb0cc6dba30dfc342bb215d453ce3b6286c",
+            }
+        ]
+        result = aggregate_batch({"batch_id": "SRGRB_TEST", "attempts": attempts})
+        as_dict = result.to_dict()
+        attempt_dict = as_dict["attempts"][0]
+        self.assertEqual(attempt_dict["spec_commit"], "4d777590d7189fedaffb105eddfd5003ea1cb40e")
+        self.assertEqual(attempt_dict["execution_code_commit"], "8515dbb0cc6dba30dfc342bb215d453ce3b6286c")
+        # Purely informational -- a VALID attempt with these fields
+        # still fills its slot exactly as without them.
+        self.assertTrue(result.attempt_outcomes[0].counts_as_valid)
+        self.assertEqual(result.slot_fill[1].attempt, 1)
+
+    def test_missing_identity_fields_default_to_none_not_an_error(self):
+        # Backward compatibility: an older manifest (like
+        # SRGRB_20260727's, written before these fields existed) must
+        # still aggregate cleanly.
+        path = self._write_verification("t1a1.json", "20260721_100000")
+        attempts = [
+            {
+                "trial": 1,
+                "attempt": 1,
+                "run_id": "20260721_100000",
+                "classification": "VALID",
+                "reason": None,
+                "verification_json_path": path,
+            }
+        ]
+        result = aggregate_batch({"batch_id": "SRGRB_TEST", "attempts": attempts})
+        attempt_dict = result.to_dict()["attempts"][0]
+        self.assertIsNone(attempt_dict["spec_commit"])
+        self.assertIsNone(attempt_dict["execution_code_commit"])
+        self.assertTrue(result.attempt_outcomes[0].counts_as_valid)
+
+
 if __name__ == "__main__":
     unittest.main()

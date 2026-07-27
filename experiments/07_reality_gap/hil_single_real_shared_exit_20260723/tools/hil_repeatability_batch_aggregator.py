@@ -21,7 +21,7 @@ Manifest schema (JSON, required, explicit -- see also
 test_hil_repeatability_batch_aggregator.py for worked examples):
 {
   "batch_id": "SRGRB_20260728",
-  "spec_commit": "<git commit hash the batch was run against>",
+  "original_spec_commit": "<the specification commit the batch was originally approved under>",
   "attempts": [
     {
       "trial": 1,
@@ -29,11 +29,31 @@ test_hil_repeatability_batch_aggregator.py for worked examples):
       "run_id": "20260728_101500",
       "classification": "VALID" | "INVALID" | "EXCLUDED",
       "reason": null or "<short reason, required if not VALID>",
-      "verification_json_path": "path/to/post_run_verification.json"
+      "verification_json_path": "path/to/post_run_verification.json",
+      "spec_commit": "<optional -- the specification commit in effect for THIS attempt>",
+      "execution_code_commit": "<optional -- the code commit the physical stack was actually brought up against for THIS attempt>"
     },
     ...
   ]
 }
+
+`spec_commit`/`execution_code_commit` are OPTIONAL, per-attempt, purely
+informational identity fields -- never validated for format, never
+compared against each other or against `original_spec_commit`, and
+never affect `batch_status`, slot-filling, or descriptive statistics.
+They exist so a batch spanning a code/spec fix between attempts (e.g.
+a retry after an offline bug fix) can record, per attempt, exactly
+which specification and code commit that specific attempt actually
+ran against -- distinct from `original_spec_commit` (the identity of
+the batch's own original approval, which never changes once the batch
+starts) and distinct from the runtime evidence's own
+`repository_head_at_start` (recorded separately, live, at the start of
+each attempt's actual bring-up -- not part of this manifest). Neither
+field is ever named "execution_head" -- that name conflated a
+documentation/registration commit with the actual commit code
+executed against, which caused a real identity mismatch live during
+SRGRB_20260727_02 (see this batch's own attempts_manifest.json for the
+historical record of that correction).
 
 `verification_json_path` is resolved relative to the MANIFEST FILE'S
 OWN DIRECTORY, never the process's current working directory -- a
@@ -84,6 +104,8 @@ class AttemptRecord:
     classification: str
     reason: Optional[str]
     verification_json_path: str
+    spec_commit: Optional[str] = None
+    execution_code_commit: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -126,6 +148,8 @@ class BatchAggregationResult:
                     "reason": o.attempt.reason,
                     "counts_as_valid": o.counts_as_valid,
                     "errors": list(o.errors),
+                    "spec_commit": o.attempt.spec_commit,
+                    "execution_code_commit": o.attempt.execution_code_commit,
                 }
                 for o in self.attempt_outcomes
             ],
@@ -186,6 +210,8 @@ def _parse_manifest(manifest: dict) -> tuple:
                 classification=classification,
                 reason=reason,
                 verification_json_path=verification_json_path,
+                spec_commit=raw.get("spec_commit"),
+                execution_code_commit=raw.get("execution_code_commit"),
             )
         )
 
@@ -348,7 +374,9 @@ def render_markdown(batch_id: str, spec_commit: str, result: BatchAggregationRes
     lines = [
         f"# Batch summary -- {batch_id}",
         "",
-        f"Specification/frozen commit: `{spec_commit}`",
+        f"Original specification commit (batch approval): `{spec_commit}` -- "
+        "see each attempt's own spec_commit/execution_code_commit columns below for what that "
+        "specific attempt actually ran against.",
         "",
         f"**BATCH_STATUS = {result.batch_status}**",
         f"n_valid = {result.n_valid}/{len(REQUIRED_TRIAL_SLOTS)}"
@@ -367,13 +395,17 @@ def render_markdown(batch_id: str, spec_commit: str, result: BatchAggregationRes
         lines.append("")
 
     lines.append("## Attempts")
-    lines.append("| Trial | Attempt | Run ID | Classification | Reason | Counts as valid | Errors |")
-    lines.append("|---|---|---|---|---|---|---|")
+    lines.append(
+        "| Trial | Attempt | Run ID | Classification | Reason | Counts as valid | Spec commit | "
+        "Execution code commit | Errors |"
+    )
+    lines.append("|---|---|---|---|---|---|---|---|---|")
     for o in result.attempt_outcomes:
         a = o.attempt
         lines.append(
             f"| {a.trial} | {a.attempt} | {a.run_id} | {a.classification} | {a.reason or ''} | "
-            f"{o.counts_as_valid} | {'; '.join(o.errors) if o.errors else ''} |"
+            f"{o.counts_as_valid} | {a.spec_commit or ''} | {a.execution_code_commit or ''} | "
+            f"{'; '.join(o.errors) if o.errors else ''} |"
         )
     lines.append("")
 
