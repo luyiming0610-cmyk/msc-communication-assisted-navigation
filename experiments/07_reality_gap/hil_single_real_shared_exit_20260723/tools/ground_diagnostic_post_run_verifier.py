@@ -51,51 +51,19 @@ from analyze_ground_diagnostic import (
     compute_sha256_manifest,
     compute_speed_summary,
     compute_validity_flags_dropouts,
+    count_nonzero_pulses,
     evaluate_verdict,
     find_nonzero_command_window,
     load_pi_jsonl_records,
     load_wsl_csv_rows,
 )
+from hil_motion_repeatability_metrics import DEFAULT_MAX_SAMPLE_STALENESS_S, compute_motion_metrics
 
 DEFAULT_TOLERANCE_MPS = 0.005
 DEFAULT_MAX_TIME_DIFF_S = 0.2
 DEFAULT_LINEAR_CAP_MPS = 0.02
 DEFAULT_REQUIRED_VALIDITY_FLAGS = 7
-
-
-@dataclass(frozen=True)
-class PulseWindow:
-    start_time_ns: int
-    end_time_ns: int
-    duration_s: float
-
-
-def count_nonzero_pulses(wsl_rows: list, topic: str) -> tuple:
-    """Counts contiguous nonzero runs ("pulses") on `topic`, in the
-    order they were recorded. Pure/read-only -- operates on
-    already-loaded rows only."""
-    topic_rows = [r for r in wsl_rows if r.get("topic") == topic and isinstance(r.get("local_time_ns"), int)]
-
-    def is_nonzero(r):
-        return (isinstance(r.get("linear_x"), float) and r["linear_x"] != 0.0) or (
-            isinstance(r.get("angular_z"), float) and r["angular_z"] != 0.0
-        )
-
-    pulses = []
-    run_start = None
-    prev_time = None
-    for row in topic_rows:
-        if is_nonzero(row):
-            if run_start is None:
-                run_start = row["local_time_ns"]
-            prev_time = row["local_time_ns"]
-        else:
-            if run_start is not None:
-                pulses.append(PulseWindow(run_start, prev_time, (prev_time - run_start) / 1e9))
-                run_start = None
-    if run_start is not None:
-        pulses.append(PulseWindow(run_start, prev_time, (prev_time - run_start) / 1e9))
-    return tuple(pulses)
+DEFAULT_STOP_LINE_DISTANCE_M = 0.10
 
 
 def find_first_arm_time_ns(wsl_rows: list) -> Optional[int]:
@@ -156,6 +124,8 @@ class PostRunVerificationResult:
     run_id: str
     file_checks: dict
     facts: dict
+    motion_metrics_required: bool = False
+    motion_metrics_ok: bool = True
 
     def to_dict(self) -> dict:
         return {
@@ -164,6 +134,8 @@ class PostRunVerificationResult:
             "diagnostic_verdict": self.diagnostic_verdict,
             "diagnostic_reasons": list(self.diagnostic_reasons),
             "run_id": self.run_id,
+            "motion_metrics_required": self.motion_metrics_required,
+            "motion_metrics_ok": self.motion_metrics_ok,
             "file_checks": {
                 k: {
                     "path": v.path,
@@ -216,11 +188,27 @@ def verify_run(
     tolerance_mps: float = DEFAULT_TOLERANCE_MPS,
     max_time_diff_s: float = DEFAULT_MAX_TIME_DIFF_S,
     external: ExternalConfirmations = ExternalConfirmations(),
+    require_motion_metrics: bool = False,
+    frozen_start_yaw_rad: float = 0.0,
+    stop_line_distance_m: float = DEFAULT_STOP_LINE_DISTANCE_M,
+    max_sample_staleness_s: float = DEFAULT_MAX_SAMPLE_STALENESS_S,
 ) -> PostRunVerificationResult:
     """Orchestrates the whole read-only verification. Never raises on
     missing/malformed evidence -- every failure mode is reported as a
     reason string, and diagnostic_verdict falls back to 'EXCLUDED' if
-    the evidence could not be parsed at all."""
+    the evidence could not be parsed at all.
+
+    Motion metrics (longitudinal/lateral displacement, final yaw
+    error, stop-line clearance -- see hil_motion_repeatability_metrics.py)
+    are always computed and reported when the evidence has the pose
+    columns; they never feed evaluate_verdict() and never change
+    diagnostic_verdict. require_motion_metrics=True (used for
+    SINGLE_ROBOT_GROUND_REPEATABILITY_BASELINE trials, never for
+    historical evidence recorded before the pose columns existed)
+    additionally requires motion_metrics.available to be True for
+    motion_metrics_ok -- reported as its own field, orthogonal to
+    integrity_ok and diagnostic_verdict, so a run missing pose data
+    is distinguishable from one that is unsafe or has broken evidence."""
     integrity_reasons: list = []
 
     file_checks = {
@@ -304,6 +292,15 @@ def verify_run(
     )
     upstream_pulses = count_nonzero_pulses(wsl_rows, upstream_topic)
     guarded_pulses = count_nonzero_pulses(wsl_rows, guarded_topic)
+    motion_metrics = compute_motion_metrics(
+        wsl_rows,
+        state_topic,
+        guarded_topic,
+        frozen_start_yaw_rad=frozen_start_yaw_rad,
+        stop_line_distance_m=stop_line_distance_m,
+        max_sample_staleness_s=max_sample_staleness_s,
+    )
+    motion_metrics_ok = motion_metrics.available if require_motion_metrics else True
 
     first_arm_time_ns = find_first_arm_time_ns(wsl_rows)
     pre_arm_nonzero = any_nonzero_before_time(wsl_rows, (upstream_topic, guarded_topic), first_arm_time_ns)
@@ -358,6 +355,7 @@ def verify_run(
         "pre_arm_nonzero_command_found": pre_arm_nonzero,
         "first_arm_time_ns": first_arm_time_ns,
         "malformed_pi_jsonl_line_count": malformed_pi_records,
+        "motion_metrics": motion_metrics.to_dict(),
     }
 
     return PostRunVerificationResult(
@@ -368,6 +366,8 @@ def verify_run(
         run_id=run_id,
         file_checks=file_checks,
         facts=facts,
+        motion_metrics_required=require_motion_metrics,
+        motion_metrics_ok=motion_metrics_ok,
     )
 
 
@@ -400,6 +400,18 @@ def main(argv=None) -> int:
     parser.add_argument("--no-unexpected-motion-observed", default="false")
     parser.add_argument("--robot-stayed-within-measured-area", default="false")
     parser.add_argument("--run-not-interrupted", default="false")
+    parser.add_argument(
+        "--require-motion-metrics",
+        default="false",
+        help="'true' makes motion_metrics_ok False whenever the pose columns/exactly-one-pulse "
+        "motion metrics are not available -- use for SINGLE_ROBOT_GROUND_REPEATABILITY_BASELINE "
+        "trials. Never affects diagnostic_verdict/evaluate_verdict(). Default 'false' so "
+        "historical evidence recorded before the pose columns existed (e.g. RUN_ID "
+        "20260727_102033) is unaffected.",
+    )
+    parser.add_argument("--frozen-start-yaw-rad", type=float, default=0.0)
+    parser.add_argument("--stop-line-distance-m", type=float, default=DEFAULT_STOP_LINE_DISTANCE_M)
+    parser.add_argument("--max-sample-staleness-s", type=float, default=DEFAULT_MAX_SAMPLE_STALENESS_S)
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
     def as_bool(s):
@@ -428,6 +440,10 @@ def main(argv=None) -> int:
         confirmed_diagnostic_linear_cap_mps=args.linear_cap_mps,
         required_validity_flags=args.required_validity_flags,
         external=external,
+        require_motion_metrics=as_bool(args.require_motion_metrics),
+        frozen_start_yaw_rad=args.frozen_start_yaw_rad,
+        stop_line_distance_m=args.stop_line_distance_m,
+        max_sample_staleness_s=args.max_sample_staleness_s,
     )
 
     with open(args.output_json, "w", encoding="utf-8") as fh:
@@ -439,6 +455,8 @@ def main(argv=None) -> int:
     print(f"VERDICT={result.diagnostic_verdict}")
     print(f"REASONS={list(result.diagnostic_reasons)}")
     print(f"RUN_ID={result.run_id}")
+    print(f"MOTION_METRICS_REQUIRED={result.motion_metrics_required}")
+    print(f"MOTION_METRICS_OK={result.motion_metrics_ok}")
     if result.facts:
         print(f"GUARDED_MAX_LINEAR_MPS={result.facts['speed_summary'].get('guarded_max_linear_mps')}")
         print(f"REQUESTED_MAX_LINEAR_MPS={result.facts['speed_summary'].get('requested_max_linear_mps')}")
@@ -454,8 +472,17 @@ def main(argv=None) -> int:
         print(f"guarded_vs_pi_matched_pairs={result.facts['guarded_vs_pi_matched_pairs']}")
         print(f"guarded_vs_pi_mismatched_pairs={result.facts['guarded_vs_pi_mismatched_pairs']}")
         print(f"PRE_ARM_NONZERO_COMMAND_FOUND={result.facts['pre_arm_nonzero_command_found']}")
+        motion = result.facts["motion_metrics"]
+        print(f"MOTION_METRICS_AVAILABLE={motion['available']}")
+        if not motion["available"]:
+            print(f"MOTION_METRICS_REASON={motion['reason']}")
+        else:
+            print(f"LONGITUDINAL_DISPLACEMENT_M={motion['longitudinal_displacement_m']}")
+            print(f"LATERAL_DISPLACEMENT_M={motion['lateral_displacement_m']}")
+            print(f"FINAL_YAW_ERROR_RAD={motion['final_yaw_error_rad']}")
+            print(f"STOP_LINE_CLEARANCE_M={motion['stop_line_clearance_m']}")
 
-    return 0 if (result.integrity_ok and result.diagnostic_verdict == "PASS") else 1
+    return 0 if (result.integrity_ok and result.diagnostic_verdict == "PASS" and result.motion_metrics_ok) else 1
 
 
 if __name__ == "__main__":

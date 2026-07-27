@@ -41,6 +41,30 @@ class BuildRowTest(unittest.TestCase):
         self.assertEqual(row["validity_flags"], 7)
         self.assertEqual(row["sequence"], 42)
 
+    def test_state_row_can_carry_pose_fields(self):
+        # Additive, 2026-07-27: state_x_m/state_y_m/state_yaw_rad, read
+        # from the same EpuckState subscription this recorder already
+        # holds -- no new subscription, no protocol change.
+        row = build_row(
+            local_time_ns=1,
+            local_monotonic_ns=2,
+            topic="/epuck1/state",
+            validity_flags=7,
+            sequence=42,
+            state_x_m=0.28,
+            state_y_m=0.125,
+            state_yaw_rad=0.0,
+        )
+        self.assertEqual(row["state_x_m"], 0.28)
+        self.assertEqual(row["state_y_m"], 0.125)
+        self.assertEqual(row["state_yaw_rad"], 0.0)
+
+    def test_non_state_row_leaves_pose_fields_none(self):
+        row = build_row(local_time_ns=1, local_monotonic_ns=2, topic="/cmd_vel", linear_x=0.01, angular_z=0.0)
+        self.assertIsNone(row["state_x_m"])
+        self.assertIsNone(row["state_y_m"])
+        self.assertIsNone(row["state_yaw_rad"])
+
     def test_row_always_has_exactly_csv_fields_keys(self):
         row = build_row(local_time_ns=1, local_monotonic_ns=2, topic="/cmd_vel")
         self.assertEqual(set(row.keys()), set(CSV_FIELDS))

@@ -31,6 +31,32 @@ def _csv_row(topic="", t_ns="", linear_x="", angular_z="", arm_state="", validit
     return f"{topic},{t_ns},{t_ns},{seq},{linear_x},{angular_z},{arm_state},{validity_flags},{bridge_connected},{rx}\n"
 
 
+CSV_HEADER_WITH_POSE = (
+    "topic,local_time_ns,local_monotonic_ns,sequence,linear_x,angular_z,arm_state,validity_flags,"
+    "bridge_connected,bridge_rx_count,state_x_m,state_y_m,state_yaw_rad\n"
+)
+
+
+def _csv_row_with_pose(
+    topic="",
+    t_ns="",
+    linear_x="",
+    angular_z="",
+    arm_state="",
+    validity_flags="",
+    bridge_connected="",
+    rx="",
+    seq="",
+    state_x_m="",
+    state_y_m="",
+    state_yaw_rad="",
+):
+    return (
+        f"{topic},{t_ns},{t_ns},{seq},{linear_x},{angular_z},{arm_state},{validity_flags},"
+        f"{bridge_connected},{rx},{state_x_m},{state_y_m},{state_yaw_rad}\n"
+    )
+
+
 def _sha256(path):
     hasher = hashlib.sha256()
     with open(path, "rb") as fh:
@@ -51,6 +77,12 @@ class VerifierFixtureBase(unittest.TestCase):
     def _write_csv(self, rows):
         with open(self.wsl_csv_path, "w", encoding="utf-8") as fh:
             fh.write(CSV_HEADER)
+            for row in rows:
+                fh.write(row)
+
+    def _write_csv_with_pose(self, rows):
+        with open(self.wsl_csv_path, "w", encoding="utf-8") as fh:
+            fh.write(CSV_HEADER_WITH_POSE)
             for row in rows:
                 fh.write(row)
 
@@ -398,6 +430,81 @@ class CliContractTest(VerifierFixtureBase):
         self.assertEqual(report["diagnostic_reasons"], [])
         self.assertIn("guarded_vs_pi_matched_pairs", report["facts"])
         self.assertIn("guarded_vs_pi_mismatched_pairs", report["facts"])
+
+
+class MotionMetricsBackwardCompatibilityTest(VerifierFixtureBase):
+    """Historical evidence (like RUN_ID 20260727_102033) has no
+    state_x_m/state_y_m/state_yaw_rad columns at all -- this must keep
+    parsing and reproducing PASS/[] exactly as before, regardless of
+    --require-motion-metrics."""
+
+    def test_historical_style_evidence_defaults_motion_metrics_ok_true(self):
+        _clean_pulse_evidence(self)
+        result = self._verify()  # require_motion_metrics defaults to False
+        self.assertEqual(result.diagnostic_verdict, "PASS")
+        self.assertEqual(result.diagnostic_reasons, ())
+        self.assertFalse(result.facts["motion_metrics"]["available"])
+        self.assertEqual(result.facts["motion_metrics"]["reason"], "NO_POSE_SAMPLES_AVAILABLE")
+        self.assertFalse(result.motion_metrics_required)
+        self.assertTrue(result.motion_metrics_ok)
+
+    def test_require_motion_metrics_true_does_not_change_diagnostic_verdict(self):
+        _clean_pulse_evidence(self)
+        result = self._verify(require_motion_metrics=True)
+        # Safety/task verdict is untouched even though motion metrics
+        # are unavailable and required -- these are orthogonal fields.
+        self.assertEqual(result.diagnostic_verdict, "PASS")
+        self.assertEqual(result.diagnostic_reasons, ())
+        self.assertTrue(result.motion_metrics_required)
+        self.assertFalse(result.motion_metrics_ok)
+
+
+class MotionMetricsAvailableTest(VerifierFixtureBase):
+    def test_pose_columns_present_with_one_pulse_satisfies_requirement(self):
+        self._write_csv_with_pose(
+            [
+                _csv_row_with_pose(topic="/hil_guard/arm", t_ns=1_000_000_000, arm_state="True"),
+                _csv_row_with_pose(
+                    topic="/epuck1/state",
+                    t_ns=1_000_000_000,
+                    validity_flags=7,
+                    state_x_m=0.25,
+                    state_y_m=0.125,
+                    state_yaw_rad=0.0,
+                ),
+                _csv_row_with_pose(topic="cmd_vel_unguarded", t_ns=2_000_000_000, linear_x=0.015, angular_z=0.0),
+                _csv_row_with_pose(topic="cmd_vel", t_ns=2_000_000_000, linear_x=0.015, angular_z=0.0),
+                _csv_row_with_pose(topic="cmd_vel_unguarded", t_ns=3_000_000_000, linear_x=0.0, angular_z=0.0),
+                _csv_row_with_pose(topic="cmd_vel", t_ns=3_000_000_000, linear_x=0.0, angular_z=0.0),
+                _csv_row_with_pose(
+                    topic="/epuck1/state",
+                    t_ns=3_500_000_000,
+                    validity_flags=7,
+                    state_x_m=0.28,
+                    state_y_m=0.125,
+                    state_yaw_rad=0.0,
+                ),
+                _csv_row_with_pose(
+                    topic="/epuck_bridge/status", t_ns=1_000_000_000, bridge_connected="True", rx=1
+                ),
+            ]
+        )
+        self._write_jsonl(
+            [
+                {"event": "tick_applied", "wall_time": 2.0, "monotonic_time": 2.0, "linear": 0.015, "angular": 0.0},
+                {"event": "tick_applied", "wall_time": 3.0, "monotonic_time": 3.0, "linear": 0.0, "angular": 0.0},
+            ]
+        )
+        self._write_verdict()
+        result = self._verify(require_motion_metrics=True, stop_line_distance_m=0.10)
+        self.assertTrue(result.motion_metrics_required)
+        self.assertTrue(result.motion_metrics_ok)
+        motion = result.facts["motion_metrics"]
+        self.assertTrue(motion["available"])
+        self.assertAlmostEqual(motion["longitudinal_displacement_m"], 0.03, places=6)
+        self.assertAlmostEqual(motion["stop_line_clearance_m"], 0.07, places=6)
+        # Displacement is reported, never used to fail/pass the run.
+        self.assertEqual(result.diagnostic_verdict, "PASS")
 
 
 if __name__ == "__main__":

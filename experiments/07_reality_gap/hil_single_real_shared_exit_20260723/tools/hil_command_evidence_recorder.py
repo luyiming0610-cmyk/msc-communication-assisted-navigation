@@ -13,8 +13,18 @@ audits' preconditions for any future powered session:
   - /cmd_vel_unguarded (geometry_msgs/Twist)   -- pre-guard command
   - /cmd_vel           (geometry_msgs/Twist)   -- final, driver-facing command
   - /hil_guard/arm     (std_msgs/Bool)          -- arm/disarm state
-  - /epuck1/state      (EpuckState, validity_flags field only)
+  - /epuck1/state      (EpuckState, validity_flags + pose fields)
   - /epuck_bridge/status (std_msgs/String, JSON payload)
+
+State-topic pose capture (state_x_m/state_y_m/state_yaw_rad, added
+2026-07-27 for SINGLE_ROBOT_GROUND_REPEATABILITY_BASELINE): purely
+additive CSV columns read from the SAME EpuckState subscription this
+recorder already holds -- state_publisher.py has always populated
+x_m/y_m/yaw_rad from its own real /odom subscription, this recorder
+simply did not record them before. No new subscription, no message
+type change, no state_publisher change. Every existing column's
+meaning is unchanged; a CSV produced before this change (missing these
+three columns entirely) remains valid input to every existing reader.
 
 Never publishes anything (verified by
 test_hil_command_evidence_recorder_zero_publishers.py).
@@ -64,6 +74,9 @@ CSV_FIELDS = [
     "sequence",
     "bridge_connected",
     "bridge_rx_count",
+    "state_x_m",
+    "state_y_m",
+    "state_yaw_rad",
 ]
 
 REQUIRED_COMMAND_TOPICS = ("/cmd_vel_unguarded", "/cmd_vel")
@@ -82,6 +95,9 @@ def build_row(
     sequence: Optional[int] = None,
     bridge_connected: Optional[bool] = None,
     bridge_rx_count: Optional[int] = None,
+    state_x_m: Optional[float] = None,
+    state_y_m: Optional[float] = None,
+    state_yaw_rad: Optional[float] = None,
 ) -> dict:
     """Pure row construction -- no I/O, no ROS. One dict per event,
     always with exactly CSV_FIELDS keys (missing values are None ->
@@ -97,6 +113,9 @@ def build_row(
         "sequence": sequence,
         "bridge_connected": bridge_connected,
         "bridge_rx_count": bridge_rx_count,
+        "state_x_m": state_x_m,
+        "state_y_m": state_y_m,
+        "state_yaw_rad": state_yaw_rad,
     }
 
 
@@ -296,6 +315,9 @@ def _build_node():
                 topic=self.args.state_topic,
                 validity_flags=int(msg.validity_flags),
                 sequence=int(msg.sequence),
+                state_x_m=float(msg.x_m),
+                state_y_m=float(msg.y_m),
+                state_yaw_rad=float(msg.yaw_rad),
             )
 
         def _on_bridge_status(self, msg) -> None:

@@ -45,7 +45,7 @@ def load_wsl_csv_rows(path: str) -> list:
                         row[key] = int(row[key])
                     except ValueError:
                         pass
-            for key in ("linear_x", "angular_z"):
+            for key in ("linear_x", "angular_z", "state_x_m", "state_y_m", "state_yaw_rad"):
                 if row.get(key):
                     try:
                         row[key] = float(row[key])
@@ -335,6 +335,44 @@ def compute_guarded_vs_pi_applied_mismatch(
             mismatches.append((g["local_time_ns"], g_linear, nearest.get("monotonic_time"), p_linear, diff))
 
     return MismatchResult(checked_pairs=checked, mismatched_pairs=tuple(mismatches))
+
+
+@dataclass(frozen=True)
+class PulseWindow:
+    start_time_ns: int
+    end_time_ns: int
+    duration_s: float
+
+
+def count_nonzero_pulses(wsl_rows: list, topic: str) -> tuple:
+    """Counts contiguous nonzero runs ("pulses") on `topic`, in the
+    order they were recorded. Pure/read-only -- operates on
+    already-loaded rows only. Moved here 2026-07-27 (from
+    ground_diagnostic_post_run_verifier.py) so
+    hil_motion_repeatability_metrics.py can reuse it without a
+    circular import between the two verifier-side modules."""
+    topic_rows = [r for r in wsl_rows if r.get("topic") == topic and isinstance(r.get("local_time_ns"), int)]
+
+    def is_nonzero(r):
+        return (isinstance(r.get("linear_x"), float) and r["linear_x"] != 0.0) or (
+            isinstance(r.get("angular_z"), float) and r["angular_z"] != 0.0
+        )
+
+    pulses = []
+    run_start = None
+    prev_time = None
+    for row in topic_rows:
+        if is_nonzero(row):
+            if run_start is None:
+                run_start = row["local_time_ns"]
+            prev_time = row["local_time_ns"]
+        else:
+            if run_start is not None:
+                pulses.append(PulseWindow(run_start, prev_time, (prev_time - run_start) / 1e9))
+                run_start = None
+    if run_start is not None:
+        pulses.append(PulseWindow(run_start, prev_time, (prev_time - run_start) / 1e9))
+    return tuple(pulses)
 
 
 def compute_sha256_manifest(paths: dict) -> dict:

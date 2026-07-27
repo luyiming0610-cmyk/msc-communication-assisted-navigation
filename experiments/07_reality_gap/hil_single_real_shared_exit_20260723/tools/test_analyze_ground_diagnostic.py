@@ -39,11 +39,15 @@ CSV_FIELDS = [
 
 
 def _write_csv(rows):
+    return _write_csv_with_fields(CSV_FIELDS, rows)
+
+
+def _write_csv_with_fields(fields, rows):
     tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, newline="", encoding="utf-8")
-    writer = csv.DictWriter(tmp, fieldnames=CSV_FIELDS)
+    writer = csv.DictWriter(tmp, fieldnames=fields)
     writer.writeheader()
     for row in rows:
-        full = {k: "" for k in CSV_FIELDS}
+        full = {k: "" for k in fields}
         full.update(row)
         writer.writerow(full)
     tmp.close()
@@ -71,6 +75,36 @@ class LoadWslCsvRowsTest(unittest.TestCase):
         path = _write_csv([{"topic": "/hil_guard/arm", "arm_state": "True"}])
         rows = load_wsl_csv_rows(path)
         self.assertIs(rows[0]["arm_state"], True)
+
+    def test_state_pose_fields_are_converted_when_present(self):
+        # Additive columns (2026-07-27) -- a CSV that DOES carry them
+        # (a new-format recorder output) must parse them as floats.
+        path = _write_csv_with_fields(
+            CSV_FIELDS + ["state_x_m", "state_y_m", "state_yaw_rad"],
+            [
+                {
+                    "topic": "/epuck1/state",
+                    "local_time_ns": 1000,
+                    "validity_flags": 7,
+                    "state_x_m": 0.28,
+                    "state_y_m": 0.125,
+                    "state_yaw_rad": 0.0,
+                }
+            ],
+        )
+        rows = load_wsl_csv_rows(path)
+        self.assertEqual(rows[0]["state_x_m"], 0.28)
+        self.assertEqual(rows[0]["state_y_m"], 0.125)
+        self.assertEqual(rows[0]["state_yaw_rad"], 0.0)
+
+    def test_old_format_csv_without_pose_columns_still_parses(self):
+        # Backward compatibility: a CSV written before this change (no
+        # state_x_m/state_y_m/state_yaw_rad columns at all) must still
+        # load without error -- the keys simply do not appear in the
+        # resulting row dicts.
+        path = _write_csv([{"topic": "/epuck1/state", "local_time_ns": 1000, "validity_flags": 7}])
+        rows = load_wsl_csv_rows(path)
+        self.assertNotIn("state_x_m", rows[0])
 
 
 class LoadPiJsonlRecordsTest(unittest.TestCase):
