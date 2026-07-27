@@ -231,6 +231,22 @@ recur):**
   filesystem slug and `BATCH_ID` are related but not
   interchangeable -- one is for paths, the other is the identifier
   recorded everywhere else.
+- **Collision-free `BATCH_ID` on a repeat date:** if a `BATCH_ID` for a
+  given date already has a committed batch directory (e.g.
+  `SRGRB_20260727` already exists, whether `BATCH_COMPLETE`,
+  `INCOMPLETE_BATCH`, or `BATCH_ABORTED_EXCLUDED`), a **new** batch
+  attempted on that same date must use an explicit sequence suffix:
+  `SRGRB_<YYYYMMDD>_<SEQ>` (`SEQ` = `2`, `3`, ... -- the first batch on
+  a date has no suffix). The filesystem slug follows the same rule as
+  above: `srgrb_<YYYYMMDD>_<SEQ>`, never `srgrb_SRGRB_<YYYYMMDD>_<SEQ>`.
+  Before starting a suffixed batch, confirm the exact proposed
+  `BATCH_ID` (and its filesystem slug) has no existing committed
+  directory under `single_robot_ground_repeatability_baseline/` --
+  this is a one-line, read-only check
+  (`test ! -e single_robot_ground_repeatability_baseline/<BATCH_ID>`),
+  not a new tool. This convention itself was proposed, not yet used
+  to create any batch, following `SRGRB_20260727`'s exclusion -- see
+  that batch's own `BATCH_SUMMARY.md`.
 
 Every attempt gets its own fresh `RUN_ID` (`<YYYYMMDD>_<HHMMSS>`, same
 convention as every prior run this session) and fresh, never-reused
@@ -255,6 +271,17 @@ document's list by mistake) is now explicit:
                                                    one of the seven frozen paths since it
                                                    does not exist until after the attempt)
 ```
+
+**Starting the recorder at a frozen evidence root (corrected, found live
+during Trial 1 Attempt 1):** use
+`run_hil_command_evidence_recorder.sh start --output-root <path 3>
+[other args...]`, **never** a bare `--output-csv <path>`. The wrapper
+now rejects a bare `--output-csv` outright (nonzero exit,
+`HIL_COMMAND_EVIDENCE_RECORDER_REJECTED`) instead of silently letting
+it collide with the wrapper's own auto-generated path -- see
+`run_hil_command_evidence_recorder.sh`'s own module docstring and
+`test_run_hil_command_evidence_recorder_output_root_e2e.sh` for the
+full incident and fix.
 
 **Raw vs. tracked, stated explicitly:** the raw WSL command-evidence
 CSV, the raw Pi command-audit JSONL, `manifest.json`, and

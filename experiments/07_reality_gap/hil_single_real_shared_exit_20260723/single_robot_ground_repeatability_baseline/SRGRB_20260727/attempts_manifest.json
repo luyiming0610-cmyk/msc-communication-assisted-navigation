@@ -1,5 +1,5 @@
 {
-  "_comment": "Tracked (committed) attempts manifest for batch SRGRB_20260727. Small, human/machine-readable JSON only -- not raw evidence. Contains Trial 1 Attempt 1 only -- no future RUN_ID values are invented in advance. classification=PENDING is a PLANNING STATE ONLY, not a result -- hil_repeatability_batch_aggregator.py's VALID_CLASSIFICATIONS is exactly VALID/INVALID/EXCLUDED, so a manifest containing any PENDING entry cannot be fed to the aggregator at all. No trial result -- valid, invalid, or excluded -- is implied by PENDING. This file will be updated (in a further commit) with the real classification and reason once Trial 1 Attempt 1's post_run_verification.json actually exists after shutdown. verification_json_path is relative to this manifest's own directory, resolved by hil_repeatability_batch_aggregator.py against the manifest file's location, never the process's current working directory.",
+  "_comment": "Tracked (committed) attempts manifest for batch SRGRB_20260727. Small, human/machine-readable JSON only -- not raw evidence. Trial 1 Attempt 1 is EXCLUDED: the WSL command-evidence recorder (PID 876) crashed at startup with FileNotFoundError, before the guard was ever started, before any arm command, before ground placement, before any pulse or motion -- a procedural/instrumentation failure, not a motion or safety failure. Root cause and fix: run_hil_command_evidence_recorder.sh's --output-csv/--output-root argument-collision bug, fixed offline after full shutdown. Per this batch's approved retry policy, this EXCLUDED attempt ends the entire batch (BATCH_ABORTED_EXCLUDED) and requires a fresh approval cycle before any further attempt -- see trial1_attempt1_20260727_131437/SUMMARY.md and BATCH_SUMMARY.md. verification_json_path is relative to this manifest's own directory; no post_run_verification.json exists for this attempt (no evidence was ever produced), so the aggregator reports it as not found -- this does not affect the attempt's own EXCLUDED classification or the batch's BATCH_ABORTED_EXCLUDED status.",
   "batch_id": "SRGRB_20260727",
   "spec_commit": "16dd56d87ea88f72de4e50da3434f7ffbffe7a59",
   "attempts": [
@@ -7,8 +7,8 @@
       "trial": 1,
       "attempt": 1,
       "run_id": "20260727_131437",
-      "classification": "PENDING",
-      "reason": null,
+      "classification": "EXCLUDED",
+      "reason": "RECORDER_STARTUP_CRASH_WRONG_OUTPUT_PATH",
       "verification_json_path": "trial1_attempt1_20260727_131437/post_run_verification.json"
     }
   ]
