@@ -1,0 +1,135 @@
+# First ground diagnostic, run 20260727_102033 -- epuck5809 (2026-07-27)
+
+**Classification: `EXCLUSIONARY_GROUND_DIAGNOSTIC_PASS`.**
+
+This is a single, bounded, straight-line, low-speed diagnostic pulse --
+**not** a formal cooperative-navigation trial, **not** a shared-exit
+trial, and **not** a formal HIL task trial. It establishes only that
+the guarded command path, from the physical driver through to the
+wheels and back through independent Pi- and WSL-side evidence, behaves
+as designed for one short forward pulse.
+
+## Frozen code/config identity
+
+Git commit at the time this run's physical stack was brought up:
+`09eea0accaa3fef662d7792f24c74b397b5e15e9` (tracked tree clean,
+confirmed via `PRE_STACK_CHECK` immediately before startup).
+
+## Pre-motion gate sequence
+
+- `GROUND_DIAGNOSTIC_PRE_STACK_CHECK_PASS` before any process started.
+- Full bring-up (Pi driver, audited Pi server, WSL bridge,
+  state_publisher, WSL command-evidence recorder at `--duration-s
+  3600`, guard started DISARMED) each independently verified.
+- `GROUND_DIAGNOSTIC_LIVE_ZERO_STATE_CHECK_PASS` achieved **before**
+  the robot was placed on the ground -- `validity_flags=7`, bridge
+  connected, WSL CSV growing zero-only, Pi verifier verdict `PASS`
+  with zero nonzero commands, guard sole `/cmd_vel` publisher with
+  zero output, `/cmd_vel_unguarded` absent.
+- After ground placement, a second read-only zero-output recheck
+  (`/cmd_vel` all-zero, guard still sole publisher) passed.
+- Explicit, separate approval `APPROVED_FOR_SINGLE_PULSE=YES` was
+  given only after that recheck -- never inferred from any earlier
+  confirmation.
+
+## Pulse result
+
+| Quantity | Requested (upstream) | Guarded (`/cmd_vel`) | Pi-applied |
+|---|---|---|---|
+| Max linear (m/s) | 0.015 | 0.015 | 0.015 |
+| Max angular (rad/s) | 0.0 | 0.0 | 0.0 |
+
+- Confirmed diagnostic linear cap: 0.02 m/s (frozen guard value) --
+  the pulse (0.015 m/s) never approached, let alone exceeded, it.
+- Upstream nonzero window: duration 1.884 s, final value zero.
+- Guarded nonzero window: duration 1.951 s, final value zero.
+- `validity_flags` dropouts during the run: **0** (no episodes).
+- Bridge: 800 connected samples recorded, 0 disconnected samples,
+  never disconnected.
+- No nonzero command was recorded on either evidence stream before
+  the guard was armed.
+
+## Operator observation
+
+```
+PULSE_VISUAL_OBSERVATION=EXPECTED
+MOTION=SHORT_STRAIGHT_LOW_SPEED
+STOPPED_COMPLETELY=YES
+UNEXPECTED_SOUND=NO
+VISIBLE_DRIFT=NO
+UNEXPECTED_DIRECTION=NO
+MEASURED_STOPPING_CLEARANCE_M=0.07
+MEASUREMENT_REFERENCE=ROBOT_CENTRE_TO_MARKED_STOP_LINE
+```
+
+## Timing-edge cross-check (diagnostic only, not an acceptance-rule input)
+
+`compute_guarded_vs_pi_applied_mismatch()` (nearest wall-clock time
+match between the WSL-recorded guarded output and the Pi's own
+applied-command log, tolerance 0.005 m/s, max time difference 0.2 s)
+reports **62 of 12112 matched pairs** as mismatched. Every one of them
+falls exactly at the pulse's rise (~t=819.0-820.6 s) or fall
+(~t=822.1-822.4 s): one side already reflects the new value (`0.0` <->
+`0.015`) while the other, sampled a few tens of milliseconds apart
+across two independent clocks (WSL wall clock vs. Pi monotonic time),
+still reflects the old one. No mismatched pair shows any value other
+than `0.0` or `0.015`; no pair involves a nonzero angular value. This
+function's own docstring already states it does not claim to prove
+synchrony beyond its matching window -- it is not one of
+`evaluate_verdict()`'s inputs and does not affect this run's
+classification.
+
+## Binding acceptance-rule verdict
+
+`analyze_ground_diagnostic.evaluate_verdict()`, applied to this run's
+confirmed facts (geometry confirmed, both evidence logs active before
+arm, `validity_flags=7` before motion, guard sole publisher, no
+pre-arm nonzero command, angular commanded/applied both `0.0`, guarded
+max linear `0.015` <= cap `0.02`, final command confirmed zero, robot
+stayed within the measured area, no unexpected motion observed, run
+not interrupted):
+```
+VERDICT=PASS
+REASONS=[]
+```
+
+## Shutdown
+
+Exact-PID `kill -INT` only, never `pkill`, recorder last:
+
+| Process | PID(s) |
+|---|---|
+| Guard | 1155 |
+| state_publisher | 969 (wrapper) / 970 (node) |
+| WSL bridge | 890 |
+| Audited Pi server | 756 |
+| Pi driver | 678 (wrapper) / 679 (node) |
+| WSL command-evidence recorder | 1076 (last) |
+
+Confirmed afterward: no related process remains on either machine;
+`/cmd_vel` absent from `ros2 topic list`.
+
+## Evidence (raw files preserved on disk only, gitignored, never committed here)
+
+| File | Path | SHA-256 |
+|---|---|---|
+| Pi command-audit JSONL | `/home/pi/real_robot_avoidance_v1/command_audit_20260727_102033.jsonl` | `28f113a6d376aa01a86c929370922d74e6ec956dc5bd210b4ea336401a243b9d` |
+| Pi verifier verdict JSON | `/home/pi/real_robot_avoidance_v1/pi_audit_verdict_20260727_102033.json` | `8e5f61a4f603c6fbbbf14a3d6804d65beb4563cb3c0ff579caea633d9360f9c1` |
+| WSL command-evidence CSV | `/home/eamon/epuck_comm_bags/first_ground_diagnostic_20260727_102033/command_evidence.csv` | `c5d406931c31e704f4f0b5aef2da6e363f3f52dfb7b21beecb153eb8f986b5ac` |
+| Transferred WSL copy of Pi verdict | `/home/eamon/epuck_comm_bags/first_ground_diagnostic_20260727_102033/pi_audit_verdict_20260727_102033.json` | `8e5f61a4f603c6fbbbf14a3d6804d65beb4563cb3c0ff579caea633d9360f9c1` (identical to the Pi-side copy) |
+| WSL copy of Pi JSONL (transferred for offline analysis only) | `/home/eamon/epuck_comm_bags/first_ground_diagnostic_20260727_102033/command_audit_20260727_102033.jsonl` | `28f113a6d376aa01a86c929370922d74e6ec956dc5bd210b4ea336401a243b9d` (identical to the Pi-side original) |
+
+## Limitations -- what this run does and does not establish
+
+- One robot (epuck5809), one pulse, one direction. No repetition, no
+  statistical generalisation of any kind -- n=1.
+- Maximum commanded/applied speed 0.015 m/s, well inside the frozen
+  0.02 m/s hard cap; nothing about behavior at or near the cap is
+  established.
+- Straight-line motion only -- `angular.z` fixed at exactly `0.0`
+  throughout; no turning behavior of any kind was exercised.
+- No obstacle, no navigation goal, no cooperative-avoidance behavior,
+  no virtual peer, no formal shared-exit or task scenario was involved.
+- Does not authorize, and must not be cited as evidence for, any
+  formal navigation trial, shared-exit trial, or cooperative-avoidance
+  claim.
