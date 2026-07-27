@@ -1,0 +1,15 @@
+{
+  "_comment": "Tracked (committed) attempts manifest for batch SRGRB_20260727. Small, human/machine-readable JSON only -- not raw evidence. Contains Trial 1 Attempt 1 only -- no future RUN_ID values are invented in advance. classification=PENDING is a PLANNING STATE ONLY, not a result -- hil_repeatability_batch_aggregator.py's VALID_CLASSIFICATIONS is exactly VALID/INVALID/EXCLUDED, so a manifest containing any PENDING entry cannot be fed to the aggregator at all. No trial result -- valid, invalid, or excluded -- is implied by PENDING. This file will be updated (in a further commit) with the real classification and reason once Trial 1 Attempt 1's post_run_verification.json actually exists after shutdown. verification_json_path is relative to this manifest's own directory, resolved by hil_repeatability_batch_aggregator.py against the manifest file's location, never the process's current working directory.",
+  "batch_id": "SRGRB_20260727",
+  "spec_commit": "6d552464e419418fccbf4f3d2abe5aacad530e0c",
+  "attempts": [
+    {
+      "trial": 1,
+      "attempt": 1,
+      "run_id": "20260727_131437",
+      "classification": "PENDING",
+      "reason": null,
+      "verification_json_path": "trial1_attempt1_20260727_131437/post_run_verification.json"
+    }
+  ]
+}

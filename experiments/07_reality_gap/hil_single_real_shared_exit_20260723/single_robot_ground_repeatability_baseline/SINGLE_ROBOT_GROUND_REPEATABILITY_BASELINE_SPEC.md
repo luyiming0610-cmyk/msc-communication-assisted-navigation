@@ -213,46 +213,71 @@ not silently introduced here.
 
 ## 6. Evidence paths / naming convention (single condition only)
 
-Batch identifier: `SRGRB_<YYYYMMDD>` (e.g. `SRGRB_20260728`), assigned
-once at the start of the batch, distinct from each attempt's own
-`RUN_ID`.
+**Corrected naming rule (binding -- the defect below must never
+recur):**
+
+- `BATCH_ID` remains `SRGRB_<YYYYMMDD>` (e.g. `SRGRB_20260727`),
+  assigned once at the start of the batch, distinct from each
+  attempt's own `RUN_ID`. This is the identifier used in documents,
+  commit messages, and the attempts manifest.
+- The **filesystem slug** used inside evidence paths is the lowercase
+  date-only form `srgrb_<YYYYMMDD>` (e.g. `srgrb_20260727`) -- derived
+  by stripping `BATCH_ID`'s `SRGRB_` prefix and lowercasing the
+  remainder, then prepending lowercase `srgrb_` **exactly once**.
+- **Never prepend `srgrb_` to the full `BATCH_ID`** (which already
+  starts with `SRGRB_`) -- doing so produces the redundant
+  `srgrb_SRGRB_<YYYYMMDD>_...` defect found and corrected on
+  2026-07-27, before any evidence existed for this experiment. The
+  filesystem slug and `BATCH_ID` are related but not
+  interchangeable -- one is for paths, the other is the identifier
+  recorded everywhere else.
 
 Every attempt gets its own fresh `RUN_ID` (`<YYYYMMDD>_<HHMMSS>`, same
 convention as every prior run this session) and fresh, never-reused
 evidence paths, exactly as `GROUND_DIAGNOSTIC_RUNBOOK.md` step -1
-already requires:
+already requires. Seven paths are frozen per attempt, not six --
+`manifest.json` (the WSL command-evidence recorder's own manifest,
+already produced by every prior run, previously omitted from this
+document's list by mistake) is now explicit:
 
 ```
-Pi command-audit JSONL:      /home/pi/real_robot_avoidance_v1/command_audit_<RUN_ID>.jsonl
-Pi verifier verdict JSON:    /home/pi/real_robot_avoidance_v1/pi_audit_verdict_<RUN_ID>.json
-WSL evidence root:           /home/eamon/epuck_comm_bags/srgrb_<BATCH_ID>_trial<N>_attempt<A>_<RUN_ID>/
-  command_evidence.csv
-  recorder.log
-  manifest.json
-  pi_audit_verdict_<RUN_ID>.json          (copied)
-  command_audit_<RUN_ID>.jsonl            (copied, for offline analysis only)
-  post_run_verification.json              (from ground_diagnostic_post_run_verifier.py,
-                                            run with --require-motion-metrics true)
+1. Pi command-audit JSONL:      /home/pi/real_robot_avoidance_v1/command_audit_<RUN_ID>.jsonl
+2. Pi verifier verdict JSON:    /home/pi/real_robot_avoidance_v1/pi_audit_verdict_<RUN_ID>.json
+3. WSL evidence root:           /home/eamon/epuck_comm_bags/srgrb_<YYYYMMDD>_trial<N>_attempt<A>_<RUN_ID>/
+4.   <3>/command_evidence.csv
+5.   <3>/manifest.json
+6.   <3>/pi_audit_verdict_<RUN_ID>.json          (copied from path 2)
+7.   <3>/command_audit_<RUN_ID>.jsonl            (copied from path 1, for offline analysis only)
+     <3>/recorder.log                            (not one of the seven frozen paths -- log only)
+     <3>/post_run_verification.json              (produced afterward by
+                                                   ground_diagnostic_post_run_verifier.py
+                                                   --require-motion-metrics true; not
+                                                   one of the seven frozen paths since it
+                                                   does not exist until after the attempt)
 ```
 
 **Raw vs. tracked, stated explicitly:** the raw WSL command-evidence
-CSV, the raw Pi command-audit JSONL, and `recorder.log` all remain
-**local to the WSL/Pi filesystems and gitignored, exactly as for every
-prior ground-diagnostic run** -- never committed. The **only** files
-this experiment tracks (commits) per attempt are the two already-used
-derived artifacts (`SUMMARY.md`, `post_run_verification.json`); at the
-batch level, the only tracked files are the two derived aggregation
-outputs (`BATCH_SUMMARY.md`, `batch_summary.json`). Every attempt
-directory shown below is committed, including `INVALID` and `EXCLUDED`
-ones -- per requirement 7, nothing is overwritten or silently dropped
--- but only its derived `SUMMARY.md` and `post_run_verification.json`,
-never its raw CSV/JSONL:
+CSV, the raw Pi command-audit JSONL, `manifest.json`, and
+`recorder.log` all remain **local to the WSL/Pi filesystems and
+gitignored, exactly as for every prior ground-diagnostic run** --
+never committed. The **only** files this experiment tracks (commits)
+per attempt are the two already-used derived artifacts (`SUMMARY.md`,
+`post_run_verification.json`); at the batch level, the only tracked
+files are the two derived aggregation outputs (`BATCH_SUMMARY.md`,
+`batch_summary.json`) plus the attempts manifest itself (section 11.C
+-- tracked so `PRE_STACK_CHECK`'s tracked-tree-clean check is never
+blocked by an untracked working file). Every attempt directory shown
+below is committed, including `INVALID` and `EXCLUDED` ones -- per
+requirement 7, nothing is overwritten or silently dropped -- but only
+its derived `SUMMARY.md` and `post_run_verification.json`, never its
+raw CSV/JSONL/manifest/log:
 
 ```
 experiments/07_reality_gap/hil_single_real_shared_exit_20260723/
   single_robot_ground_repeatability_baseline/
     SINGLE_ROBOT_GROUND_REPEATABILITY_BASELINE_SPEC.md   (this file)
     <BATCH_ID>/
+      attempts_manifest.json                 (tracked -- section 11.C)
       trial1_attempt1_<RUN_ID>/
         SUMMARY.md
         post_run_verification.json
@@ -270,6 +295,13 @@ experiments/07_reality_gap/hil_single_real_shared_exit_20260723/
 attempt count at that slot. This is a **single-condition** naming
 scheme -- there is no paired/comparison-condition slot in this
 document (see section 10, "Explicitly deferred, not designed here").
+
+**`verification_json_path` in the manifest is relative to the
+manifest's own directory** (e.g.
+`trial1_attempt1_<RUN_ID>/post_run_verification.json`), resolved by
+`hil_repeatability_batch_aggregator.py` against the manifest file's
+own location, never the process's current working directory -- see
+section 11.B.
 
 ### Batch-summary format (proposed)
 
@@ -495,6 +527,57 @@ pass)
   the recorder, guard, bridge, controller, protocol, or geometry --
   purely an aggregation layer over already-produced verification JSON
   files.
+- **`verification_json_path` resolution (corrected):** `aggregate_batch()`
+  accepts an optional `base_dir`; a relative `verification_json_path`
+  is joined against `base_dir` (an absolute one is always used as-is).
+  `main()`'s CLI wrapper computes `base_dir` from
+  `--attempts-manifest`'s own directory, so a manifest committed
+  alongside its attempt subdirectories resolves correctly regardless
+  of which directory the aggregator is invoked from. Covered by
+  dedicated tests: relative-path resolution against the manifest's
+  directory, resolution from a different current working directory,
+  and a missing tracked verification JSON reported as
+  `VERIFICATION_JSON_NOT_FOUND` rather than crashing the aggregator.
+
+### 11.C -- Tracked batch registration (corrected; resolves a
+`SOURCE_IDENTITY`/`PRE_STACK_CHECK` conflict found before any evidence
+existed)
+
+`run_ground_diagnostic_preflight.sh`'s `pre-stack` phase blocks unless
+`git status --porcelain` under this whole HIL study subtree is empty.
+An attempts manifest left as an untracked working file would itself
+block every future `PRE_STACK_CHECK` -- found and corrected before any
+attempt was ever started. The fix: the attempts manifest is a
+**tracked, committed** file from the start of the batch, not a
+scratch/staging file:
+
+- Path: `<BATCH_ID's directory>/attempts_manifest.json` (e.g.
+  `single_robot_ground_repeatability_baseline/SRGRB_20260727/attempts_manifest.json`),
+  committed in the same documentation-only commit as this
+  specification, before any physical process starts.
+- Initial content lists only the attempt(s) actually about to be
+  attempted -- never a future, not-yet-run `RUN_ID` invented in
+  advance.
+- `"classification": "PENDING"` is used for an attempt that has not
+  yet been run. **`PENDING` is a planning state, not a result** --
+  `hil_repeatability_batch_aggregator.py` does not accept it (its
+  `VALID_CLASSIFICATIONS` are exactly `VALID`/`INVALID`/`EXCLUDED`), so
+  a manifest containing any `PENDING` entry cannot be fed to the
+  aggregator at all. **No trial result -- valid, invalid, or excluded
+  -- is implied by `PENDING`.**
+- After an attempt actually completes (its `post_run_verification.json`
+  exists, tracked at
+  `<BATCH_ID>/trial<N>_attempt<A>_<RUN_ID>/post_run_verification.json`),
+  the manifest is updated (a further commit) replacing `PENDING` with
+  the real classification and reason, and adding the next attempt.
+  The batch aggregator is run only once every entry in the manifest
+  has a real classification -- never while any entry is still
+  `PENDING`.
+- This tracked manifest is a small, human/machine-readable JSON file
+  containing only trial/attempt/run-id/classification/reason/path
+  fields -- it is not raw evidence (no CSV rows, no JSONL records) and
+  is committed for exactly the same reason `SUMMARY.md` and
+  `post_run_verification.json` already are.
 
 **Backward compatibility, verified:** re-running
 `ground_diagnostic_post_run_verifier.py` (with `--require-motion-metrics`
