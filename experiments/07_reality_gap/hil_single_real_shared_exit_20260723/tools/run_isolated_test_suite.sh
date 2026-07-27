@@ -70,6 +70,8 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_hil_live_zero_state_verdict"
     "test_ground_diagnostic_post_run_verifier"
     "test_hil_motion_repeatability_metrics"
+    "test_hil_repeatability_pose_readiness"
+    "test_hil_repeatability_batch_aggregator"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
     "test_pi_epuck_tcp_server_sensors_audited"
