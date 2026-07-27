@@ -3,7 +3,8 @@
 # the command-evidence-chain work following the two 2026-07-23
 # UNEXPECTED_PHYSICAL_MOTION incidents.
 #
-# `start`: creates a new timestamped output directory, starts the
+# `start`: creates a new output directory (auto-timestamped by
+# default, or the exact caller-supplied --output-root), starts the
 # recorder in the background, writes its exact PID and start time to a
 # manifest.json in that directory, and prints both. Per
 # HIL_LAB_RUNBOOK.md, this must be the FIRST process started in any
@@ -16,8 +17,26 @@
 # provenance.
 #
 # Usage:
-#   run_hil_command_evidence_recorder.sh start [extra recorder args...]
+#   run_hil_command_evidence_recorder.sh start [--output-root <dir>] [extra recorder args...]
 #   run_hil_command_evidence_recorder.sh stop <manifest.json>
+#
+# --output-root, not --output-csv (2026-07-27 fix): found live during
+# SRGRB_20260727 Trial 1 Attempt 1 -- this wrapper always built its own
+# --output-csv from an auto-generated timestamped directory and
+# prepended it ahead of any caller-supplied extra args. A caller who
+# also passed --output-csv (intending to override the destination) got
+# a silent argparse last-value-wins collision: the recorder actually
+# tried to open the CALLER's path, while this wrapper's own bash
+# variables -- and therefore its manifest.json, its console output, and
+# the parent directory it actually mkdir -p'd -- still referred to its
+# OWN auto path. The recorder crashed with FileNotFoundError because
+# the caller's intended directory was never created; the crash log was
+# left behind while the wrapper reported a directory the recorder never
+# touched. --output-csv is no longer accepted from a caller at all
+# (rejected outright, see cmd_start below); --output-root <dir> is the
+# only supported override, and it is this function's single source of
+# truth for out_dir/csv_path/log_path/manifest, so every path reported
+# is guaranteed to be the one the recorder actually opened.
 # set -u deliberately NOT enabled here yet -- ROS2's own setup.bash
 # (sourced inside cmd_start) references unset variables internally and
 # is not `set -u`-safe. Each function sources ROS first, THEN enables
@@ -34,8 +53,46 @@ cmd_start() {
     source "$HOME/epuck_ws/install/setup.bash"
     set -u
 
-    ts="$(date -u +%Y%m%d_%H%M%S)"
-    out_dir="${BAGS_ROOT}/hil_command_evidence_${ts}"
+    # Parse for an optional --output-root override BEFORE anything else
+    # touches "$@" -- see the module docstring above for why a bare
+    # --output-csv is rejected rather than silently forwarded.
+    output_root=""
+    remaining_args=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --output-root)
+                if [[ -n "${output_root}" ]]; then
+                    echo "HIL_COMMAND_EVIDENCE_RECORDER_REJECTED: --output-root given more than once" >&2
+                    exit 2
+                fi
+                output_root="${2:-}"
+                shift 2
+                ;;
+            --output-root=*)
+                if [[ -n "${output_root}" ]]; then
+                    echo "HIL_COMMAND_EVIDENCE_RECORDER_REJECTED: --output-root given more than once" >&2
+                    exit 2
+                fi
+                output_root="${1#--output-root=}"
+                shift
+                ;;
+            --output-csv|--output-csv=*)
+                echo "HIL_COMMAND_EVIDENCE_RECORDER_REJECTED: --output-csv is not accepted directly -- use --output-root <dir> instead, so this wrapper's manifest/log/reported paths always agree with what the recorder actually opens." >&2
+                exit 2
+                ;;
+            *)
+                remaining_args+=("$1")
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -n "${output_root}" ]]; then
+        out_dir="${output_root}"
+    else
+        ts="$(date -u +%Y%m%d_%H%M%S)"
+        out_dir="${BAGS_ROOT}/hil_command_evidence_${ts}"
+    fi
     mkdir -p "${out_dir}"
     csv_path="${out_dir}/command_evidence.csv"
     log_path="${out_dir}/recorder.log"
@@ -56,7 +113,7 @@ cmd_start() {
     # the invoking terminal can signal it either.
     setsid python3 "${SCRIPT_DIR}/hil_command_evidence_recorder.py" \
         --output-csv "${csv_path}" \
-        "$@" \
+        "${remaining_args[@]}" \
         < /dev/null > "${log_path}" 2>&1 &
     pid=$!
     disown 2>/dev/null || true
