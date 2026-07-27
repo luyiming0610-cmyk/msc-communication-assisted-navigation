@@ -431,6 +431,59 @@ PIDs, `[WSL Window 5 -- read-only HIL verification]` for WSL PIDs) --
 **closing a terminal window is not a substitute for an exact-PID
 `kill -INT`.**
 
+## 17. Offline post-run verifier (after shutdown, before writing SUMMARY.md)
+
+No physical window -- run from any WSL shell, ROS not required. This
+step is entirely read-only with respect to evidence: it opens the WSL
+CSV, the Pi JSONL, and the copied Pi verdict JSON for reading only,
+and writes a separate `--output-json` report. It never sources ROS,
+never contacts the Pi, never publishes a topic, starts a process, arms
+the guard, or issues a `cmd_vel`. Added 2026-07-27, packaging the
+one-off analysis workflow used to close out `RUN_ID 20260727_102033`
+into a reusable, tested tool
+(`tools/ground_diagnostic_post_run_verifier.py`,
+`tools/test_ground_diagnostic_post_run_verifier.py`).
+
+```bash
+python3 ground_diagnostic_post_run_verifier.py \
+    --run-id <RUN_ID> \
+    --wsl-csv <output_dir>/command_evidence.csv \
+    --pi-jsonl <WSL copy of the Pi JSONL> \
+    --pi-verdict <WSL copy of the Pi verdict JSON> \
+    --expected-wsl-sha256 <sha256 of the WSL CSV> \
+    --expected-pi-jsonl-sha256 <sha256 of the Pi JSONL> \
+    --expected-pi-verdict-sha256 <sha256 of the Pi verdict JSON> \
+    --geometry-confirmed true \
+    --guard-sole-publisher-confirmed true \
+    --no-unexpected-motion-observed true \
+    --robot-stayed-within-measured-area true \
+    --run-not-interrupted true \
+    --output-json <output_dir>/post_run_verification_<RUN_ID>.json
+```
+
+The five `--geometry-confirmed` / `--guard-sole-publisher-confirmed` /
+`--no-unexpected-motion-observed` / `--robot-stayed-within-measured-area`
+/ `--run-not-interrupted` flags each default to `false` (fail-closed)
+-- they encode facts the raw evidence files cannot prove by
+themselves (they came from the separate procedural gates in steps 8-10
+and the human observation in step 15). Only pass `true` for a flag
+once its own step has actually passed; never pass all five as a
+shortcut.
+
+Prints `INTEGRITY_OK` (evidence files present, hash-matched, parseable,
+and tagged with the expected run ID/path -- a question about the
+evidence, not the robot) separately from `VERDICT`/`REASONS` (the
+existing, unmodified `evaluate_verdict()` result computed from the
+evidence). Also reports the guarded/requested/Pi-applied maxima,
+validity-flags dropout count, bridge disconnection status, pulse count
+and duration, and the guarded-vs-Pi-applied timing-edge mismatch count
+-- copy the relevant lines into the run's `SUMMARY.md` exactly as
+printed, never re-typed by hand from a separate manual run of
+`analyze_ground_diagnostic.py`. Exit code is `0` only when
+`INTEGRITY_OK=true` and `VERDICT=PASS`; nonzero otherwise, including
+for a legitimately excluded/failed run -- a nonzero exit here means
+"go read `REASONS`," not "something is broken."
+
 ## Window/evidence table for the run summary
 
 Copy this table (filled in) into the run's `SUMMARY.md` so the
