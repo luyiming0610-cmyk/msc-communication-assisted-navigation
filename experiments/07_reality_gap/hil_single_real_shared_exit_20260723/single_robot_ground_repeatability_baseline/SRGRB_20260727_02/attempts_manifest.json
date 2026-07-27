@@ -11,6 +11,15 @@
       "reason": "POSE_READINESS_FLUSH_FRESHNESS_INCOMPATIBLE",
       "verification_json_path": "trial1_attempt1_20260727_143309/post_run_verification.json",
       "execution_head": "9288198d3416e7d931cd682b72d51108dbbb1d8e"
+    },
+    {
+      "trial": 1,
+      "attempt": 2,
+      "run_id": "20260727_153600",
+      "classification": "PENDING",
+      "reason": null,
+      "verification_json_path": "trial1_attempt2_20260727_153600/post_run_verification.json",
+      "execution_head": "4d777590d7189fedaffb105eddfd5003ea1cb40e"
     }
   ]
 }
