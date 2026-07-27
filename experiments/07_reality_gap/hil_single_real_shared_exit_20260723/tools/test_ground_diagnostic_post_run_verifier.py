@@ -14,7 +14,7 @@ import os
 import tempfile
 import unittest
 
-from ground_diagnostic_post_run_verifier import ExternalConfirmations, verify_run
+from ground_diagnostic_post_run_verifier import ExternalConfirmations, main, verify_run
 
 CSV_HEADER = "topic,local_time_ns,local_monotonic_ns,sequence,linear_x,angular_z,arm_state,validity_flags,bridge_connected,bridge_rx_count\n"
 
@@ -343,6 +343,61 @@ class PreArmNonzeroTest(VerifierFixtureBase):
         self.assertTrue(result.facts["pre_arm_nonzero_command_found"])
         self.assertEqual(result.diagnostic_verdict, "FAIL")
         self.assertIn("NONZERO_COMMAND_BEFORE_EXPLICIT_ARM", result.diagnostic_reasons)
+
+
+class CliContractTest(VerifierFixtureBase):
+    """Exercises the real argparse-wired CLI (main()), not verify_run()
+    directly -- named-argument off-by-one/omission bugs only show up
+    through actual argv plumbing (the exact bug class that motivated
+    hil_live_zero_state_verdict.py's own CLI test)."""
+
+    def _cli_args(self, output_json_path):
+        _clean_pulse_evidence(self)
+        hashes = self._expected_hashes()
+        return [
+            "--run-id", self.run_id,
+            "--wsl-csv", self.wsl_csv_path,
+            "--pi-jsonl", self.pi_jsonl_path,
+            "--pi-verdict", self.pi_verdict_path,
+            "--expected-wsl-sha256", hashes["wsl"],
+            "--expected-pi-jsonl-sha256", hashes["jsonl"],
+            "--expected-pi-verdict-sha256", hashes["verdict"],
+            "--geometry-confirmed", "true",
+            "--guard-sole-publisher-confirmed", "true",
+            "--no-unexpected-motion-observed", "true",
+            "--robot-stayed-within-measured-area", "true",
+            "--run-not-interrupted", "true",
+            "--output-json", output_json_path,
+        ]
+
+    def test_output_json_is_required_by_the_cli(self):
+        _clean_pulse_evidence(self)
+        hashes = self._expected_hashes()
+        args_without_output_json = [
+            "--run-id", self.run_id,
+            "--wsl-csv", self.wsl_csv_path,
+            "--pi-jsonl", self.pi_jsonl_path,
+            "--pi-verdict", self.pi_verdict_path,
+            "--expected-wsl-sha256", hashes["wsl"],
+            "--expected-pi-jsonl-sha256", hashes["jsonl"],
+            "--expected-pi-verdict-sha256", hashes["verdict"],
+        ]
+        with self.assertRaises(SystemExit):
+            main(args_without_output_json)
+
+    def test_cli_writes_a_valid_json_report_with_the_reconciled_mismatch_count(self):
+        output_json_path = os.path.join(self.tmpdir.name, "post_run_verification.json")
+        exit_code = main(self._cli_args(output_json_path))
+        self.assertEqual(exit_code, 0)
+
+        with open(output_json_path, encoding="utf-8") as fh:
+            report = json.load(fh)
+
+        self.assertTrue(report["integrity_ok"])
+        self.assertEqual(report["diagnostic_verdict"], "PASS")
+        self.assertEqual(report["diagnostic_reasons"], [])
+        self.assertIn("guarded_vs_pi_matched_pairs", report["facts"])
+        self.assertIn("guarded_vs_pi_mismatched_pairs", report["facts"])
 
 
 if __name__ == "__main__":

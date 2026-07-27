@@ -345,6 +345,12 @@ def verify_run(
         "guarded_vs_pi_mismatch_checked_pairs": mismatch.checked_pairs,
         "guarded_vs_pi_mismatch_count": len(mismatch.mismatched_pairs),
         "guarded_vs_pi_mismatch_pairs": list(mismatch.mismatched_pairs),
+        # Explicit aliases matching the exact terms used when this run's
+        # SUMMARY.md erratum was reconciled (2026-07-27): the 68/12112
+        # reproducible cross-check count, kept alongside (not replacing)
+        # the original *_checked_pairs / *_count field names above.
+        "guarded_vs_pi_matched_pairs": mismatch.checked_pairs,
+        "guarded_vs_pi_mismatched_pairs": len(mismatch.mismatched_pairs),
         "upstream_pulse_count": len(upstream_pulses),
         "upstream_pulse_durations_s": [p.duration_s for p in upstream_pulses],
         "guarded_pulse_count": len(guarded_pulses),
@@ -376,7 +382,13 @@ def main(argv=None) -> int:
     parser.add_argument("--expected-wsl-sha256", required=True)
     parser.add_argument("--expected-pi-jsonl-sha256", required=True)
     parser.add_argument("--expected-pi-verdict-sha256", required=True)
-    parser.add_argument("--output-json", default=None)
+    parser.add_argument(
+        "--output-json",
+        required=True,
+        help="Path to write the machine-readable verification report (required -- every "
+        "verification run must leave a persistent, reproducible JSON record, not console "
+        "output alone).",
+    )
     parser.add_argument("--upstream-topic", default="cmd_vel_unguarded")
     parser.add_argument("--guarded-topic", default="cmd_vel")
     parser.add_argument("--state-topic", default="/epuck1/state")
@@ -418,10 +430,9 @@ def main(argv=None) -> int:
         external=external,
     )
 
-    if args.output_json:
-        with open(args.output_json, "w", encoding="utf-8") as fh:
-            json.dump(result.to_dict(), fh, indent=2)
-            fh.write("\n")
+    with open(args.output_json, "w", encoding="utf-8") as fh:
+        json.dump(result.to_dict(), fh, indent=2)
+        fh.write("\n")
 
     print(f"INTEGRITY_OK={'true' if result.integrity_ok else 'false'}")
     print(f"INTEGRITY_REASONS={list(result.integrity_reasons)}")
@@ -440,6 +451,8 @@ def main(argv=None) -> int:
         print(
             f"GUARDED_VS_PI_MISMATCH={result.facts['guarded_vs_pi_mismatch_count']}/{result.facts['guarded_vs_pi_mismatch_checked_pairs']}"
         )
+        print(f"guarded_vs_pi_matched_pairs={result.facts['guarded_vs_pi_matched_pairs']}")
+        print(f"guarded_vs_pi_mismatched_pairs={result.facts['guarded_vs_pi_mismatched_pairs']}")
         print(f"PRE_ARM_NONZERO_COMMAND_FOUND={result.facts['pre_arm_nonzero_command_found']}")
 
     return 0 if (result.integrity_ok and result.diagnostic_verdict == "PASS") else 1
