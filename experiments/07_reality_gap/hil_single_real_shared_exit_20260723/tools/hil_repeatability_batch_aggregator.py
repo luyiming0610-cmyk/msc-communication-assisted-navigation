@@ -34,10 +34,22 @@ test_hil_repeatability_batch_aggregator.py for worked examples):
     ...
   ]
 }
+
+`verification_json_path` is resolved relative to the MANIFEST FILE'S
+OWN DIRECTORY, never the process's current working directory -- a
+manifest committed alongside its attempt subdirectories (as this
+experiment's are) stays correct no matter where `hil_repeatability_
+batch_aggregator.py` is invoked from. An absolute path is used as-is.
+`aggregate_batch()` takes this already-resolved base directory as a
+plain string (`base_dir`) -- it never touches the CLI's argv or CWD
+itself, keeping it pure and independently testable; `main()`'s thin
+CLI wrapper computes `base_dir` from `--attempts-manifest`'s own
+location before calling it.
 """
 from __future__ import annotations
 
 import json
+import os
 import statistics
 from dataclasses import dataclass, field
 from typing import Optional
@@ -253,13 +265,26 @@ def _descriptive_stats(values: list) -> dict:
     }
 
 
-def aggregate_batch(manifest: dict) -> BatchAggregationResult:
+def _resolve_verification_path(path: str, base_dir: Optional[str]) -> str:
+    if base_dir is not None and not os.path.isabs(path):
+        return os.path.join(base_dir, path)
+    return path
+
+
+def aggregate_batch(manifest: dict, *, base_dir: Optional[str] = None) -> BatchAggregationResult:
+    """`base_dir`, if given, is the already-resolved directory that a
+    relative `verification_json_path` is joined against -- typically
+    the attempts manifest file's own directory, computed by the CLI
+    wrapper (main()) from `--attempts-manifest`, never this function's
+    own concern. An absolute `verification_json_path` is always used
+    as-is, regardless of `base_dir`."""
     attempts, manifest_errors = _parse_manifest(manifest)
 
     outcomes = []
     verifications_by_attempt = {}
     for attempt in attempts:
-        verification, load_errors = _load_verification(attempt.verification_json_path)
+        resolved_path = _resolve_verification_path(attempt.verification_json_path, base_dir)
+        verification, load_errors = _load_verification(resolved_path)
         consistency_errors = _validate_attempt_against_verification(attempt, verification)
         outcomes.append(
             AttemptOutcome(
@@ -381,7 +406,8 @@ def main(argv=None) -> int:
     with open(args.attempts_manifest, encoding="utf-8") as fh:
         manifest = json.load(fh)
 
-    result = aggregate_batch(manifest)
+    base_dir = os.path.dirname(os.path.abspath(args.attempts_manifest))
+    result = aggregate_batch(manifest, base_dir=base_dir)
 
     output = result.to_dict()
     output["batch_id"] = args.batch_id

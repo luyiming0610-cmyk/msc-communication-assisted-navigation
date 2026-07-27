@@ -243,6 +243,112 @@ class MalformedJsonTest(AggregatorFixtureBase):
         self.assertTrue(any("VERIFICATION_JSON_MALFORMED" in e for e in outcome.errors))
 
 
+class RelativeVerificationPathTest(AggregatorFixtureBase):
+    """verification_json_path must resolve against the manifest's own
+    directory (base_dir), never the process's current working
+    directory -- see hil_repeatability_batch_aggregator.py's
+    _resolve_verification_path()."""
+
+    def test_relative_path_resolves_against_base_dir(self):
+        subdir = os.path.join(self.tmpdir.name, "trial1_attempt1_20260727_131437")
+        os.makedirs(subdir)
+        payload_path = os.path.join(subdir, "post_run_verification.json")
+        with open(payload_path, "w", encoding="utf-8") as fh:
+            json.dump(
+                {
+                    "integrity_ok": True,
+                    "diagnostic_verdict": "PASS",
+                    "run_id": "20260727_131437",
+                    "motion_metrics_required": True,
+                    "motion_metrics_ok": True,
+                    "file_checks": {"a": {"hash_matches": True}},
+                    "facts": FACTS_TEMPLATE,
+                },
+                fh,
+            )
+        attempts = [
+            {
+                "trial": 1,
+                "attempt": 1,
+                "run_id": "20260727_131437",
+                "classification": "VALID",
+                "reason": None,
+                "verification_json_path": "trial1_attempt1_20260727_131437/post_run_verification.json",
+            }
+        ]
+        result = aggregate_batch({"attempts": attempts}, base_dir=self.tmpdir.name)
+        self.assertTrue(result.attempt_outcomes[0].counts_as_valid)
+        self.assertEqual(result.attempt_outcomes[0].errors, ())
+
+    def test_relative_path_resolution_is_independent_of_current_working_directory(self):
+        subdir = os.path.join(self.tmpdir.name, "trial1_attempt1_20260727_131437")
+        os.makedirs(subdir)
+        payload_path = os.path.join(subdir, "post_run_verification.json")
+        with open(payload_path, "w", encoding="utf-8") as fh:
+            json.dump(
+                {
+                    "integrity_ok": True,
+                    "diagnostic_verdict": "PASS",
+                    "run_id": "20260727_131437",
+                    "motion_metrics_required": True,
+                    "motion_metrics_ok": True,
+                    "file_checks": {"a": {"hash_matches": True}},
+                    "facts": FACTS_TEMPLATE,
+                },
+                fh,
+            )
+        attempts = [
+            {
+                "trial": 1,
+                "attempt": 1,
+                "run_id": "20260727_131437",
+                "classification": "VALID",
+                "reason": None,
+                "verification_json_path": "trial1_attempt1_20260727_131437/post_run_verification.json",
+            }
+        ]
+        original_cwd = os.getcwd()
+        elsewhere = tempfile.mkdtemp()
+        try:
+            os.chdir(elsewhere)
+            result = aggregate_batch({"attempts": attempts}, base_dir=self.tmpdir.name)
+        finally:
+            os.chdir(original_cwd)
+        self.assertTrue(result.attempt_outcomes[0].counts_as_valid)
+
+    def test_missing_tracked_verification_json_is_reported_not_crashed_on(self):
+        attempts = [
+            {
+                "trial": 1,
+                "attempt": 1,
+                "run_id": "20260727_131437",
+                "classification": "VALID",
+                "reason": None,
+                "verification_json_path": "trial1_attempt1_20260727_131437/post_run_verification.json",
+            }
+        ]
+        result = aggregate_batch({"attempts": attempts}, base_dir=self.tmpdir.name)
+        outcome = result.attempt_outcomes[0]
+        self.assertFalse(outcome.counts_as_valid)
+        self.assertTrue(any("VERIFICATION_JSON_NOT_FOUND" in e for e in outcome.errors))
+        self.assertIsNone(result.slot_fill[1])
+
+    def test_absolute_path_is_used_as_is_regardless_of_base_dir(self):
+        path = self._write_verification("abs.json", "20260727_131437")
+        attempts = [
+            {
+                "trial": 1,
+                "attempt": 1,
+                "run_id": "20260727_131437",
+                "classification": "VALID",
+                "reason": None,
+                "verification_json_path": path,
+            }
+        ]
+        result = aggregate_batch({"attempts": attempts}, base_dir="/some/unrelated/directory")
+        self.assertTrue(result.attempt_outcomes[0].counts_as_valid)
+
+
 class DescriptiveStatsOnlyTest(AggregatorFixtureBase):
     def test_stats_are_descriptive_not_inferential(self):
         attempts = [self._valid_attempt(t, 1, f"2026072{t}_100000") for t in range(1, 6)]
