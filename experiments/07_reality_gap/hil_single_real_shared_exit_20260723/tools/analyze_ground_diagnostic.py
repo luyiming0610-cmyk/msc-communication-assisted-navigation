@@ -289,7 +289,21 @@ def compute_guarded_vs_pi_applied_mismatch(
     (the guarded topic) against the Pi's own tick_applied linear value,
     matched by nearest wall-clock time within max_time_diff_s. Only
     pairs actually matched within the time window are checked; this
-    does not claim to prove synchrony beyond that window."""
+    does not claim to prove synchrony beyond that window.
+
+    Nearest-neighbor lookup via sort + bisect (O((n+m) log m)) rather
+    than a linear scan per guarded row (O(n*m), found too slow for a
+    ~12000-row real run during the 2026-07-27 post-run analysis of
+    RUN_ID 20260727_102033). tick_rows are sorted by wall_time
+    internally before any lookup, so correctness (and the exact set of
+    matched/mismatched pairs) does not depend on either input already
+    being time-ordered -- out-of-order input produces the identical
+    result as already-sorted input. Tolerance and matching semantics
+    (nearest by absolute time difference, independent per guarded row)
+    are otherwise unchanged from the original implementation.
+    """
+    import bisect
+
     guarded_rows = [
         r for r in wsl_rows if r.get("topic") == guarded_topic and isinstance(r.get("local_time_ns"), int)
     ]
@@ -297,12 +311,21 @@ def compute_guarded_vs_pi_applied_mismatch(
     if not guarded_rows or not tick_rows:
         return MismatchResult(checked_pairs=0, mismatched_pairs=())
 
+    sorted_ticks = sorted(tick_rows, key=lambda t: t["wall_time"])
+    tick_times = [t["wall_time"] for t in sorted_ticks]
+
+    def nearest_tick(g_time_s):
+        idx = bisect.bisect_left(tick_times, g_time_s)
+        candidates = [i for i in (idx - 1, idx) if 0 <= i < len(tick_times)]
+        best_idx = min(candidates, key=lambda i: abs(tick_times[i] - g_time_s))
+        return sorted_ticks[best_idx], tick_times[best_idx]
+
     mismatches = []
     checked = 0
     for g in guarded_rows:
         g_time_s = g["local_time_ns"] / 1e9
-        nearest = min(tick_rows, key=lambda t: abs(t["wall_time"] - g_time_s))
-        if abs(nearest["wall_time"] - g_time_s) > max_time_diff_s:
+        nearest, nearest_time = nearest_tick(g_time_s)
+        if abs(nearest_time - g_time_s) > max_time_diff_s:
             continue
         checked += 1
         g_linear = g.get("linear_x") if isinstance(g.get("linear_x"), float) else 0.0

@@ -233,6 +233,58 @@ class ComputeGuardedVsPiMismatchTest(unittest.TestCase):
         result = compute_guarded_vs_pi_applied_mismatch([], [], "cmd_vel")
         self.assertEqual(result.checked_pairs, 0)
 
+    def test_out_of_order_input_gives_identical_result_to_sorted_input(self):
+        # The optimized (sort + bisect) implementation must not depend
+        # on either input already being time-ordered.
+        wsl_rows = [
+            {"topic": "cmd_vel", "local_time_ns": 3_000_000_000, "linear_x": 0.015},
+            {"topic": "cmd_vel", "local_time_ns": 1_000_000_000, "linear_x": 0.0},
+            {"topic": "cmd_vel", "local_time_ns": 2_000_000_000, "linear_x": 0.015},
+        ]
+        pi_records_sorted = [
+            {"event": "tick_applied", "wall_time": 1.0, "monotonic_time": 1.0, "linear": 0.0},
+            {"event": "tick_applied", "wall_time": 2.0, "monotonic_time": 2.0, "linear": 0.015},
+            {"event": "tick_applied", "wall_time": 3.0, "monotonic_time": 3.0, "linear": 0.015},
+        ]
+        pi_records_shuffled = [pi_records_sorted[2], pi_records_sorted[0], pi_records_sorted[1]]
+
+        result_sorted = compute_guarded_vs_pi_applied_mismatch(wsl_rows, pi_records_sorted, "cmd_vel")
+        result_shuffled = compute_guarded_vs_pi_applied_mismatch(wsl_rows, pi_records_shuffled, "cmd_vel")
+        self.assertEqual(result_sorted.checked_pairs, result_shuffled.checked_pairs)
+        self.assertEqual(set(result_sorted.mismatched_pairs), set(result_shuffled.mismatched_pairs))
+        self.assertEqual(result_sorted.mismatched_pairs, ())
+
+    def test_pulse_edge_timing_produces_expected_mismatch_shape(self):
+        # Reproduces the exact shape found in RUN_ID 20260727_102033's
+        # real evidence: samples right at a rising/falling edge where
+        # one side has already transitioned and the other has not,
+        # both values otherwise valid (0.0 or the pulse speed), never
+        # anything else.
+        wsl_rows = [
+            {"topic": "cmd_vel", "local_time_ns": 10_000_000_000, "linear_x": 0.0},  # just before rise
+            {"topic": "cmd_vel", "local_time_ns": 10_100_000_000, "linear_x": 0.015},  # after rise
+        ]
+        pi_records = [
+            {"event": "tick_applied", "wall_time": 10.05, "monotonic_time": 500.0, "linear": 0.015},
+        ]
+        result = compute_guarded_vs_pi_applied_mismatch(wsl_rows, pi_records, "cmd_vel", max_time_diff_s=0.2)
+        self.assertEqual(result.checked_pairs, 2)
+        self.assertEqual(len(result.mismatched_pairs), 1)
+        mismatched_linear_values = {m[1] for m in result.mismatched_pairs} | {m[3] for m in result.mismatched_pairs}
+        self.assertEqual(mismatched_linear_values, {0.0, 0.015})
+
+    def test_true_unexpected_mismatch_outside_pulse_is_flagged(self):
+        # Unlike the edge-timing case, a mismatch far from any known
+        # transition (large abs_diff, no adjacent same-value sample)
+        # must still be flagged -- the optimized algorithm must not
+        # suppress genuine discrepancies.
+        wsl_rows = [{"topic": "cmd_vel", "local_time_ns": 50_000_000_000, "linear_x": 0.02}]
+        pi_records = [{"event": "tick_applied", "wall_time": 50.0, "monotonic_time": 900.0, "linear": 0.0}]
+        result = compute_guarded_vs_pi_applied_mismatch(wsl_rows, pi_records, "cmd_vel")
+        self.assertEqual(result.checked_pairs, 1)
+        self.assertEqual(len(result.mismatched_pairs), 1)
+        self.assertAlmostEqual(result.mismatched_pairs[0][4], 0.02)
+
 
 class ComputeSha256ManifestTest(unittest.TestCase):
     def test_hashes_are_deterministic_and_correct(self):
