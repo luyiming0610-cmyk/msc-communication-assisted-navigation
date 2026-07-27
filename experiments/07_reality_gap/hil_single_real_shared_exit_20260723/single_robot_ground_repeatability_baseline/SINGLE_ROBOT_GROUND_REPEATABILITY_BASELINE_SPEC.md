@@ -283,6 +283,33 @@ it collide with the wrapper's own auto-generated path -- see
 `test_run_hil_command_evidence_recorder_output_root_e2e.sh` for the
 full incident and fix.
 
+**Frozen flush interval for repeatability trials (corrected, found
+live during SRGRB_20260727_02 Trial 1 Attempt 1 -- classified
+`INVALID`, reason `POSE_READINESS_FLUSH_FRESHNESS_INCOMPATIBLE`):**
+always pass `--flush-interval-s 0.2`
+(`hil_repeatability_pose_readiness.RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S`)
+when starting the recorder for a repeatability trial -- **never the
+1.0 s value** used by non-repeatability ground diagnostics. The
+recorder's `CommandEvidenceCsvWriter` only flushes its CSV to disk
+when a write arrives at/after the flush interval has elapsed (not on a
+background timer); between two consecutive flushes, the freshest
+sample actually readable on disk stays fixed at the last flush's own
+row, and its age (as observed by a check running near the end of that
+window, plus the check's own ordinary CSV-parse/startup/clock-jitter
+overhead) approaches the flush interval itself. A flush interval equal
+to `hil_repeatability_pose_readiness.DEFAULT_MAX_POSE_SAMPLE_STALENESS_S`
+(1.0 s, unchanged -- this safety rule itself was never relaxed)
+therefore leaves **zero margin** and can and did spuriously block a
+perfectly healthy attempt. `0.2` s leaves roughly 70% margin,
+mathematically derived and reproduced deterministically (not a real
+sensor/bridge fault) in
+`test_hil_repeatability_pose_readiness.py`'s
+`FlushFreshnessIncompatibilityTest` and validated across many
+check-timing offsets, and against genuinely stale data, in
+`ProductionRepeatabilitySettingsTest`. This is a **parameter choice**
+for how the recorder is invoked -- no change to
+`state_publisher.py`, the protocol, controller, bridge, or guard.
+
 **Raw vs. tracked, stated explicitly:** the raw WSL command-evidence
 CSV, the raw Pi command-audit JSONL, `manifest.json`, and
 `recorder.log` all remain **local to the WSL/Pi filesystems and
@@ -512,6 +539,16 @@ only the recorder's own CSV file from disk, never a ROS topic):
   section 9 step 3). A historical or future non-repeatability run
   never invokes this module, so its CSV (which may lack the pose
   columns) is entirely unaffected.
+- **Frozen flush-interval requirement (third correction pass, see
+  section 6):** this gate's `max_pose_sample_staleness_s` (1.0 s) was
+  never relaxed, but the recorder MUST be started with
+  `--flush-interval-s 0.2` for a repeatability trial, never the 1.0 s
+  value non-repeatability diagnostics use -- otherwise the recorder's
+  own flush buffering can spuriously exceed this gate's staleness
+  threshold with zero connection to any actual sensor/bridge problem.
+  See `worst_case_on_disk_pose_sample_age_s()`,
+  `RECOMMENDED_REPEATABILITY_FLUSH_INTERVAL_S`, and
+  `FlushFreshnessIncompatibilityTest`/`ProductionRepeatabilitySettingsTest`.
 
 ### 11.B -- Batch aggregation tooling (implemented, second correction
 pass)
