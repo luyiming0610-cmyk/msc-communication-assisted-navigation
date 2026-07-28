@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # Permanent safe test runner -- the ONLY sanctioned way to run the HIL
 # unit suite, the Pi command-audit suite, the sync-script suite, and
 # the epuck2_comm/epuck2_comm_interfaces colcon suite from 2026-07-23
@@ -72,6 +72,8 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_hil_motion_repeatability_metrics"
     "test_hil_repeatability_pose_readiness"
     "test_hil_repeatability_batch_aggregator"
+    "test_new_field_geometry_params"
+    "test_hil_ground_single_pulse_test"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
     "test_pi_epuck_tcp_server_sensors_audited"
@@ -150,35 +152,42 @@ if ! _assert_modules_collected "PI_AUDIT" "${PI_OUTPUT}" "${REQUIRED_PI_AUDIT_TE
 fi
 
 echo ""
-echo "=== [6/10] Synthetic sync/build script end-to-end test (never touches ~/epuck_ws) ==="
+echo "=== [6/11] Synthetic sync/build script end-to-end test (never touches ~/epuck_ws) ==="
 _assert_isolated_domain
 E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_sync_and_build_epuck2_comm_e2e.sh" 2>&1)"
 echo "${E2E_OUTPUT}"
 E2E_EXIT=$?
 
 echo ""
-echo "=== [7/10] Command-evidence recorder end-to-end test (private test-only topics, never the real physical stack) ==="
+echo "=== [7/11] Command-evidence recorder end-to-end test (private test-only topics, never the real physical stack) ==="
 _assert_isolated_domain
 RECORDER_E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_run_hil_command_evidence_recorder_e2e.sh" 2>&1)"
 echo "${RECORDER_E2E_OUTPUT}"
 RECORDER_E2E_EXIT=$?
 
 echo ""
-echo "=== [8/10] Command-evidence recorder --output-root end-to-end test (private test-only topics, never the real physical stack) ==="
+echo "=== [8/11] Command-evidence recorder --output-root end-to-end test (private test-only topics, never the real physical stack) ==="
 _assert_isolated_domain
 RECORDER_OUTPUT_ROOT_E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_run_hil_command_evidence_recorder_output_root_e2e.sh" 2>&1)"
 echo "${RECORDER_OUTPUT_ROOT_E2E_OUTPUT}"
 RECORDER_OUTPUT_ROOT_E2E_EXIT=$?
 
 echo ""
-echo "=== [9/10] colcon test: epuck2_comm, epuck2_comm_interfaces (isolated domain) ==="
+echo "=== [9/11] New-field GROUND_DIAGNOSTIC_PARAMS override end-to-end test (read-only, offline, never contacts the Pi) ==="
+_assert_isolated_domain
+NEW_FIELD_OVERRIDE_E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_run_ground_diagnostic_preflight_new_field_override_e2e.sh" 2>&1)"
+echo "${NEW_FIELD_OVERRIDE_E2E_OUTPUT}"
+NEW_FIELD_OVERRIDE_E2E_EXIT=$?
+
+echo ""
+echo "=== [10/11] colcon test: epuck2_comm, epuck2_comm_interfaces (isolated domain) ==="
 _assert_isolated_domain
 (cd ~/epuck_ws && colcon test --packages-select epuck2_comm epuck2_comm_interfaces --event-handlers console_direct+)
 COLCON_EXIT=$?
 (cd ~/epuck_ws && colcon test-result --verbose) || true
 
 echo ""
-echo "=== [10/10] Real /cmd_vel publisher count, default domain, AFTER ==="
+echo "=== [11/11] Real /cmd_vel publisher count, default domain, AFTER ==="
 unset ROS_DOMAIN_ID
 AFTER="$(ros2 topic info /cmd_vel 2>/dev/null | grep 'Publisher count' | grep -o '[0-9]*' || true)"
 if [[ -z "${AFTER}" ]]; then
@@ -204,6 +213,10 @@ if [[ ${RECORDER_E2E_EXIT} -ne 0 ]]; then
 fi
 if [[ ${RECORDER_OUTPUT_ROOT_E2E_EXIT} -ne 0 ]]; then
     echo "RECORDER_OUTPUT_ROOT_E2E_TEST_FAILED"
+    FAIL=1
+fi
+if [[ ${NEW_FIELD_OVERRIDE_E2E_EXIT} -ne 0 ]]; then
+    echo "NEW_FIELD_PARAMS_OVERRIDE_E2E_TEST_FAILED"
     FAIL=1
 fi
 if [[ ${COLCON_EXIT} -ne 0 ]]; then

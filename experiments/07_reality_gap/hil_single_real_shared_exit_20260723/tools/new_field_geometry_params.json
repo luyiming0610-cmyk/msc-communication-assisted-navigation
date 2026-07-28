@@ -1,0 +1,65 @@
+{
+    "_comment_top": "Parameter file for NEW_FIELD_SINGLE_PULSE_REVALIDATION -- a bounded, exclusionary, single-attempt revalidation of the ground command path in a new, larger, marked physical field, prepared 2026-07-28 after SRGRB_20260727_02 Trial 1 Attempt 2 was EXCLUDED (MIN_BOUNDARY_CLEARANCE_VIOLATION) in the old 0.65m x 0.25m field. Deliberately a SEPARATE file from ground_diagnostic_params.json (the old field's own tracked config, left completely unchanged and unread by this experiment) and from hil_frozen_params.json (the formal shared-exit geometry record, also untouched). Selected at runtime via the GROUND_DIAGNOSTIC_PARAMS environment variable, consumed by run_ground_diagnostic_preflight.sh's existing, unmodified PARAMS_FILE default-override line and hil_preflight.check_required_fields_ready() -- both entirely schema-driven (no hardcoded field names), so this new file's own required_before_ground_motion list (below) is honored with zero code changes; see test_new_field_geometry_params.py and test_run_ground_diagnostic_preflight_new_field_override_e2e.sh for the regression proof. Any field whose value is not yet backed by a real measurement is the literal string 'UNCONFIRMED_PHYSICAL_MEASUREMENT'; any boolean confirmation not yet actually checked is 'false' -- there is no default that counts as ready.",
+    "schema_version": 1,
+    "diagnostic_id": "new_field_single_pulse_revalidation",
+    "reused_frozen_reference": {
+        "_comment": "Read-only references to already-confirmed values recorded elsewhere. Never duplicated as separately-editable numbers here, and never re-derived or re-measured -- copied for traceability only.",
+        "guard_hard_linear_cap_mps": 0.02,
+        "guard_hard_linear_cap_source": "hil_frozen_params.json hil_guard_limits.max_linear_speed_mps (confirmed, unchanged by this revalidation)",
+        "revalidation_pulse_speed_mps": 0.015,
+        "revalidation_pulse_speed_source": "same requested_linear_speed_mps already used throughout first_ground_diagnostic and SRGRB_20260727/SRGRB_20260727_02 -- unchanged by the new field",
+        "old_field_exclusion_note": "SRGRB_20260727_02 Trial 1 Attempt 2 (RUN_ID 20260727_153600) was EXCLUDED/MIN_BOUNDARY_CLEARANCE_VIOLATION in the old 0.65m x 0.25m field (measured 0.05m clearance against a 0.10m minimum). That batch, its RUN_IDs, evidence, and ground_diagnostic_params.json remain unchanged and unread by this file -- this is a new field, new geometry, new revalidation, not a modification of the old one."
+    },
+    "diagnostic_command_limits": {
+        "_comment": "Reuses hil_ground_single_pulse_test.py's own compute_phase() (imported from hil_wheel_suspension_test.py, not duplicated) -- no new pulse-generation mechanism. angular is not a tunable field here: it is fixed at 0.0 and prohibited, enforced independently by both this file and hil_cmd_vel_guard.py's own --max-angular-speed-rps 0.0 CLI argument at runbook execution time. target_commanded_travel_m is the NOMINAL commanded travel used to derive pulse_s (0.10 / 0.015 = 6.666...7, stored to 2dp) -- it is a planning value, not a claim about actual physical displacement, and is never compared against a measurement as if it were one.",
+        "requested_linear_speed_mps": 0.015,
+        "max_linear_speed_mps": 0.02,
+        "max_angular_speed_rps": 0.0,
+        "angular_speed_prohibited": true,
+        "target_commanded_travel_m": 0.10,
+        "zero_hold_s": 1.0,
+        "pulse_s": 6.67,
+        "post_hold_s": 1.0
+    },
+    "measured_geometry": {
+        "_comment": "Coordinate origin is the rear-left physical corner (standing behind the robot, looking along its intended forward travel direction); +x forward along the 1.40m length, +y across the 1.00m width toward the operator's right when facing +x. Start x/y/yaw refer to the robot's BODY CENTRE (not front edge, rear edge, or wheels). stop_line_distance_m is a DISTANCE FROM START, not an absolute coordinate -- the marked stop line is at absolute x=1.20m, and start_x_m=0.30m, so stop_line_distance_m = 1.20 - 0.30 = 0.90m. corridor_y_min_m/corridor_y_max_m mark a HUMAN-VISIBLE TAPE REFERENCE ONLY -- the robot has no means of sensing it (no vision, no line-following, no IR tape detection) and no automated check reads these two fields at runtime; corridor compliance is decided solely by post-pulse human observation of whether any part of the robot body crossed either tape edge. min_boundary_clearance_m applies to the nearest REAL PHYSICAL field boundary in any direction (the true 1.40m/1.00m edges), measured from the nearest robot body edge -- this is the actual automated-adjacent safety gate (fed into evaluate_verdict() via --robot-stayed-within-measured-area, exactly as used for SRGRB_20260727_02's own exclusion), never the corridor tape. No minimum dimension or threshold is asserted anywhere in this file beyond what is stated here -- these are recorded measurements only.",
+        "start_x_m": 0.30,
+        "start_y_m": 0.50,
+        "start_yaw_rad": 0.0,
+        "travel_direction": "forward_along_length",
+        "stop_line_distance_m": 0.90,
+        "min_boundary_clearance_m": 0.10,
+        "test_area_length_m": 1.40,
+        "test_area_width_m": 1.00,
+        "corridor_y_min_m": 0.30,
+        "corridor_y_max_m": 0.70
+    },
+    "documentation_only_reference": {
+        "_comment": "Not a parameter_path field, not in required_before_ground_motion, never read by any preflight gate -- a manual distance-measurement aid only, never a safety stop line and never an automatic gate.",
+        "manual_reference_line_x_m": 0.40
+    },
+    "environment": {
+        "_comment": "boundaries_and_obstacles_recorded is a STABLE fact about this new, fixed test venue. Deliberately left false -- it has not yet been explicitly confirmed for this new field (this is a genuinely new physical setup; the old field's confirmed value must never be assumed to carry over). Must be set true only after the new field's walls/obstacle locations are actually recorded.",
+        "boundaries_and_obstacles_recorded": false
+    },
+    "safety": {
+        "_comment": "emergency_stop_position_confirmed records a stable fact about this new venue's e-stop/operator position. Deliberately left false for the same reason as above -- a new field very likely has a different physical e-stop/operator position than the old one, and that must be actually checked, not assumed.",
+        "emergency_stop_position_confirmed": false
+    },
+    "required_before_ground_motion": [
+        "measured_geometry.start_x_m",
+        "measured_geometry.start_y_m",
+        "measured_geometry.start_yaw_rad",
+        "measured_geometry.travel_direction",
+        "measured_geometry.stop_line_distance_m",
+        "measured_geometry.min_boundary_clearance_m",
+        "measured_geometry.test_area_length_m",
+        "measured_geometry.test_area_width_m",
+        "measured_geometry.corridor_y_min_m",
+        "measured_geometry.corridor_y_max_m",
+        "environment.boundaries_and_obstacles_recorded",
+        "safety.emergency_stop_position_confirmed"
+    ],
+    "_comment_required_before_ground_motion": "12 tracked paths -- the original 8 measured_geometry fields plus the two new corridor bounds, plus the 2 stable-venue confirmations. Deliberately excludes the 4 genuinely per-session runtime confirmations (floor condition, travel path clear, operator present, Wi-Fi checked), which live only in the separate, gitignored session-state file (hil_ground_diagnostic_session.py), exactly as for the old field -- a tracked-file value can never substitute for a session-file confirmation.",
+    "status": "OFFLINE_TOOLING_ONLY_NO_PHYSICAL_MEASUREMENTS_YET"
+}
