@@ -107,35 +107,41 @@ handling below).
 | `UNEXPECTED_PHYSICAL_MOTION` safety incident (2026-07-23) | **Audited, root cause NOT_MEASURABLE, not solved** -- see `safety_incident_unexpected_motion_20260723/SUMMARY.md`. Added binding preconditions to `HIL_SAFETY_CHECKLIST.md` for any future powered session |
 | Command-evidence chain (Pi audit + WSL recorder) | **PASS** -- `command_evidence_activation_pass_20260724/SUMMARY.md`. Suspended, zero-motion validation only, not a ground trial |
 | Computer-to-e-puck zero-command delivery and auditing | **VERIFIED** -- guard confirmed sole `/cmd_vel` publisher and `armed=False` throughout; Pi JSONL (34,458 records) and WSL CSV (22,812 rows) both independently confirmed zero nonzero commands for the entire session |
-| First ground diagnostic (bounded, low-speed, straight-line only) | **PREPARED_OFFLINE / NOT_RUN** -- see `first_ground_diagnostic/FIRST_GROUND_DIAGNOSTIC_SPEC.md`. Spec, field-measurement form, parameter template, preflight, runbook, offline analysis, and acceptance-rule tests are all in place and pass the isolated test suite; the diagnostic itself requires the field measurements below plus supervised execution, neither of which has happened |
-| First ground diagnostic -- required measurements | **Outstanding** -- `first_ground_diagnostic/FIELD_MEASUREMENT_FORM.md` and `tools/ground_diagnostic_params.json`'s `measured_geometry` remain `UNCONFIRMED_PHYSICAL_MEASUREMENT`; this diagnostic's angular motion is prohibited by design (fixed `0.0`), independent of the still-unconfirmed `hil_frozen_params.json` ground angular cap |
-| Ground navigation / formal HIL trial | **Not started** -- unaffected by the first ground diagnostic's preparation or (once run) its outcome; still gated by field geometry and a separately measured/justified ground angular cap |
-| First ground-motion pilot | **Still outstanding** -- not yet authorized; command-evidence chain being active is a precondition for it, not a substitute |
+| First ground diagnostic (bounded, low-speed, straight-line only) | **RUN, `EXCLUSIONARY_GROUND_DIAGNOSTIC_PASS`** -- run `20260727_102033` in a new, separately measured 1.40m x 1.00m field (`first_ground_diagnostic_20260727_102033/SUMMARY.md`, `post_run_verification.json`; reproduced offline via `ground_diagnostic_post_run_verifier.py`). Confirmed: guarded/Pi-applied commands matched the requested straight-line pulse (max 0.015 m/s, well inside the 0.02 m/s cap), zero pre-arm nonzero commands, guard sole publisher throughout, clean shutdown. **This is a single bounded straight-line pulse only -- it does NOT validate HIL navigation, GoalAnnouncement transmission or adoption, `require_virtual_peer=true` on physical hardware, any ground-contact angular/turning motion, or the shared-exit arena geometry. None of those remain gated on this diagnostic's outcome; see the rows below, unchanged.** |
+| First ground diagnostic -- required measurements | **Satisfied for that diagnostic's own straight-line field only** -- the 1.40m x 1.00m new-field geometry used for run `20260727_102033` is measured and recorded in `tools/new_field_geometry_params.json`. This is a separate, purpose-scoped file from `hil_frozen_params.json`; the HIL shared-exit arena's own `field_geometry.*` (exit/parking/waypoints/obstacles) remain `UNCONFIRMED_PHYSICAL_MEASUREMENT` in `hil_frozen_params.json` and have not been derived from the new field. This diagnostic's angular motion is, and remains, prohibited by design (fixed `0.0`), independent of the still-unconfirmed `hil_frozen_params.json` ground angular cap |
+| Ground navigation / formal HIL trial | **Not started** -- unaffected by the first ground diagnostic's completion or outcome; still gated by HIL shared-exit field geometry (not yet transcribed from the new field) and a separately measured/justified ground-contact angular cap, neither of which exists |
+| Ground-contact angular calibration | **Not performed** -- only a suspended-wheel angular test (±0.1 rad/s, reset to unconfirmed immediately after) has ever been run; no turning motion with wheels bearing weight on the ground has occurred. This remains a required, separately authorised, supervised step before any formal HIL trial |
+| First ground-motion pilot | **Superseded by the completed first ground diagnostic above for the narrow straight-line-only scope described there; still outstanding for anything beyond it** -- command-evidence chain being active is a precondition for further ground work, not a substitute for the still-missing HIL geometry and angular calibration |
 
-## Topic-contract accuracy check (finding only -- not implemented)
+## Topic-contract accuracy check (2026-07-23 finding; resolved as of 2026-07-29)
 
-`HIL_TOPIC_CONTRACT.md` names the physical robot's state topic as
+`HIL_TOPIC_CONTRACT.md` named the physical robot's state topic as
 `/epuck5809/state` and several related topics as `/epuck5809/...`
-(`nav_intent`, `cmd_vel_unguarded`, `cmd_vel`). Every live diagnostic
-this session instead used, and confirmed working end-to-end, the real
-topic names: `/epuck1/state` (matches `state_publisher.py`'s actual
-launch remap `-r state:=/epuck1/state`, used in every bring-up this
-session) and un-namespaced `/cmd_vel_unguarded` / `/cmd_vel` (matching
-`hil_cmd_vel_guard.py`'s actual CLI defaults, exercised live in the
-suspended-wheel and angular diagnostics). `HIL_TOPIC_CONTRACT.md` also
-still states the guard's validity requirement as `FLAG_ODOM_VALID`
-alone -- stale since the guard was hardened to require
-`FLAG_ODOM_VALID | FLAG_IR_VALID | FLAG_TOF_VALID` (commit
-`9e2b586`, "fix: harden hardware-in-loop physical preflight").
+(`nav_intent`, `cmd_vel_unguarded`, `cmd_vel`) at the time this finding
+was first written. Every live diagnostic that session instead used, and
+confirmed working end-to-end, the real topic names: `/epuck1/state`
+(matches `state_publisher.py`'s actual launch remap
+`-r state:=/epuck1/state`) and un-namespaced `/cmd_vel_unguarded` /
+`/cmd_vel` (matching `hil_cmd_vel_guard.py`'s actual CLI defaults,
+exercised live in the suspended-wheel and angular diagnostics).
+`HIL_TOPIC_CONTRACT.md` also stated the guard's validity requirement as
+`FLAG_ODOM_VALID` alone at that time -- stale since the guard was
+hardened to require `FLAG_ODOM_VALID | FLAG_IR_VALID | FLAG_TOF_VALID`
+(commit `9e2b586`, "fix: harden hardware-in-loop physical preflight").
 
-**Proposed smallest correction** (not implemented, awaiting approval):
-replace `/epuck5809/state`, `/epuck5809/nav_intent`,
-`/epuck5809/cmd_vel_unguarded`, `/epuck5809/cmd_vel` with `/epuck1/state`,
-`/epuck1/nav_intent`, `/cmd_vel_unguarded`, `/cmd_vel` respectively in
-`HIL_TOPIC_CONTRACT.md`'s table, and update its "Validity and freshness
-rules" section to state the full `FLAG_ODOM_VALID | FLAG_IR_VALID |
-FLAG_TOF_VALID` requirement instead of `FLAG_ODOM_VALID` alone. No
-other file needs this correction: `HIL_SAFETY_CHECKLIST.md` and
-`hil_frozen_params.json` were already updated for the validity
-requirement in the earlier hardening commit; only `HIL_TOPIC_CONTRACT.md`
-was missed.
+**Resolution status, checked directly against the live document as part
+of the Stage 2 offline HIL audit (2026-07-29)**: `HIL_TOPIC_CONTRACT.md`
+already states `/epuck1/state`, `/epuck1/nav_intent`, un-namespaced
+`/cmd_vel_unguarded` / `/cmd_vel`, and the full three-flag
+(`FLAG_ODOM_VALID | FLAG_IR_VALID | FLAG_TOF_VALID`, value 7) validity
+requirement -- both parts of the correction proposed here were already
+applied at some point before this check and match the current code
+exactly (`test_hil_topic_contract.py` locks this down). **Nothing
+further was required for either of those two items.**
+
+**New finding from the same 2026-07-29 check**: `HIL_TOPIC_CONTRACT.md`'s
+bridge-status row instead named `/hil/bridge_status`, which never
+matched the real code (`hil_command_evidence_recorder.py`'s
+`--bridge-status-topic` default) or `HIL_LAB_RUNBOOK.md`'s own usage,
+both of which use `/epuck_bridge/status`. This one row has now been
+corrected in `HIL_TOPIC_CONTRACT.md`; no code changed.

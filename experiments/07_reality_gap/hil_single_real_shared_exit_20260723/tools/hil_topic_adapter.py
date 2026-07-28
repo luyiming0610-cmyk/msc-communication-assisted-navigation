@@ -21,6 +21,12 @@ the GoalNavigator class directly and constructs it under a real-time
 GoalNavigator's tested navigation-state logic (waypoint advancement,
 ARRIVED_HOLD, EXIT_TO_PARKING_SWITCH, GoalAnnouncement TX/RX) is reused
 unchanged; only the clock source differs.
+
+The node actually constructed is HilGoalAnnouncementEvidenceNavigator
+(hil_goal_announcement_evidence.py), a thin subclass of GoalNavigator
+adding one bounded, structured evidence log line per received
+GoalAnnouncement -- itself still just GoalNavigator's own unmodified
+navigation logic, wrapped, not replaced.
 """
 from __future__ import annotations
 
@@ -45,14 +51,17 @@ def _import_goal_navigator():
 def main(argv=None):
     import rclpy
 
+    from hil_goal_announcement_evidence import build_evidence_navigator_class
+
     goal_navigator = _import_goal_navigator()
     args = goal_navigator.parse_args(argv if argv is not None else sys.argv[1:])
+    EvidenceNavigator = build_evidence_navigator_class()
 
     # Deliberately NOT use_sim_time -- see module docstring. This is the
     # one line this adapter exists to change relative to
     # goal_navigator.main().
     rclpy.init(args=[])
-    node = goal_navigator.GoalNavigator(args)
+    node = EvidenceNavigator(args)
     try:
         rclpy.spin(node)
     except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
