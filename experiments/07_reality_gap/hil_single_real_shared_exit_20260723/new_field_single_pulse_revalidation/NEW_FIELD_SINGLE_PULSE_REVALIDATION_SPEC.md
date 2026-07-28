@@ -87,11 +87,16 @@ state machine, wrapped in a clearly ground-named node
 `cmd_vel_unguarded`, no CLI angular override exists, `--pulse-linear-mps`
 and `--pulse-s` are both required (no silent default), publishes zero
 three times and exits on its own -- no auto-repeat, no second pulse
-from one invocation:
+from one invocation.
 
-```bash
-python3 hil_ground_single_pulse_test.py --pulse-linear-mps 0.015 --pulse-s 6.67 --zero-hold-s 1.0 --post-hold-s 1.0
-```
+**This specification does not itself state an abbreviated executable
+pulse or recorder command.** The exact, frozen, per-session invocation
+-- including the frozen RUN_ID and evidence paths -- is recorded in
+exactly one place: the dedicated command sheet
+[`NEW_FIELD_SINGLE_PULSE_COMMAND_SHEET_<RUN_ID>.md`](./NEW_FIELD_SINGLE_PULSE_COMMAND_SHEET_20260728_143937.md)
+for the session in question. This avoids a second, potentially
+drifting copy of the executable command living alongside the design
+rationale here.
 
 ## Emergency power-off arrangement (confirmed 2026-07-28)
 

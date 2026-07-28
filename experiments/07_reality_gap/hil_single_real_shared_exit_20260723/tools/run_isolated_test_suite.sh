@@ -75,6 +75,7 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_new_field_geometry_params"
     "test_hil_ground_single_pulse_test"
     "test_run_isolated_test_suite_shebang"
+    "test_new_field_single_pulse_command_sheet_static"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
     "test_pi_epuck_tcp_server_sensors_audited"
