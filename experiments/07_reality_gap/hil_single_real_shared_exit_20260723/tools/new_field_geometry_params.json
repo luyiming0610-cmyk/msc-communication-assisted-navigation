@@ -35,8 +35,9 @@
         "corridor_y_max_m": 0.70
     },
     "documentation_only_reference": {
-        "_comment": "Not a parameter_path field, not in required_before_ground_motion, never read by any preflight gate -- a manual distance-measurement aid only, never a safety stop line and never an automatic gate.",
-        "manual_reference_line_x_m": 0.40
+        "_comment": "Not a parameter_path field, not in required_before_ground_motion, never read by any preflight gate. manual_reference_line_x_m is a manual distance-measurement aid only, never a safety stop line and never an automatic gate. absolute_stop_line_x_m is documentation/traceability metadata for the runtime stop_line_distance_m above (measured_geometry.stop_line_distance_m = absolute_stop_line_x_m - measured_geometry.start_x_m) -- it must never itself become a runtime threshold or appear in required_before_ground_motion; test_new_field_geometry_params.py machine-checks the two stay consistent so this conversion is never silently redone incorrectly.",
+        "manual_reference_line_x_m": 0.40,
+        "absolute_stop_line_x_m": 1.20
     },
     "environment": {
         "_comment": "boundaries_and_obstacles_recorded is a STABLE fact about this new, fixed test venue. Deliberately left false -- it has not yet been explicitly confirmed for this new field (this is a genuinely new physical setup; the old field's confirmed value must never be assumed to carry over). Must be set true only after the new field's walls/obstacle locations are actually recorded.",

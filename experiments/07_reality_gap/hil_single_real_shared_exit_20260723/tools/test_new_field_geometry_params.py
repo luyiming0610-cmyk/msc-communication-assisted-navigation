@@ -229,6 +229,21 @@ class NewFieldGeometryParamsFileTest(unittest.TestCase):
         for dotted_path in params["required_before_ground_motion"]:
             self.assertNotIn("manual_reference_line", dotted_path)
 
+    def test_absolute_stop_line_is_documentation_only_never_a_gate(self):
+        params = _load()
+        self.assertIn("absolute_stop_line_x_m", params["documentation_only_reference"])
+        for dotted_path in params["required_before_ground_motion"]:
+            self.assertNotIn("absolute_stop_line", dotted_path)
+
+    def test_absolute_stop_line_traceability_matches_derived_stop_line_distance(self):
+        # absolute_stop_line_x_m - start_x_m must equal stop_line_distance_m
+        # (1.20 - 0.30 = 0.90), so the two can never silently drift apart.
+        params = _load()
+        geometry = params["measured_geometry"]
+        absolute_stop_line_x_m = params["documentation_only_reference"]["absolute_stop_line_x_m"]
+        derived_distance = absolute_stop_line_x_m - geometry["start_x_m"]
+        self.assertAlmostEqual(derived_distance, geometry["stop_line_distance_m"], places=9)
+
     def test_does_not_duplicate_formal_shared_exit_geometry_fields(self):
         params = _load()
         geometry_keys = set(params["measured_geometry"].keys())

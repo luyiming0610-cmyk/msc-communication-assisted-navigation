@@ -33,7 +33,7 @@ record in any way.
 | Start y (m, robot body centre) | 0.50 | `measured_geometry.start_y_m` |
 | Start yaw (rad) | 0.0 | `measured_geometry.start_yaw_rad` |
 | Intended travel direction | forward_along_length | `measured_geometry.travel_direction` |
-| Stop line, absolute x (m) | 1.20 | (documentation only -- see note; the gated field is a distance) |
+| Stop line, absolute x (m) | 1.20 | `documentation_only_reference.absolute_stop_line_x_m` (documentation/traceability only -- the gated field is the derived distance; a consistency test enforces `absolute_stop_line_x_m - start_x_m == stop_line_distance_m`) |
 | Stop-line distance from start (m) | 0.90 | `measured_geometry.stop_line_distance_m` |
 | Central corridor, y minimum (m) | 0.30 | `measured_geometry.corridor_y_min_m` |
 | Central corridor, y maximum (m) | 0.70 | `measured_geometry.corridor_y_max_m` |

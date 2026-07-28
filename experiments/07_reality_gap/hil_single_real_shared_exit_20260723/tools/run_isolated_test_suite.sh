@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # Permanent safe test runner -- the ONLY sanctioned way to run the HIL
 # unit suite, the Pi command-audit suite, the sync-script suite, and
 # the epuck2_comm/epuck2_comm_interfaces colcon suite from 2026-07-23
@@ -74,6 +74,7 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_hil_repeatability_batch_aggregator"
     "test_new_field_geometry_params"
     "test_hil_ground_single_pulse_test"
+    "test_run_isolated_test_suite_shebang"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
     "test_pi_epuck_tcp_server_sensors_audited"
@@ -103,7 +104,7 @@ _assert_modules_collected() {
     return 0
 }
 
-echo "=== [1/8] Refusing to run if any physical/HIL process is detected ==="
+echo "=== [1/11] Refusing to run if any physical/HIL process is detected ==="
 if MATCHED="$(pgrep -af -- "${PHYSICAL_PATTERN}" 2>/dev/null)"; then
     echo "${MATCHED}"
     echo "SAFE_TEST_RUNNER_BLOCKED_PHYSICAL_PROCESS_DETECTED"
@@ -112,7 +113,7 @@ fi
 echo "No matching physical/HIL process found."
 
 echo ""
-echo "=== [2/8] Real /cmd_vel publisher count, default domain, BEFORE ==="
+echo "=== [2/11] Real /cmd_vel publisher count, default domain, BEFORE ==="
 unset ROS_DOMAIN_ID
 BEFORE="$(ros2 topic info /cmd_vel 2>/dev/null | grep 'Publisher count' | grep -o '[0-9]*' || true)"
 if [[ -z "${BEFORE}" ]]; then
@@ -125,14 +126,14 @@ if [[ "${BEFORE}" != "TOPIC_NOT_PRESENT" && "${BEFORE}" != "0" ]]; then
 fi
 
 echo ""
-echo "=== [3/8] Switching to isolated ROS_DOMAIN_ID=${TEST_ROS_DOMAIN_ID} ==="
+echo "=== [3/11] Switching to isolated ROS_DOMAIN_ID=${TEST_ROS_DOMAIN_ID} ==="
 export ROS_DOMAIN_ID="${TEST_ROS_DOMAIN_ID}"
 _assert_isolated_domain
 
 FAIL=0
 
 echo ""
-echo "=== [4/8] HIL unit test suite (includes command-evidence recorder, zero-publisher proofs, sync-logic tests) ==="
+echo "=== [4/11] HIL unit test suite (includes command-evidence recorder, zero-publisher proofs, sync-logic tests) ==="
 _assert_isolated_domain
 HIL_OUTPUT="$(cd "${SCRIPT_DIR}" && python3 -m unittest discover -s . -p "test_*.py" -v 2>&1)"
 echo "${HIL_OUTPUT}"
@@ -142,7 +143,7 @@ if ! _assert_modules_collected "HIL" "${HIL_OUTPUT}" "${REQUIRED_HIL_TEST_MODULE
 fi
 
 echo ""
-echo "=== [5/8] Pi command-audit test suite (pure logic, no rclpy) ==="
+echo "=== [5/11] Pi command-audit test suite (pure logic, no rclpy) ==="
 _assert_isolated_domain
 PI_OUTPUT="$(cd "${PI_AUDIT_DIR}" && python3 -m unittest discover -s . -p "test_*.py" -v 2>&1)"
 echo "${PI_OUTPUT}"
