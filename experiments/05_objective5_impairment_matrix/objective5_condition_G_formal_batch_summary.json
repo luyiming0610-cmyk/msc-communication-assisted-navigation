@@ -1,0 +1,348 @@
+{
+  "condition_id": "G",
+  "batch_id": "objective5_condition_G_formal_batch_20260728",
+  "batch_label": "FORMAL_SIM",
+  "status": "FINAL_BATCH_PASS_DATA_VALIDITY",
+  "status_note": "FINAL_BATCH_PASS refers to DATA_VALIDITY only (5/5 VALID). Task-outcome results are mixed and reported honestly below; this label is not a claim that every trial succeeded at the task/safety level.",
+  "n_trials": 5,
+  "counted_trial_ids": [
+    "objective5_impairment_matrix_v1_condition_G_trial01_attempt01",
+    "objective5_impairment_matrix_v1_condition_G_trial02_attempt01",
+    "objective5_impairment_matrix_v1_condition_G_trial03_attempt01",
+    "objective5_impairment_matrix_v1_condition_G_trial04_attempt01",
+    "objective5_impairment_matrix_v1_condition_G_trial05_attempt01"
+  ],
+  "excluded_or_invalid_attempts": [],
+  "valid_trial_count": 5,
+  "task_outcome_counts": {
+    "SUCCESS": 4,
+    "SAFE_DEGRADATION": 0,
+    "UNSAFE_FAILURE": 1,
+    "NOT_EVALUABLE": 0
+  },
+  "configuration": {
+    "delay_s": 0.20,
+    "jitter_s": 0.20,
+    "jitter_semantics": "Uniform(-0.10, +0.10) added to delay_s per message; release_delay_s = max(0.0, delay_s + jitter)",
+    "drop_probability": 0.10,
+    "outage_period_s": 0.0,
+    "outage_duration_s": 0.0,
+    "outage_phase_s": 0.0,
+    "peer_timeout_s": 0.5,
+    "safety_radius_m": 0.14,
+    "max_runtime_s": 60.0,
+    "startup_hold_s": 5.0,
+    "stop_after_recovery": true,
+    "post_recovery_hold_s": 0.5,
+    "seeds_epuck1_to_epuck2": [4001, 4002, 4003, 4004, 4005],
+    "seeds_epuck2_to_epuck1": [14001, 14002, 14003, 14004, 14005]
+  },
+  "execution_identity": {
+    "git_commit": "e80ae7565a1f4583879382ad388dc3a4a8167e75",
+    "orchestrator_sha256": "94bfede6726f712d98ed91ebebb103cdf59ed5c372b653f59443454994851244",
+    "network_impairment_relay_py_sha256": "f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff",
+    "network_impairment_py_sha256": "253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561",
+    "sequence_counter_py_sha256": "57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3"
+  },
+  "trials": [
+    {
+      "trial_index": 1,
+      "trial_id": "objective5_impairment_matrix_v1_condition_G_trial01_attempt01",
+      "seed_epuck1_to_epuck2": 4001,
+      "seed_epuck2_to_epuck1": 14001,
+      "data_validity": "VALID",
+      "data_validity_reasons": [],
+      "task_outcome": "SUCCESS",
+      "task_outcome_reason": "complete_count=2 >= expected 2",
+      "min_interrobot_distance_m": 0.1431967129721379,
+      "safety_margin_m": 0.0031967129721379,
+      "completion_recovery_result": "both robots completed (complete_count=2/2), controller_crashed=false",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 464, "relay_forwarded_count": 423, "independent_drop_count": 41,
+        "realised_loss_fraction": 0.088362, "duplicate_count": 0, "out_of_order_count": 43,
+        "mean_message_age_s": 0.21229314419621623, "median_message_age_s": 0.21999999999999886,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000010000008, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 472, "relay_forwarded_count": 416, "independent_drop_count": 56,
+        "realised_loss_fraction": 0.118644, "duplicate_count": 0, "out_of_order_count": 30,
+        "mean_message_age_s": 0.214278846134614, "median_message_age_s": 0.21999999999999886,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "startup_stale_episode_count": 2,
+      "startup_stale_episode_note": "One SAFE_STOP_STALE->recovery episode per robot, both near trial start (ros_time approx 26.2s and 28.4s), each recovering within <0.3s. Reported as startup diagnostic events per the accepted reporting limitation; not proven to have occurred during the navigation encounter.",
+      "in_task_stale_episode_count": "NOT_AVAILABLE",
+      "peer_timeout_events": "NOT_AVAILABLE",
+      "pending_queue_depth": {"epuck1": 0, "epuck2": 0},
+      "queue_drained": true,
+      "bag_metadata_result": "VALID_NON_EMPTY",
+      "bag_record_scan": "CLEAN_NO_DROP_WARN_ERROR",
+      "analyzer_result": "analyzer_ok=true, exit=0, schema valid",
+      "controller_simulation_failure": "NONE",
+      "realtime_factor_ok": true,
+      "evidence_completeness": "ALL_PRESENT_NON_EMPTY"
+    },
+    {
+      "trial_index": 2,
+      "trial_id": "objective5_impairment_matrix_v1_condition_G_trial02_attempt01",
+      "seed_epuck1_to_epuck2": 4002,
+      "seed_epuck2_to_epuck1": 14002,
+      "data_validity": "VALID",
+      "data_validity_reasons": [],
+      "task_outcome": "UNSAFE_FAILURE",
+      "task_outcome_reason": "min_interrobot_distance_m=0.1397 < safety_radius_m=0.1400",
+      "min_interrobot_distance_m": 0.1396690407705024,
+      "safety_margin_m": -0.0003309592294976,
+      "completion_recovery_result": "both robots completed (complete_count=2/2), controller_crashed=false -- task completion did not prevent the safety-radius violation",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 425, "relay_forwarded_count": 381, "independent_drop_count": 44,
+        "realised_loss_fraction": 0.103529, "duplicate_count": 0, "out_of_order_count": 31,
+        "mean_message_age_s": 0.21154855641994638, "median_message_age_s": 0.21999999999999886,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 432, "relay_forwarded_count": 382, "independent_drop_count": 50,
+        "realised_loss_fraction": 0.115741, "duplicate_count": 0, "out_of_order_count": 37,
+        "mean_message_age_s": 0.2075916230314123, "median_message_age_s": 0.20000000000000195,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "startup_stale_episode_count": 2,
+      "startup_stale_episode_note": "One SAFE_STOP_STALE->recovery episode per robot, near trial start (ros_time approx 21.4s and 21.6-24.5s). Reported as startup diagnostic events per the accepted reporting limitation; not proven to have occurred during the navigation encounter, and not asserted as the cause of the safety-margin violation.",
+      "in_task_stale_episode_count": "NOT_AVAILABLE",
+      "peer_timeout_events": "NOT_AVAILABLE",
+      "pending_queue_depth": {"epuck1": 0, "epuck2": 0},
+      "queue_drained": true,
+      "bag_metadata_result": "VALID_NON_EMPTY",
+      "bag_record_scan": "CLEAN_NO_DROP_WARN_ERROR",
+      "analyzer_result": "analyzer_ok=true, exit=0, schema valid",
+      "controller_simulation_failure": "NONE",
+      "realtime_factor_ok": true,
+      "evidence_completeness": "ALL_PRESENT_NON_EMPTY"
+    },
+    {
+      "trial_index": 3,
+      "trial_id": "objective5_impairment_matrix_v1_condition_G_trial03_attempt01",
+      "seed_epuck1_to_epuck2": 4003,
+      "seed_epuck2_to_epuck1": 14003,
+      "data_validity": "VALID",
+      "data_validity_reasons": [],
+      "task_outcome": "SUCCESS",
+      "task_outcome_reason": "complete_count=2 >= expected 2",
+      "min_interrobot_distance_m": 0.1498907028615544,
+      "safety_margin_m": 0.0098907028615544,
+      "completion_recovery_result": "both robots completed (complete_count=2/2), controller_crashed=false",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 432, "relay_forwarded_count": 392, "independent_drop_count": 40,
+        "realised_loss_fraction": 0.092593, "duplicate_count": 0, "out_of_order_count": 41,
+        "mean_message_age_s": 0.20831632651275384, "median_message_age_s": 0.21999999999999886,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 439, "relay_forwarded_count": 407, "independent_drop_count": 32,
+        "realised_loss_fraction": 0.072893, "duplicate_count": 0, "out_of_order_count": 42,
+        "mean_message_age_s": 0.20766584766093238, "median_message_age_s": 0.20000000000000284,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "startup_stale_episode_count": 2,
+      "startup_stale_episode_note": "One SAFE_STOP_STALE->recovery episode per robot, near trial start (both ros_time approx 22.4-22.6s). Reported as startup diagnostic events per the accepted reporting limitation; not proven to have occurred during the navigation encounter.",
+      "in_task_stale_episode_count": "NOT_AVAILABLE",
+      "peer_timeout_events": "NOT_AVAILABLE",
+      "pending_queue_depth": {"epuck1": 0, "epuck2": 0},
+      "queue_drained": true,
+      "bag_metadata_result": "VALID_NON_EMPTY",
+      "bag_record_scan": "CLEAN_NO_DROP_WARN_ERROR",
+      "analyzer_result": "analyzer_ok=true, exit=0, schema valid",
+      "controller_simulation_failure": "NONE",
+      "realtime_factor_ok": true,
+      "evidence_completeness": "ALL_PRESENT_NON_EMPTY"
+    },
+    {
+      "trial_index": 4,
+      "trial_id": "objective5_impairment_matrix_v1_condition_G_trial04_attempt01",
+      "seed_epuck1_to_epuck2": 4004,
+      "seed_epuck2_to_epuck1": 14004,
+      "data_validity": "VALID",
+      "data_validity_reasons": [],
+      "task_outcome": "SUCCESS",
+      "task_outcome_reason": "complete_count=2 >= expected 2",
+      "min_interrobot_distance_m": 0.1430484304569504,
+      "safety_margin_m": 0.0030484304569504,
+      "completion_recovery_result": "both robots completed (complete_count=2/2), controller_crashed=false",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 455, "relay_forwarded_count": 402, "independent_drop_count": 53,
+        "realised_loss_fraction": 0.116484, "duplicate_count": 0, "out_of_order_count": 44,
+        "mean_message_age_s": 0.21149253730099363, "median_message_age_s": 0.21999999999999886,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 443, "relay_forwarded_count": 400, "independent_drop_count": 43,
+        "realised_loss_fraction": 0.097065, "duplicate_count": 0, "out_of_order_count": 32,
+        "mean_message_age_s": 0.20809999998749862, "median_message_age_s": 0.1999999999999993,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "startup_stale_episode_count": 2,
+      "startup_stale_episode_note": "One SAFE_STOP_STALE->recovery episode per robot, near trial start (both ros_time approx 26.9-27.1s). Reported as startup diagnostic events per the accepted reporting limitation; not proven to have occurred during the navigation encounter.",
+      "in_task_stale_episode_count": "NOT_AVAILABLE",
+      "peer_timeout_events": "NOT_AVAILABLE",
+      "pending_queue_depth": {"epuck1": 0, "epuck2": 0},
+      "queue_drained": true,
+      "bag_metadata_result": "VALID_NON_EMPTY",
+      "bag_record_scan": "CLEAN_NO_DROP_WARN_ERROR",
+      "analyzer_result": "analyzer_ok=true, exit=0, schema valid",
+      "controller_simulation_failure": "NONE",
+      "realtime_factor_ok": true,
+      "evidence_completeness": "ALL_PRESENT_NON_EMPTY"
+    },
+    {
+      "trial_index": 5,
+      "trial_id": "objective5_impairment_matrix_v1_condition_G_trial05_attempt01",
+      "seed_epuck1_to_epuck2": 4005,
+      "seed_epuck2_to_epuck1": 14005,
+      "data_validity": "VALID",
+      "data_validity_reasons": [],
+      "task_outcome": "SUCCESS",
+      "task_outcome_reason": "complete_count=2 >= expected 2",
+      "min_interrobot_distance_m": 0.1429028107215421,
+      "safety_margin_m": 0.0029028107215421,
+      "completion_recovery_result": "both robots completed (complete_count=2/2), controller_crashed=false",
+      "epuck1_to_epuck2": {
+        "relay_received_count": 427, "relay_forwarded_count": 386, "independent_drop_count": 41,
+        "realised_loss_fraction": 0.096019, "duplicate_count": 0, "out_of_order_count": 27,
+        "mean_message_age_s": 0.20616580310362567, "median_message_age_s": 0.20000000000000284,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "epuck2_to_epuck1": {
+        "relay_received_count": 433, "relay_forwarded_count": 382, "independent_drop_count": 51,
+        "realised_loss_fraction": 0.117783, "duplicate_count": 0, "out_of_order_count": 33,
+        "mean_message_age_s": 0.2084293193586376, "median_message_age_s": 0.20000000000000284,
+        "p95_message_age_s": 0.29999999999999716, "p99_message_age_s": 0.3000000000000007,
+        "max_message_age_s": 0.3000000000000007, "realised_jitter": "NOT_AVAILABLE"
+      },
+      "startup_stale_episode_count": 2,
+      "startup_stale_episode_note": "One SAFE_STOP_STALE->recovery episode per robot, near trial start (both ros_time approx 22.2-22.4s). Reported as startup diagnostic events per the accepted reporting limitation; not proven to have occurred during the navigation encounter.",
+      "in_task_stale_episode_count": "NOT_AVAILABLE",
+      "peer_timeout_events": "NOT_AVAILABLE",
+      "pending_queue_depth": {"epuck1": 0, "epuck2": 0},
+      "queue_drained": true,
+      "bag_metadata_result": "VALID_NON_EMPTY",
+      "bag_record_scan": "CLEAN_NO_DROP_WARN_ERROR",
+      "analyzer_result": "analyzer_ok=true, exit=0, schema valid",
+      "controller_simulation_failure": "NONE",
+      "realtime_factor_ok": true,
+      "evidence_completeness": "ALL_PRESENT_NON_EMPTY"
+    }
+  ],
+  "aggregate": {
+    "min_interrobot_distance_m": {
+      "values": [0.1431967129721379, 0.1396690407705024, 0.1498907028615544, 0.1430484304569504, 0.1429028107215421],
+      "mean": 0.1437415396,
+      "sample_sd": 0.0037375,
+      "minimum": 0.1396690407705024,
+      "maximum": 0.1498907028615544
+    },
+    "safety_margin_m": {
+      "values": [0.0031967129721379, -0.0003309592294976, 0.0098907028615544, 0.0030484304569504, 0.0029028107215421],
+      "mean": 0.0037415396,
+      "sample_sd": 0.0037375,
+      "minimum": -0.0003309592294976,
+      "maximum": 0.0098907028615544
+    },
+    "epuck1_to_epuck2_realised_loss_fraction": {
+      "values": [0.088362, 0.103529, 0.092593, 0.116484, 0.096019],
+      "mean": 0.099397,
+      "minimum": 0.088362,
+      "maximum": 0.116484,
+      "configured": 0.10
+    },
+    "epuck2_to_epuck1_realised_loss_fraction": {
+      "values": [0.118644, 0.115741, 0.072893, 0.097065, 0.117783],
+      "mean": 0.104425,
+      "minimum": 0.072893,
+      "maximum": 0.118644,
+      "configured": 0.10
+    },
+    "epuck1_to_epuck2_mean_message_age_s": {
+      "values": [0.21229, 0.21155, 0.20832, 0.21149, 0.20617],
+      "mean": 0.209964
+    },
+    "epuck2_to_epuck1_mean_message_age_s": {
+      "values": [0.21428, 0.20759, 0.20767, 0.20810, 0.20843],
+      "mean": 0.209214
+    },
+    "epuck1_to_epuck2_out_of_order_count": {"values": [43, 31, 41, 44, 27], "mean": 37.2},
+    "epuck2_to_epuck1_out_of_order_count": {"values": [30, 37, 42, 32, 33], "mean": 34.8},
+    "duplicate_count_all_trials_both_directions": 0,
+    "realised_jitter": "NOT_AVAILABLE for all trials -- no defined, reproducible jitter-specific metric exists in the current tooling; the mean/median/p95/p99/max figures above are message-age (measured-delay) distribution statistics, not jitter statistics",
+    "task_outcome_counts": {"SUCCESS": 4, "SAFE_DEGRADATION": 0, "UNSAFE_FAILURE": 1, "NOT_EVALUABLE": 0},
+    "all_data_validity_pass": true,
+    "all_task_outcome_success": false,
+    "trials_with_unsafe_failure": [2],
+    "queue_drained_all_trials": true,
+    "bag_metadata_valid_all_trials": true,
+    "bag_record_clean_all_trials": true,
+    "analyzer_ok_all_trials": true,
+    "realtime_factor_ok_all_trials": true,
+    "controller_crashed_any_trial": false,
+    "startup_stale_episodes_total": 10,
+    "startup_stale_episodes_note": "2 per trial (one per robot), all occurring within the first ~30s of a 60s max_runtime_s window, all recovering within well under 1s. Not proven to be in-task (during the navigation encounter) versus purely startup-related; in_task_stale_episode_count is NOT_AVAILABLE for every trial."
+  },
+  "evidence": {
+    "analysis_directory_sha256": {
+      "trial01": {
+        "frozen_params.json": "1ee5d82d0f74bd906983c9777375971b1628bb80ca7670cb226cafc2ca24ce87",
+        "trial_verdict.json": "1bc71a5d36ffee3faf7ac357c6f08e12f0eb2b98569f65e10eecce6c7ad96293",
+        "matrix_analysis.json": "375917d1963f42f21adae852be36601599dbc0de18c3a45db74fa38e01a18c6a"
+      },
+      "trial02": {
+        "frozen_params.json": "ebac634c38250b1b34571579e0a6233c38ad922ac479d301ffaa5aafa67f9e40",
+        "trial_verdict.json": "13fb62ae686b4dcc2988ad586189630d24baf844f95d65c915f5d9866fa32f6f",
+        "matrix_analysis.json": "3a054406f930a54dbed24bab0b96f66c15ae72d6e9e1351ac26a53c9ab30091e"
+      },
+      "trial03": {
+        "frozen_params.json": "4ba7b518add3a2608cea7c6a182c16ec9ce20c1478959431796dbf83e8a6e474",
+        "trial_verdict.json": "0905fedab7b64996c274efdc7b7326519b1941f32b5e92d58b2a138501c1546d",
+        "matrix_analysis.json": "01ca0090353e9c33088146cf649a37f0600930e363ede968ab8e40e2311065ee"
+      },
+      "trial04": {
+        "frozen_params.json": "b38461b9b072640a49c33ec3889bf4d97998af15f8806947811453f41ecc2fba",
+        "trial_verdict.json": "8cae63587e0dfb5a88663c153a62952dbf34a954e7d7f40d7ca3325c6dc91313",
+        "matrix_analysis.json": "c3b924f93aa9cc97e691abce126b7f0de9b4bf5c509530c07f972446e4e150ca"
+      },
+      "trial05": {
+        "frozen_params.json": "6ea419bace90832b2dc896f939cb1a7e7b802742219384a641e2bf37e7372a56",
+        "trial_verdict.json": "92ed48fc81c2ee793f4a800cd9422b36de6a8408d8d4844a7f842c96a31d227f",
+        "matrix_analysis.json": "03fd0b7daeb32d68d7f4866401b803f662148feb0ab66e2ba131c1890166415f"
+      }
+    },
+    "hashed_file_count": 15,
+    "hash_mismatch_count": 0,
+    "note": "This SHA-256 manifest covers the tracked analysis-directory evidence (frozen_params.json, trial_verdict.json, matrix_analysis.json per trial), following the E/F convention of recording verified hashes in the batch summary.",
+    "raw_evidence_archival": {
+      "raw_evidence_sha256_csv": "experiments/05_objective5_impairment_matrix/objective5_condition_G_raw_evidence_sha256.csv",
+      "source_file_count": 70,
+      "destination_file_count": 70,
+      "relative_path_match_count": 70,
+      "hash_match_count": 70,
+      "hash_mismatch_count": 0,
+      "missing_file_count": 0,
+      "extra_file_count": 0,
+      "archival_copy_status": "VERIFIED",
+      "native_source_roots": [
+        "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_G_trial0N_attempt01",
+        "/home/eamon/epuck_comm_bags/objective5_impairment_matrix_v1_condition_G_trial0N_attempt01_diag_logs"
+      ],
+      "windows_destination_root": "experiments/05_objective5_impairment_matrix/bags/ (gitignored per .gitignore:39)",
+      "note": "Native-to-Windows raw evidence copy performed and verified for all five trials, following the same convention as objective5_condition_F_raw_evidence_sha256.csv (five-column schema: trial_index,relative_path,source_sha256,windows_sha256,match). 70/70 files matched (14 files/trial x 5 trials: bag metadata.yaml + .db3, plus 12 diag_logs files)."
+    }
+  },
+  "limitation": "n=5 formal Webots trials under one fixed combined-impairment configuration (delay=0.20s, jitter=0.20s full spread, drop_probability=0.10). Results are descriptive only; no statistical-significance claim and no broad generalisation claim is made. One of five trials (Trial 02) produced a genuine UNSAFE_FAILURE (safety-radius violation of 0.33mm); this is retained as a real, valid result and is not excluded, retried, or explained away."
+}
