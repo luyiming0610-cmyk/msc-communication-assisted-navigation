@@ -85,16 +85,20 @@ assert_true "TRACKED_MISSING=[] with the fully-confirmed override file" "$([[ "$
 assert_true "TRACKED_UNCONFIRMED=[] with the fully-confirmed override file" "$([[ "${OUTPUT_CONFIRMED}" == *"TRACKED_UNCONFIRMED=[]"* ]] && echo true || echo false)"
 
 echo ""
-echo "=== Scenario 3: shipped new_field_geometry_params.json (unmodified) still blocks on the one remaining stable-venue confirmation ==="
+echo "=== Scenario 3: shipped new_field_geometry_params.json (unmodified) now passes both stable-venue confirmations ==="
 # boundaries_and_obstacles_recorded was confirmed true 2026-07-28 after
-# manual on-site obstacle-clearance confirmation; only
-# emergency_stop_position_confirmed (a separate fact -- the operator's
-# own e-stop position) remains unconfirmed.
+# manual on-site obstacle-clearance confirmation; emergency_stop_position_confirmed
+# was confirmed true the same day after manual confirmation of the
+# emergency power-off arrangement. Both tracked-file confirmations are
+# now true -- this proves TRACKED_FIELDS_OK, not PRE_STACK_VERDICT: the
+# four genuinely per-session confirmations (floor condition, travel
+# path, operator present, Wi-Fi) still block PRE_STACK_VERDICT via the
+# separate, gitignored hil_ground_diagnostic_session.py state file.
 OUTPUT_SHIPPED="$(GROUND_DIAGNOSTIC_PARAMS="${SCRIPT_DIR}/new_field_geometry_params.json" bash "${SCRIPT_DIR}/run_ground_diagnostic_preflight.sh" pre-stack 2>&1 || true)"
 echo "${OUTPUT_SHIPPED}"
-assert_true "TRACKED_FIELDS_OK=false with the shipped (not-yet-fully-confirmed) new-field file" "$([[ "${OUTPUT_SHIPPED}" == *"TRACKED_FIELDS_OK=false"* ]] && echo true || echo false)"
-assert_true "TRACKED_UNCONFIRMED names emergency_stop_position_confirmed" "$([[ "${OUTPUT_SHIPPED}" == *"emergency_stop_position_confirmed"* ]] && echo true || echo false)"
-assert_true "TRACKED_UNCONFIRMED no longer names boundaries_and_obstacles_recorded (now confirmed)" "$([[ "${OUTPUT_SHIPPED}" != *"'environment.boundaries_and_obstacles_recorded'"* ]] && echo true || echo false)"
+assert_true "TRACKED_FIELDS_OK=true with the shipped (now fully-confirmed) new-field file" "$([[ "${OUTPUT_SHIPPED}" == *"TRACKED_FIELDS_OK=true"* ]] && echo true || echo false)"
+assert_true "TRACKED_UNCONFIRMED=[] with the shipped (now fully-confirmed) new-field file" "$([[ "${OUTPUT_SHIPPED}" == *"TRACKED_UNCONFIRMED=[]"* ]] && echo true || echo false)"
+assert_true "PRE_STACK_VERDICT is still not a pass (per-session confirmations remain false)" "$([[ "${OUTPUT_SHIPPED}" == *"SESSION_STATE_NOT_READY"* || "${OUTPUT_SHIPPED}" == *"CONFIRMATIONS_NOT_TRUE"* ]] && echo true || echo false)"
 
 echo ""
 echo "=== Scenario 4: no override at all still reads the OLD field's default file, unaffected ==="

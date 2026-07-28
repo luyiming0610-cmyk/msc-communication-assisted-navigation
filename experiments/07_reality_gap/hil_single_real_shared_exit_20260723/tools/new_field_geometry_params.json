@@ -45,8 +45,8 @@
         "external_obstacle_clearance_lower_bound_m": 0.30
     },
     "safety": {
-        "_comment": "emergency_stop_position_confirmed records a stable fact about this new venue's e-stop/operator position. Deliberately left false for the same reason as above -- a new field very likely has a different physical e-stop/operator position than the old one, and that must be actually checked, not assumed.",
-        "emergency_stop_position_confirmed": false
+        "_comment": "emergency_stop_position_confirmed records a stable fact about this new venue's e-stop/operator position. Set true 2026-07-28 after manual confirmation of the emergency power-off arrangement: operator positioned beside and slightly behind the robot, outside the intended forward travel path, with an unobstructed view of the robot and the complete marked field; the robot's physical power button remains within the operator's immediate arm's reach throughout the pulse; immediate power-removal method is to press that physical power button at the first sign of unexpected wheel motion, abnormal sound, rotation, sudden acceleration, unknown command source, or evidence-chain failure; operator remains at this position for the complete live session and will not move away from the physical power button while the robot is powered. See NEW_FIELD_MEASUREMENT_FORM.md's Emergency-stop operator position row for the full description.",
+        "emergency_stop_position_confirmed": true
     },
     "required_before_ground_motion": [
         "measured_geometry.start_x_m",

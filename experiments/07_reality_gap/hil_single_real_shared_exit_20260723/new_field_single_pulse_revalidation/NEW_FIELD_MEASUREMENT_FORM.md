@@ -43,8 +43,8 @@ record in any way.
 | Intended travel path checked clear of any obstruction | (per-session, see note) | session file: `travel_path_clear_confirmed` (`hil_ground_diagnostic_session.py`, not this JSON file) |
 | Wall and obstacle locations | New field is in a substantially larger, unobstructed open-floor area. Nearest external wall, furniture, table edge, or fixed obstacle is a verified lower bound of >0.30 m from the marked field boundary in every direction (exact distances to distant room boundaries not recorded, not invented). Intended forward path and stopping area confirmed unobstructed. | `environment.external_obstacle_clearance_lower_bound_m` (lower bound only, documentation) |
 | Wall and obstacle locations recorded | true | `environment.boundaries_and_obstacles_recorded` |
-| Emergency-stop operator position | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Emergency-stop operator position checked | false | `safety.emergency_stop_position_confirmed` |
+| Emergency-stop operator position | Beside and slightly behind the robot, outside the intended forward travel path. Operator has an unobstructed view of the robot and the complete marked field. The robot's physical power button remains within the operator's immediate arm's reach throughout the pulse. Immediate power-removal method: press the robot's physical power button immediately at the first sign of unexpected wheel motion, abnormal sound, rotation, sudden acceleration, unknown command source, or evidence-chain failure. Operator remains at this position for the complete live session and will not move away from the physical power button while the robot is powered. | (documentation only) |
+| Emergency-stop operator position checked | true | `safety.emergency_stop_position_confirmed` |
 | Operator present at the emergency stop, confirmed | (per-session, see note) | session file: `operator_present_confirmed` (`hil_ground_diagnostic_session.py`, not this JSON file) |
 | Wi-Fi observation | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 | Wi-Fi checked in the test area | (per-session, see note) | session file: `wifi_checked_in_test_area` (`hil_ground_diagnostic_session.py`, not this JSON file) |
@@ -110,13 +110,17 @@ record in any way.
   above); `external_obstacle_clearance_lower_bound_m=0.30` records that
   confirmation as a verified lower bound only, never an exact measured
   distance, and is not itself a `required_before_ground_motion` field or
-  a runtime gate. `emergency_stop_position_confirmed` remains `false` --
-  this confirmation is about the operator's own e-stop position, which
-  has not yet been separately checked for this venue, and must not be
-  assumed true from the obstacle-clearance confirmation alone.
-  `run_ground_diagnostic_preflight.sh pre-stack` will correctly report
-  only `safety.emergency_stop_position_confirmed` as unconfirmed until
-  it, too, is explicitly checked and transferred here.
+  a runtime gate. `emergency_stop_position_confirmed` was set `true` on
+  2026-07-28 after manual confirmation of the emergency power-off
+  arrangement described in the Emergency-stop operator position row
+  above (operator position, unobstructed view, physical power button
+  within immediate arm's reach, and the immediate power-removal method).
+  Both of these two stable-venue confirmations are now `true`; the only
+  fields still required before `PRE_STACK_CHECK` can pass are the four
+  genuinely per-session confirmations below (floor condition, travel
+  path, operator presence, Wi-Fi), which must be freshly reconfirmed via
+  `hil_ground_diagnostic_session.py` for the specific live session --
+  they remain `false` until that session is explicitly initialized.
 - Once every tracked field above is a real, confirmed value, transfer
   it into `../tools/new_field_geometry_params.json` at the exact path
   shown, confirm all four per-session fields via

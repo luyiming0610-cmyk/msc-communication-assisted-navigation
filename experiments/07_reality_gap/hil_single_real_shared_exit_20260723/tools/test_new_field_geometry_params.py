@@ -117,26 +117,33 @@ class NewFieldGeometryParamsFileTest(unittest.TestCase):
         self.assertEqual(set(result.unconfirmed_paths), NUMERIC_PATHS)
         self.assertEqual(result.missing_paths, ())
 
-    def test_tracked_file_currently_blocks_on_only_the_remaining_stable_venue_confirmation(self):
+    def test_tracked_file_now_passes_both_stable_venue_confirmations(self):
         # environment.boundaries_and_obstacles_recorded was confirmed
         # true 2026-07-28 after manual on-site obstacle-clearance
-        # confirmation; safety.emergency_stop_position_confirmed is a
-        # separate, still-unconfirmed fact (operator's own e-stop
-        # position) and must not be assumed from the obstacle
-        # confirmation alone -- the file must still NOT pass
-        # check_required_fields_ready() yet.
+        # confirmation; safety.emergency_stop_position_confirmed was
+        # confirmed true the same day after manual confirmation of the
+        # emergency power-off arrangement (operator position, physical
+        # power button within immediate arm's reach, immediate
+        # power-removal method). Both tracked-file confirmations are now
+        # true, so check_required_fields_ready() passes -- this is NOT
+        # the same as PRE_STACK_CHECK passing: the four genuinely
+        # per-session confirmations (floor condition, travel path,
+        # operator present, Wi-Fi) still live only in
+        # hil_ground_diagnostic_session.py and remain false until a live
+        # session is explicitly initialized and confirmed.
         params = _load()
         result = check_required_fields_ready(params)
-        self.assertFalse(result.ok)
-        self.assertEqual(
-            set(result.unconfirmed_paths),
-            {"safety.emergency_stop_position_confirmed"},
-        )
+        self.assertTrue(result.ok)
+        self.assertEqual(result.unconfirmed_paths, ())
         self.assertEqual(result.missing_paths, ())
 
     def test_boundaries_and_obstacles_recorded_is_now_confirmed_true(self):
         params = _load()
         self.assertTrue(params["environment"]["boundaries_and_obstacles_recorded"])
+
+    def test_emergency_stop_position_confirmed_is_now_confirmed_true(self):
+        params = _load()
+        self.assertTrue(params["safety"]["emergency_stop_position_confirmed"])
 
     def test_external_obstacle_clearance_is_a_documentation_only_lower_bound_not_a_gate(self):
         params = _load()

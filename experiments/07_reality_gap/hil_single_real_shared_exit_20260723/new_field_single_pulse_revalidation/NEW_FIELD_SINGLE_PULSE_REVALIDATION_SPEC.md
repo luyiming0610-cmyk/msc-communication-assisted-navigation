@@ -93,6 +93,32 @@ from one invocation:
 python3 hil_ground_single_pulse_test.py --pulse-linear-mps 0.015 --pulse-s 6.67 --zero-hold-s 1.0 --post-hold-s 1.0
 ```
 
+## Emergency power-off arrangement (confirmed 2026-07-28)
+
+Manually confirmed, `safety.emergency_stop_position_confirmed=true` in
+`new_field_geometry_params.json`:
+
+- Operator position: beside and slightly behind the robot, outside the
+  intended forward travel path.
+- The operator has an unobstructed view of the robot and the complete
+  marked field.
+- The robot's physical power button remains within the operator's
+  immediate arm's reach throughout the pulse.
+- Immediate power-removal method: press the robot's physical power
+  button immediately at the first sign of unexpected wheel motion,
+  abnormal sound, rotation, sudden acceleration, unknown command
+  source, or evidence-chain failure.
+- The operator remains at this position for the complete live session
+  and will not move away from the physical power button while the
+  robot is powered.
+
+This is a stable fact about the venue/operator arrangement, confirmed
+once for this field -- it is separate from, and does not substitute
+for, the four genuinely per-session confirmations (floor condition,
+travel path clear, operator present, Wi-Fi checked) tracked in
+`hil_ground_diagnostic_session.py`, which must still be freshly
+reconfirmed for each live session.
+
 ## Acceptance and exclusion rules
 
 **Required gates, in order** (all reused unchanged from the existing
