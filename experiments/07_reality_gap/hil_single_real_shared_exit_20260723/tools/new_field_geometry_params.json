@@ -40,8 +40,9 @@
         "absolute_stop_line_x_m": 1.20
     },
     "environment": {
-        "_comment": "boundaries_and_obstacles_recorded is a STABLE fact about this new, fixed test venue. Deliberately left false -- it has not yet been explicitly confirmed for this new field (this is a genuinely new physical setup; the old field's confirmed value must never be assumed to carry over). Must be set true only after the new field's walls/obstacle locations are actually recorded.",
-        "boundaries_and_obstacles_recorded": false
+        "_comment": "boundaries_and_obstacles_recorded is a STABLE fact about this new, fixed test venue. Set true 2026-07-28 after manual on-site confirmation: the new field sits in a substantially larger, unobstructed open-floor area; the nearest external wall, furniture, table edge, or fixed obstacle is more than 0.30m from the marked 1.40m x 1.00m field boundary in every direction; and the intended forward travel path and stopping area are unobstructed. external_obstacle_clearance_lower_bound_m below records that confirmation as a verified LOWER BOUND only -- exact distances to distant room boundaries were not recorded and must never be invented as a precise figure. Neither this field nor boundaries_and_obstacles_recorded is a runtime gate beyond the boolean itself; min_boundary_clearance_m (measured_geometry, above) remains the only automated-adjacent safety threshold, unaffected by this confirmation.",
+        "boundaries_and_obstacles_recorded": true,
+        "external_obstacle_clearance_lower_bound_m": 0.30
     },
     "safety": {
         "_comment": "emergency_stop_position_confirmed records a stable fact about this new venue's e-stop/operator position. Deliberately left false for the same reason as above -- a new field very likely has a different physical e-stop/operator position than the old one, and that must be actually checked, not assumed.",

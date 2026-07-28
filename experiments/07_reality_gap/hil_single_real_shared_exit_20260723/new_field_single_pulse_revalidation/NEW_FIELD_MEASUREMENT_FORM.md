@@ -41,17 +41,17 @@ record in any way.
 | Manual reference line measured from robot body centre (confirmed) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 | Minimum real-boundary body-edge clearance (m) | 0.10 | `measured_geometry.min_boundary_clearance_m` |
 | Intended travel path checked clear of any obstruction | (per-session, see note) | session file: `travel_path_clear_confirmed` (`hil_ground_diagnostic_session.py`, not this JSON file) |
-| Wall and obstacle locations | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Wall and obstacle locations recorded | false | `environment.boundaries_and_obstacles_recorded` |
+| Wall and obstacle locations | New field is in a substantially larger, unobstructed open-floor area. Nearest external wall, furniture, table edge, or fixed obstacle is a verified lower bound of >0.30 m from the marked field boundary in every direction (exact distances to distant room boundaries not recorded, not invented). Intended forward path and stopping area confirmed unobstructed. | `environment.external_obstacle_clearance_lower_bound_m` (lower bound only, documentation) |
+| Wall and obstacle locations recorded | true | `environment.boundaries_and_obstacles_recorded` |
 | Emergency-stop operator position | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 | Emergency-stop operator position checked | false | `safety.emergency_stop_position_confirmed` |
 | Operator present at the emergency stop, confirmed | (per-session, see note) | session file: `operator_present_confirmed` (`hil_ground_diagnostic_session.py`, not this JSON file) |
 | Wi-Fi observation | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 | Wi-Fi checked in the test area | (per-session, see note) | session file: `wifi_checked_in_test_area` (`hil_ground_diagnostic_session.py`, not this JSON file) |
-| Rear body-edge clearance at start pose (m) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Front body-edge clearance at start pose (m) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Left body-edge clearance at start pose (m) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
-| Right body-edge clearance at start pose (m) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
+| Rear body-edge clearance at start pose (m) | >0.10 (confirmed exceeds the required 0.10 m minimum; verified lower bound, exact per-edge figure not separately recorded) | (documentation only) |
+| Front body-edge clearance at start pose (m) | >0.10 (confirmed exceeds the required 0.10 m minimum; verified lower bound, exact per-edge figure not separately recorded) | (documentation only) |
+| Left body-edge clearance at start pose (m) | >0.10 (confirmed exceeds the required 0.10 m minimum; verified lower bound, exact per-edge figure not separately recorded) | (documentation only) |
+| Right body-edge clearance at start pose (m) | >0.10 (confirmed exceeds the required 0.10 m minimum; verified lower bound, exact per-edge figure not separately recorded) | (documentation only) |
 | Measured stopping clearance (m, post-run) | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only -- post-run, never a preflight gate) |
 | Observer | UNCONFIRMED_PHYSICAL_MEASUREMENT | (documentation only) |
 
@@ -101,12 +101,22 @@ record in any way.
   separate, gitignored session-state file (`hil_ground_diagnostic_session.py`),
   never committed here as a permanent fact.
 - **`boundaries_and_obstacles_recorded` and
-  `emergency_stop_position_confirmed` are deliberately `false` in the
-  shipped `new_field_geometry_params.json`** -- this is a genuinely new
-  physical venue, and the old field's own confirmed values must never
-  be assumed to carry over. `run_ground_diagnostic_preflight.sh
-  pre-stack` will correctly report these two as unconfirmed (and
-  nothing else) until they are explicitly checked and transferred here.
+  `emergency_stop_position_confirmed` were both deliberately `false` in
+  the originally shipped `new_field_geometry_params.json`** -- this is
+  a genuinely new physical venue, and the old field's own confirmed
+  values must never be assumed to carry over.
+  `boundaries_and_obstacles_recorded` was set `true` on 2026-07-28 after
+  manual on-site confirmation (see the Wall and obstacle locations row
+  above); `external_obstacle_clearance_lower_bound_m=0.30` records that
+  confirmation as a verified lower bound only, never an exact measured
+  distance, and is not itself a `required_before_ground_motion` field or
+  a runtime gate. `emergency_stop_position_confirmed` remains `false` --
+  this confirmation is about the operator's own e-stop position, which
+  has not yet been separately checked for this venue, and must not be
+  assumed true from the obstacle-clearance confirmation alone.
+  `run_ground_diagnostic_preflight.sh pre-stack` will correctly report
+  only `safety.emergency_stop_position_confirmed` as unconfirmed until
+  it, too, is explicitly checked and transferred here.
 - Once every tracked field above is a real, confirmed value, transfer
   it into `../tools/new_field_geometry_params.json` at the exact path
   shown, confirm all four per-session fields via
