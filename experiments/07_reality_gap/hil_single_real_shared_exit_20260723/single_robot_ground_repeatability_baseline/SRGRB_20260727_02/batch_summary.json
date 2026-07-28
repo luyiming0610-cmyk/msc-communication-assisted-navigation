@@ -1,0 +1,41 @@
+{
+  "batch_status": "BATCH_ABORTED_EXCLUDED",
+  "manifest_errors": [],
+  "n_valid": 0,
+  "slot_fill": {
+    "1": null,
+    "2": null,
+    "3": null,
+    "4": null,
+    "5": null
+  },
+  "attempts": [
+    {
+      "trial": 1,
+      "attempt": 1,
+      "run_id": "20260727_143309",
+      "classification": "INVALID",
+      "reason": "POSE_READINESS_FLUSH_FRESHNESS_INCOMPATIBLE",
+      "counts_as_valid": false,
+      "errors": [
+        "VERIFICATION_JSON_NOT_FOUND(/mnt/c/Users/\u8def\u4e00\u9e23/Desktop/\u786c\u4ef6\u5b9e\u9a8c\u6bd5\u8bbe/e-puck2-Comm/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/single_robot_ground_repeatability_baseline/SRGRB_20260727_02/trial1_attempt1_20260727_143309/post_run_verification.json)"
+      ],
+      "spec_commit": "16dd56d87ea88f72de4e50da3434f7ffbffe7a59",
+      "execution_code_commit": "9288198d3416e7d931cd682b72d51108dbbb1d8e"
+    },
+    {
+      "trial": 1,
+      "attempt": 2,
+      "run_id": "20260727_153600",
+      "classification": "EXCLUDED",
+      "reason": "MIN_BOUNDARY_CLEARANCE_VIOLATION",
+      "counts_as_valid": false,
+      "errors": [],
+      "spec_commit": "4d777590d7189fedaffb105eddfd5003ea1cb40e",
+      "execution_code_commit": "8515dbb0cc6dba30dfc342bb215d453ce3b6286c"
+    }
+  ],
+  "descriptive_stats": {},
+  "batch_id": "SRGRB_20260727_02",
+  "spec_commit": "16dd56d87ea88f72de4e50da3434f7ffbffe7a59"
+}
