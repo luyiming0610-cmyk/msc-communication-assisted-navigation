@@ -51,7 +51,7 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool, String
 
 from hil_offline_stage3_evidence_recorder import GATE_DECISION_EVENT_ROW_TOPIC, PHASE_EVENT_ROW_TOPIC, _build_node
-from hil_offline_stage3_post_run_verifier import run_verifier
+from hil_offline_stage3_post_run_verifier import DEFAULT_VIRTUAL_PEER_TIMEOUT_S, run_verifier
 
 _COOP_EXIT_TOOLS_DIR = str(
     Path(__file__).resolve().parents[3] / "10_cooperative_exit_navigation_20260720" / "tools"
@@ -92,6 +92,65 @@ def _spin_for(executor, seconds, step=0.02):
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         executor.spin_once(timeout_sec=step)
+
+
+def wait_until_wall_clock_at_least(target_ns: int, *, timeout_s: float = 5.0, poll_interval_s: float = 0.005) -> int:
+    """Blocks until time.time_ns() >= target_ns -- the SAME clock
+    hil_offline_stage3_evidence_recorder.py itself uses to stamp
+    local_time_ns at receipt (see its own `local_time_ns=time.time_ns()`
+    call) -- so a caller who derives `target_ns` from an
+    already-observed wall-clock reference point gets a deterministic,
+    causally-grounded guarantee about ordering relative to that
+    reference, not a guess about how long "enough" wall-clock delay
+    happens to be. Returns the actual time.time_ns() value observed at
+    return (>= target_ns). Bounded by `timeout_s`: raises TimeoutError
+    with a clear reason if target_ns is never reached (e.g. a clock
+    regression), rather than hanging indefinitely.
+    """
+    deadline = time.monotonic() + timeout_s
+    while True:
+        now_ns = time.time_ns()
+        if now_ns >= target_ns:
+            return now_ns
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                f"wait_until_wall_clock_at_least: target_ns={target_ns} not reached "
+                f"within timeout_s={timeout_s} (last observed time.time_ns()={now_ns})"
+            )
+        time.sleep(poll_interval_s)
+
+
+class WaitUntilWallClockHelperTest(unittest.TestCase):
+    """Pure, deterministic, no-ROS-dependency proof of
+    wait_until_wall_clock_at_least() itself -- the causal-condition wait
+    helper that replaced the previous test's fixed time.sleep(1.1)."""
+
+    def test_returns_only_once_target_is_actually_reached(self):
+        target = time.time_ns() + int(0.05 * 1e9)
+        observed = wait_until_wall_clock_at_least(target, timeout_s=5.0)
+        self.assertGreaterEqual(observed, target)
+        self.assertGreaterEqual(time.time_ns(), target)
+
+    def test_does_not_return_early(self):
+        target = time.time_ns() + int(0.2 * 1e9)
+        before = time.monotonic()
+        wait_until_wall_clock_at_least(target, timeout_s=5.0)
+        elapsed = time.monotonic() - before
+        self.assertGreaterEqual(elapsed, 0.19, "must not return before the target wall-clock time")
+
+    def test_raises_clear_timeout_when_target_is_unreachable_within_budget(self):
+        target = time.time_ns() + int(10 * 1e9)  # 10s away
+        with self.assertRaises(TimeoutError) as ctx:
+            wait_until_wall_clock_at_least(target, timeout_s=0.05, poll_interval_s=0.01)
+        self.assertIn("not reached", str(ctx.exception))
+        self.assertIn(str(target), str(ctx.exception))
+
+    def test_returns_immediately_if_target_already_in_the_past(self):
+        target = time.time_ns() - int(1 * 1e9)
+        before = time.monotonic()
+        wait_until_wall_clock_at_least(target, timeout_s=5.0)
+        elapsed = time.monotonic() - before
+        self.assertLess(elapsed, 1.0, "a past target must not incur any wait")
 
 
 class RecorderVerifierIntegrationTest(unittest.TestCase):
@@ -248,6 +307,14 @@ class RecorderVerifierIntegrationTest(unittest.TestCase):
 
         self._publish_phase_event(gate_open=False, phase="PEER_GATE_CLOSED")
         _spin_for(self.executor, 0.05)
+        # The recorder's own PEER_GATE_CLOSED callback runs synchronously
+        # inside this single-threaded executor's spin above (same
+        # process, same thread) -- so it has already executed and
+        # recorded local_time_ns=time.time_ns() by the time control
+        # returns here. This wall-clock reading is therefore a strict,
+        # causally-grounded upper bound on that recorded close_ts (not a
+        # guess): close_ts happened before this read, in this thread.
+        close_processed_wall_ns = time.time_ns()
 
         # Source keeps publishing during the closed interval; gate-input
         # does NOT (suppressed) -- proves continuation vs. suppression.
@@ -267,9 +334,16 @@ class RecorderVerifierIntegrationTest(unittest.TestCase):
             forwarded_destination_topic=None,
         )
 
-        # Peer-timeout (1.0s default) elapses before reopening.
-        time.sleep(1.1)
-        _spin_for(self.executor, 0.05)
+        # Peer-timeout (DEFAULT_VIRTUAL_PEER_TIMEOUT_S, the same
+        # threshold the verifier itself checks against) must have
+        # definitely elapsed before STALE_ZERO_CONFIRMED is published --
+        # waited for via the actual causal condition (wall-clock time
+        # since the already-processed PEER_GATE_CLOSED event), never a
+        # fixed sleep whose margin against the verifier's threshold can
+        # be eaten by scheduling jitter under load.
+        wait_until_wall_clock_at_least(
+            close_processed_wall_ns + int(DEFAULT_VIRTUAL_PEER_TIMEOUT_S * 1e9)
+        )
         self._publish_phase_event(phase="STALE_ZERO_CONFIRMED")
         _spin_for(self.executor, 0.05)
 

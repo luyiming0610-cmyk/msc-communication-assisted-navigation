@@ -11,6 +11,9 @@ gating -- all against private /hil_offline_stage3/... test topics only.
 """
 from __future__ import annotations
 
+import math
+import re
+import sys
 import time
 import types
 import unittest
@@ -30,6 +33,8 @@ from hil_offline_stage3_harness import (
     RunnerTimeoutError,
     Stage3AutomaticRunner,
     Stage3Phase,
+    SYNTHETIC_CLEAR_SENSOR_FIXTURE_FIELDS,
+    apply_synthetic_clear_sensor_fixture,
     build_bridge_status_payload,
     build_gate_decision_event,
     check_ros_domain_id,
@@ -38,6 +43,19 @@ from hil_offline_stage3_harness import (
     is_isolated_topic,
     is_timeout_exceeded,
 )
+
+# local_obstacle_logic.py has no ROS dependency (confirmed by its own
+# module docstring: "no ROS dependency so the safety and priority rules
+# can be unit-tested") -- imported here as a bare module by adding its
+# real source directory to sys.path directly, the same pattern already
+# used elsewhere in this project to reuse a sibling module without
+# requiring a sourced ROS workspace just for a pure-logic test.
+_LOCAL_OBSTACLE_LOGIC_DIR = str(
+    Path(__file__).resolve().parents[4] / "src" / "epuck2_comm" / "epuck2_comm"
+)
+if _LOCAL_OBSTACLE_LOGIC_DIR not in sys.path:
+    sys.path.insert(0, _LOCAL_OBSTACLE_LOGIC_DIR)
+from local_obstacle_logic import decide_local_obstacle  # noqa: E402
 
 
 class PhaseMachineTest(unittest.TestCase):
@@ -466,6 +484,317 @@ class TimeoutHelperTest(unittest.TestCase):
 
     def test_boundary_exactly_at_deadline_not_exceeded(self):
         self.assertFalse(is_timeout_exceeded(start_monotonic_s=0.0, now_monotonic_s=60.0, max_runtime_s=60.0))
+
+
+class SyntheticClearSensorFixtureTest(unittest.TestCase):
+    """Proves the SYNTHETIC_CLEAR_SENSOR_FIXTURE correction:
+    hil_offline_stage3_harness.py's own-state message must set every
+    EpuckState field the real, unmodified cooperative_avoider.py /
+    local_obstacle_logic.py chain reads under a "no valid return"
+    convention to +Inf, never the ROS float32 implicit default 0.0 --
+    which decide_local_obstacle() (imported here as the real, unmodified
+    production function, not a reimplementation) would otherwise read as
+    a genuine obstacle at zero distance."""
+
+    def _build_stub_state(self, **overrides):
+        fields = {name: float("inf") for name in SYNTHETIC_CLEAR_SENSOR_FIXTURE_FIELDS}
+        fields.update(overrides)
+        stub = types.SimpleNamespace(validity_flags=OWN_STATE_REQUIRED_VALIDITY_FLAGS, **fields)
+        return stub
+
+    def test_validity_flags_is_7(self):
+        self.assertEqual(OWN_STATE_REQUIRED_VALIDITY_FLAGS, 7)
+
+    def test_every_consumed_field_becomes_positive_infinity(self):
+        stub = types.SimpleNamespace(x_m=1.0, y_m=2.0)  # unrelated field, must survive untouched
+        apply_synthetic_clear_sensor_fixture(stub)
+        for field_name in SYNTHETIC_CLEAR_SENSOR_FIXTURE_FIELDS:
+            value = getattr(stub, field_name)
+            self.assertTrue(math.isinf(value) and value > 0, f"{field_name}={value}")
+        self.assertEqual(stub.x_m, 1.0)
+        self.assertEqual(stub.y_m, 2.0)
+
+    def test_no_consumed_field_remains_zero(self):
+        stub = types.SimpleNamespace()
+        apply_synthetic_clear_sensor_fixture(stub)
+        for field_name in SYNTHETIC_CLEAR_SENSOR_FIXTURE_FIELDS:
+            self.assertNotEqual(getattr(stub, field_name), 0.0, field_name)
+
+    def test_real_decide_local_obstacle_returns_clear_for_the_fixture(self):
+        stub = self._build_stub_state()
+        decision = decide_local_obstacle(
+            stub.front_distance_m, stub.left_distance_m, stub.right_distance_m,
+            stub.validity_flags,
+        )
+        self.assertEqual(decision.mode, "LOCAL_CLEAR")
+        self.assertFalse(decision.active)
+        self.assertFalse(decision.safety_stop)
+
+    def test_does_not_return_local_front_danger(self):
+        stub = self._build_stub_state()
+        decision = decide_local_obstacle(
+            stub.front_distance_m, stub.left_distance_m, stub.right_distance_m,
+            stub.validity_flags,
+        )
+        self.assertNotEqual(decision.mode, "LOCAL_FRONT_DANGER")
+
+    def test_does_not_produce_permanent_in_place_turn(self):
+        stub = self._build_stub_state()
+        decision = decide_local_obstacle(
+            stub.front_distance_m, stub.left_distance_m, stub.right_distance_m,
+            stub.validity_flags,
+        )
+        # LOCAL_CLEAR/inactive means cooperative_avoider's own priority
+        # chain falls through to peer-CPA/dynamic-heading/cruise logic
+        # instead of returning this decision's own linear/angular values
+        # -- confirmed here by asserting no artificial command is even
+        # offered (both zero) AND the decision is not active.
+        self.assertFalse(decision.active)
+        self.assertEqual(decision.linear_mps, 0.0)
+        self.assertEqual(decision.angular_rps, 0.0)
+
+    def test_zero_front_distance_still_produces_danger_this_proves_the_test_is_meaningful(self):
+        """Without the fixture correction (front_distance_m left at the
+        implicit 0.0 default), decide_local_obstacle() must still
+        produce LOCAL_FRONT_DANGER -- proving the CLEAR result above is
+        a genuine consequence of the +Inf fixture, not a vacuous check
+        that would pass regardless of input."""
+        stub = self._build_stub_state(front_distance_m=0.0)
+        decision = decide_local_obstacle(
+            stub.front_distance_m, stub.left_distance_m, stub.right_distance_m,
+            stub.validity_flags,
+        )
+        self.assertEqual(decision.mode, "LOCAL_FRONT_DANGER")
+        self.assertTrue(decision.active)
+
+    def test_fixture_is_explicitly_labeled_test_only_not_physical(self):
+        source = Path(__file__).with_name("hil_offline_stage3_harness.py").read_text(encoding="utf-8")
+        self.assertIn("SYNTHETIC_CLEAR_SENSOR_FIXTURE", source)
+        self.assertIn("TEST_ONLY", source)
+        self.assertIn("NOT_A_PHYSICAL_MEASUREMENT", source)
+
+    def test_publish_own_state_applies_the_fixture(self):
+        """Structural guard: _publish_own_state() must actually call
+        apply_synthetic_clear_sensor_fixture() -- a fixture function that
+        exists but is never wired in would be exactly as broken as no
+        fixture at all."""
+        source = Path(__file__).with_name("hil_offline_stage3_harness.py").read_text(encoding="utf-8")
+        start = source.index("def _publish_own_state")
+        end = source.index("\n\n", start)
+        body = source[start:end]
+        self.assertIn("apply_synthetic_clear_sensor_fixture(msg)", body)
+
+
+def _runbook_text() -> str:
+    path = Path(__file__).resolve().parents[1] / "HIL_OFFLINE_STAGE3_RUNBOOK.md"
+    return path.read_text(encoding="utf-8")
+
+
+def _runbook_bash_blocks() -> list:
+    """Extract only the executable ```bash fenced code blocks from the
+    runbook, separate from prohibition/preflight prose -- required so
+    this test never asserts a production topic string is absent from
+    the whole document (it legitimately appears in prohibition text),
+    only that it never appears as an executable argument/remap."""
+    text = _runbook_text()
+    return re.findall(r"```bash\n(.*?)\n```", text, flags=re.DOTALL)
+
+
+def _runbook_bash_code_lines() -> list:
+    """All executable (non-comment, non-blank) lines across every bash
+    block, e.g. for placeholder-token checks that must ignore the
+    deliberately-commented-out, deferred RUN_ID/OUT_DIR bootstrap
+    lines."""
+    lines = []
+    for block in _runbook_bash_blocks():
+        for line in block.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            lines.append(line)
+    return lines
+
+
+class RunbookCommandContractTest(unittest.TestCase):
+    """Parses the committed runbook's executable ```bash block(s)
+    separately from its prohibition/preflight prose, proving the
+    command contract itself -- never asserting a production topic
+    string is absent from the whole Markdown document (it legitimately
+    appears in prohibition/read-only-detection text)."""
+
+    def test_bash_block_exists(self):
+        self.assertTrue(_runbook_bash_blocks(), "expected at least one ```bash fenced block in the runbook")
+
+    def test_no_unresolved_control_placeholder_in_executable_lines(self):
+        code_lines = _runbook_bash_code_lines()
+        forbidden_substrings = (
+            "<TEST_ONLY_BOUND>", "<value>", "<X>", "<informed|search>", "[--auto-run]",
+        )
+        for line in code_lines:
+            for forbidden in forbidden_substrings:
+                self.assertNotIn(forbidden, line, line)
+
+    def test_mandatory_auto_run_present_not_bracketed(self):
+        code_lines = _runbook_bash_code_lines()
+        joined = "\n".join(code_lines)
+        self.assertIn("--auto-run", joined)
+        self.assertNotIn("[--auto-run]", joined)
+
+    def test_duplicate_identity_overrides_match_accepted_contract(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("--runner-duplicate-source-robot-id 2", joined)
+        self.assertIn("--runner-duplicate-goal-x-m 2.0", joined)
+        self.assertIn("--runner-duplicate-goal-y-m 3.0", joined)
+        self.assertIn("--runner-duplicate-goal-id shared_exit", joined)
+
+    def test_cooperative_avoider_has_all_three_isolated_remaps(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn('-r "state:=${OWN_STATE_TOPIC}"', joined)
+        self.assertIn('-r "cmd_vel:=${REQUESTED_CMD_VEL_TOPIC}"', joined)
+        self.assertIn('-r "nav_intent:=${NAV_INTENT_TOPIC}"', joined)
+        self.assertIn('-p "peer_state_topic:=${VP_GATE_INPUT_TOPIC}"', joined)
+        for exact_param in (
+            "-p armed:=true", "-p enable_peer_avoidance:=true",
+            "-p enable_dynamic_heading:=true", "-p enable_dynamic_speed:=true",
+            "-p enable_local_avoidance:=true", "-p require_local_sensors:=true",
+            "-p use_sim_time:=false", "-p safety_radius_m:=0.14",
+            "-p stop_after_recovery:=false",
+        ):
+            self.assertIn(exact_param, joined)
+
+    def test_all_operational_topics_are_isolated(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn('NS="/hil_offline_stage3"', joined)
+
+    def test_production_topics_never_appear_as_executable_argument_or_remap(self):
+        code_lines = _runbook_bash_code_lines()
+        production_topics = (
+            "/cmd_vel", "/cmd_vel_unguarded", "/epuck1/state",
+            "/epuck_bridge/status", "/hil_guard/arm",
+        )
+        for line in code_lines:
+            if "grep" in line or "pgrep" in line or "ABORT" in line or "for t in" in line:
+                continue  # prohibition/detection checks legitimately reference these exact strings
+            # Strip isolated-topic constructions (${NS}/epuck1/state etc.)
+            # before checking for a BARE production topic string -- an
+            # isolated topic that happens to share a suffix with a
+            # production topic name (by design: /hil_offline_stage3 +
+            # /epuck1/state) is not itself a production topic.
+            sanitized = re.sub(r"\$\{NS\}[A-Za-z0-9_/]*", "", line)
+            for topic in production_topics:
+                self.assertNotIn(topic, sanitized, line)
+
+    def test_production_topics_appear_only_in_prohibition_or_check_text(self):
+        text = _runbook_text()
+        # Full-document occurrence count must exceed the executable-line
+        # count (proving the remaining occurrences are prose/checks),
+        # while the executable-line check above already proves zero
+        # occurrences as an actual argument/remap.
+        self.assertIn("/cmd_vel_unguarded", text)
+        self.assertIn("/hil_guard/arm", text)
+
+    def test_direct_dollar_bang_pid_capture_present(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        for var in ("RECORDER_PID", "GUARD_PID", "ADAPTER_PID", "COOP_PID", "HARNESS_PID", "PEER_PID"):
+            self.assertIn(f'{var}="$!"', joined)
+        self.assertNotIn("pgrep -f", joined.replace("pgrep -af", ""))
+
+    def test_abort_cleanup_uses_exact_kill_int_and_no_pkill(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("kill -INT", joined)
+        self.assertNotIn("pkill", joined)
+
+    def test_recorder_last_cleanup_is_encoded(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        cleanup_start = joined.index("cleanup() {")
+        cleanup_body = joined[cleanup_start:]
+        recorder_kill_index = cleanup_body.index('kill -INT "${RECORDER_PID}"')
+        other_kill_index = cleanup_body.index('kill -INT "${pid}"')
+        self.assertLess(other_kill_index, recorder_kill_index,
+                         "recorder must be the last process killed in cleanup()")
+
+    def test_verifier_output_and_exit_status_preserved(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn('> "${VERIFIER_JSON}"', joined)
+        self.assertIn("VERIFIER_EXIT=$?", joined)
+        self.assertIn('echo "${VERIFIER_EXIT}" > "${VERIFIER_EXIT_FILE}"', joined)
+        self.assertNotIn("set -e", joined)  # errexit is deliberately not used (see script header comment)
+        self.assertIn('exit "${VERIFIER_EXIT}"', joined)
+
+    def test_cooperative_avoider_launched_via_resolved_direct_executable_not_ros2_run(self):
+        # `ros2 run epuck2_comm cooperative_avoider` was live-tested
+        # (CooperativeAvoiderCleanupPathTest) to fork a separate child
+        # process for the real node while the `ros2 run` CLI wrapper can
+        # exit on its own -- an unowned-child ambiguity. The runbook must
+        # instead resolve and invoke the real installed executable
+        # directly, via the standard, reproducible `ros2 pkg prefix`
+        # mechanism, never `ros2 run` for this specific process.
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn('COOP_PREFIX="$(ros2 pkg prefix epuck2_comm)"', joined)
+        self.assertIn('COOP_EXE="${COOP_PREFIX}/lib/epuck2_comm/cooperative_avoider"', joined)
+        self.assertIn('"${COOP_EXE}" --ros-args', joined)
+        self.assertNotIn("ros2 run epuck2_comm cooperative_avoider", joined)
+
+    def test_cooperative_avoider_launch_isolated_via_job_control_and_identity_captured(self):
+        # `set -m` (scoped tightly around only this one launch, restored
+        # immediately after) makes bash job control assign the
+        # background job its own process group (PGID == its own PID,
+        # confirmed live) instead of inheriting this script's own
+        # process group -- required so terminate_owned_process_group()
+        # can killpg the exact owned group without ever touching this
+        # script itself. The exact owned identity (PID, PGID, /proc
+        # start time, /proc/<pid>/exe) must be captured immediately
+        # after launch, before any other command could race with it.
+        joined = "\n".join(_runbook_bash_code_lines())
+        set_m_index = joined.index("set -m")
+        coop_pid_index = joined.index('COOP_PID="$!"')
+        set_plus_m_index = joined.index("set +m")
+        self.assertLess(set_m_index, coop_pid_index)
+        self.assertLess(coop_pid_index, set_plus_m_index)
+        self.assertIn('COOP_PGID="$(ps -o pgid= -p "${COOP_PID}" | tr -d \' \')"', joined)
+        self.assertIn('COOP_START_TIME="$(_proc_start_time "${COOP_PID}")"', joined)
+        self.assertIn('COOP_EXE_PATH="$(_proc_exe_path "${COOP_PID}")"', joined)
+
+    def test_cooperative_avoider_cleanup_is_exact_owned_process_group_only(self):
+        # Cleanup must call terminate_owned_process_group() with the
+        # captured owned identity, and must NEVER use `pgrep`/`pkill`
+        # output to select what gets signalled (pgrep -af is permitted
+        # elsewhere in this document ONLY for the pre-run/post-run
+        # read-only diagnostic checks, asserted separately below).
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn(
+            'terminate_owned_process_group \\\n        "${COOP_PID}" "${COOP_PGID}" "${COOP_START_TIME}" "${COOP_EXE_PATH}" "cooperative_avoider"',
+            joined,
+        )
+        self.assertNotIn("pkill", joined)
+        cleanup_start = joined.index("cleanup() {")
+        cleanup_end = joined.index("\ntrap cleanup", cleanup_start)
+        cleanup_body = joined[cleanup_start:cleanup_end]
+        # The only pgrep inside cleanup() itself is the final read-only
+        # post-run residual check -- never used to pick a kill target.
+        self.assertEqual(cleanup_body.count("pgrep"), 1)
+        self.assertIn("POST_RUN_RESIDUAL_PROCESS_CHECK", cleanup_body)
+
+    def test_owned_identity_helper_functions_never_use_name_based_discovery(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        for fn_name in ("_proc_start_time", "_proc_exe_path", "_owned_identity_still_matches", "terminate_owned_process_group"):
+            self.assertIn(f"{fn_name}()", joined)
+        fn_start = joined.index("_proc_start_time() {")
+        fn_end = joined.index("if pgrep -af 'webots-bin", fn_start)
+        helper_block = joined[fn_start:fn_end]
+        self.assertNotIn("pgrep", helper_block)
+        self.assertNotIn("pkill", helper_block)
+
+    def test_evidence_hashing_present_and_manifest_excludes_itself(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("sha256sum", joined)
+        self.assertIn("SHA256SUMS_FILE", joined)
+        # The sha256sum invocation's own argument list must not include
+        # the SHA256SUMS output file's own basename.
+        sha_call_start = joined.index("sha256sum \\")
+        sha_call_end = joined.index(")", sha_call_start)
+        sha_call_text = joined[sha_call_start:sha_call_end]
+        self.assertNotIn('basename "${SHA256SUMS_FILE}"', sha_call_text)
 
 
 if __name__ == "__main__":

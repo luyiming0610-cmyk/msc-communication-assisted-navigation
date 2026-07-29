@@ -381,6 +381,44 @@ BRIDGE_STATUS_PUBLISH_PERIOD_S = 0.5
 # physical measurement or calibration result.
 TEST_ONLY_SOFTWARE_BOUND_NOT_A_PHYSICAL_LIMIT = "TEST_ONLY_SOFTWARE_BOUND_NOT_A_PHYSICAL_LIMIT"
 
+# SYNTHETIC_CLEAR_SENSOR_FIXTURE / TEST_ONLY / NOT_A_PHYSICAL_MEASUREMENT.
+#
+# Exact EpuckState.msg local-obstacle distance/zone fields that
+# cooperative_avoider.py's decide_local_obstacle() (local_obstacle_logic.py)
+# reads once this harness's own-state message declares
+# validity_flags=OWN_STATE_REQUIRED_VALIDITY_FLAGS (FLAG_IR_VALID|
+# FLAG_TOF_VALID set). Confirmed by full source read of
+# cooperative_avoider.py (lines 418-421, 434-439, 529-531) and
+# local_obstacle_logic.py -- no other EpuckState field carries the
+# "+Inf means no valid return within range" convention documented in
+# EpuckState.msg (lines 36-37, 48-50). Left at the ROS float32 implicit
+# default of 0.0 (as this harness's own-state message did before this
+# fix), decide_local_obstacle() reads 0.0 as a genuine obstacle at zero
+# distance (0.0 is finite and >= 0.0, therefore never treated as
+# "clear"), permanently returning LOCAL_FRONT_DANGER and never letting
+# cooperative_avoider reach its NavigationIntent-driven cruise/CPA
+# command. These are synthetic, test-only fixture values -- never a
+# physical sensor measurement, never to be cited as one.
+SYNTHETIC_CLEAR_SENSOR_FIXTURE_FIELDS = (
+    "front_distance_m", "left_distance_m", "right_distance_m",
+    "left_front_m", "left_mid_m", "left_rear_m",
+    "right_front_m", "right_mid_m", "right_rear_m",
+)
+
+
+def apply_synthetic_clear_sensor_fixture(msg) -> None:
+    """SYNTHETIC_CLEAR_SENSOR_FIXTURE / TEST_ONLY / NOT_A_PHYSICAL_MEASUREMENT.
+
+    Sets every field in SYNTHETIC_CLEAR_SENSOR_FIXTURE_FIELDS to exactly
+    positive infinity (EpuckState.msg's own documented "clear/no valid
+    return within range" convention), never an implicit 0.0. Accepts any
+    object with settable attributes (a real EpuckState instance, or a
+    plain stand-in object in a pure unit test) -- this function has no
+    ROS dependency itself. Does not touch validity_flags, x_m/y_m/
+    yaw_rad, or any other identity/pose field."""
+    for field_name in SYNTHETIC_CLEAR_SENSOR_FIXTURE_FIELDS:
+        setattr(msg, field_name, float("inf"))
+
 
 def build_bridge_status_payload(rx_count: int, connected: bool = True) -> dict:
     """Pure helper -- exact keys read by hil_command_evidence_recorder.py's
@@ -516,6 +554,7 @@ def _build_node():
             msg.y_m = self.args.own_y_m
             msg.yaw_rad = self.args.own_yaw_rad
             msg.validity_flags = OWN_STATE_REQUIRED_VALIDITY_FLAGS
+            apply_synthetic_clear_sensor_fixture(msg)
             self.own_state_pub.publish(msg)
 
         def _publish_bridge_status(self) -> None:
