@@ -12,8 +12,11 @@ gating -- all against private /hil_offline_stage3/... test topics only.
 from __future__ import annotations
 
 import math
+import os
 import re
+import subprocess
 import sys
+import tempfile
 import time
 import types
 import unittest
@@ -705,21 +708,153 @@ class RunbookCommandContractTest(unittest.TestCase):
         self.assertNotIn("pkill", joined)
 
     def test_recorder_last_cleanup_is_encoded(self):
+        # Every process is now stopped via terminate_owned_pid()/
+        # terminate_owned_process_group() calls inside cleanup() (never an
+        # inline `kill -INT "${PID}"`); this proves the CALL ORDER stops
+        # recorder strictly last: peer -> harness -> cooperative_avoider ->
+        # adapter -> guard -> recorder.
         joined = "\n".join(_runbook_bash_code_lines())
         cleanup_start = joined.index("cleanup() {")
-        cleanup_body = joined[cleanup_start:]
-        recorder_kill_index = cleanup_body.index('kill -INT "${RECORDER_PID}"')
-        other_kill_index = cleanup_body.index('kill -INT "${pid}"')
-        self.assertLess(other_kill_index, recorder_kill_index,
-                         "recorder must be the last process killed in cleanup()")
+        cleanup_end = joined.index("run_cleanup_once() {")
+        cleanup_body = joined[cleanup_start:cleanup_end]
+        order = ["PEER_PID", "HARNESS_PID", "COOP_PID", "ADAPTER_PID", "GUARD_PID", "RECORDER_PID"]
+        indices = [cleanup_body.index(f'"${{{name}}}"') for name in order]
+        self.assertEqual(indices, sorted(indices), "cleanup must stop processes in exact reverse launch order")
+        self.assertEqual(
+            indices[-1], max(indices),
+            "recorder must be the last process referenced in cleanup()",
+        )
 
     def test_verifier_output_and_exit_status_preserved(self):
         joined = "\n".join(_runbook_bash_code_lines())
         self.assertIn('> "${VERIFIER_JSON}"', joined)
-        self.assertIn("VERIFIER_EXIT=$?", joined)
         self.assertIn('echo "${VERIFIER_EXIT}" > "${VERIFIER_EXIT_FILE}"', joined)
-        self.assertNotIn("set -e", joined)  # errexit is deliberately not used (see script header comment)
-        self.assertIn('exit "${VERIFIER_EXIT}"', joined)
+        # Verifier execution is captured via an explicit if/else so that
+        # `set -Eeuo pipefail`'s errexit never discards VERIFIER_EXIT
+        # before it is recorded -- a bare `cmd; VERIFIER_EXIT=$?` would
+        # abort at `cmd` itself under errexit.
+        self.assertIn('if python3 hil_offline_stage3_post_run_verifier.py "${VERIFIER_ARGS[@]}" > "${VERIFIER_JSON}"; then', joined)
+        self.assertIn("VERIFIER_EXIT=0", joined)
+        self.assertIn("VERIFIER_EXIT=$?", joined)
+        # The final exit reflects FINAL_EXIT (which incorporates harness,
+        # cleanup, residual, verifier-JSON-validity, verifier, and hashing
+        # results), never a bare pass-through of VERIFIER_EXIT alone.
+        self.assertIn('exit "${FINAL_EXIT}"', joined)
+        self.assertNotIn('exit "${VERIFIER_EXIT}"', joined)
+
+    def test_fail_fast_shell_policy_present(self):
+        # `set -Eeuo pipefail` (errexit + ERR-trap-inheritance + nounset +
+        # pipefail) must be the script's own shell policy -- a readiness
+        # timeout, hash/HEAD mismatch, forbidden-process/topic detection,
+        # or executable-resolution failure must stop startup immediately,
+        # never fall through to a later step.
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("set -Eeuo pipefail", joined)
+
+    def test_readiness_gates_are_bare_statements_not_swallowed(self):
+        # Every wait_for_log_pattern(...) call must be a bare statement --
+        # never wrapped in `|| true` or `if ...; then :; fi` -- so a
+        # nonzero (timeout) return trips errexit immediately instead of
+        # being silently discarded.
+        joined = "\n".join(_runbook_bash_code_lines())
+        for line in _runbook_bash_code_lines():
+            if line.strip().startswith("wait_for_log_pattern "):
+                self.assertNotIn("||", line, line)
+                self.assertNotIn("if ", line, line)
+
+    def test_int_term_exit_handling_is_separated_and_idempotent(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        for fn_name in ("on_int", "on_term", "on_exit", "run_cleanup_once"):
+            self.assertIn(f"{fn_name}() {{", joined)
+        self.assertIn("trap on_int INT", joined)
+        self.assertIn("trap on_term TERM", joined)
+        self.assertIn("trap on_exit EXIT", joined)
+        # A single combined `trap cleanup EXIT INT TERM` handler (the
+        # earlier design) is no longer present -- INT/TERM/EXIT must be
+        # handled by three separate functions.
+        self.assertNotIn("trap cleanup EXIT INT TERM", joined)
+        self.assertIn("exit 130", joined)  # on_int's own exit status
+        self.assertIn("exit 143", joined)  # on_term's own exit status
+        self.assertIn("CLEANUP_DONE", joined)  # idempotency guard
+        # Each signal handler disables all three traps before its own
+        # final exit, preventing recursive re-entry.
+        on_int_start = joined.index("on_int() {")
+        on_int_end = joined.index("on_term() {")
+        self.assertIn("trap - INT TERM EXIT", joined[on_int_start:on_int_end])
+        on_term_start = on_int_end
+        on_term_end = joined.index("on_exit() {")
+        self.assertIn("trap - INT TERM EXIT", joined[on_term_start:on_term_end])
+        on_exit_start = on_term_end
+        on_exit_end = joined.index("trap on_int INT")
+        self.assertIn("trap - INT TERM EXIT", joined[on_exit_start:on_exit_end])
+
+    def test_verifier_runs_only_after_explicit_stack_shutdown(self):
+        # The verifier must never run while the recorder or any other
+        # producer is still active: the explicit `run_cleanup_once`
+        # invocation (Step 10) must appear strictly before the verifier
+        # invocation (Step 13) in program order.
+        joined = "\n".join(_runbook_bash_code_lines())
+        cleanup_call_index = joined.index("run_cleanup_once || true")
+        verifier_call_index = joined.index('python3 hil_offline_stage3_post_run_verifier.py "${VERIFIER_ARGS[@]}"')
+        self.assertLess(cleanup_call_index, verifier_call_index)
+
+    def test_hashing_occurs_after_verifier_and_file_finalization_no_active_writer(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        cleanup_call_index = joined.index("run_cleanup_once || true")
+        finalization_index = joined.index('_wait_for_file_ready "${EVIDENCE_CSV}" 5')
+        verifier_call_index = joined.index('python3 hil_offline_stage3_post_run_verifier.py "${VERIFIER_ARGS[@]}"')
+        hashing_index = joined.index("sha256sum \\")
+        self.assertLess(cleanup_call_index, finalization_index)
+        self.assertLess(finalization_index, verifier_call_index)
+        self.assertLess(verifier_call_index, hashing_index)
+
+    def test_exact_ros_humble_and_repo_paths_no_glob_no_bash_source_derivation(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("source /opt/ros/humble/setup.bash", joined)
+        self.assertIn("source /home/eamon/epuck_ws/install/setup.bash", joined)
+        self.assertNotIn("/opt/ros/*/setup.bash", joined)
+        self.assertIn('REPO_ROOT="/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/e-puck2-Comm"', joined)
+        self.assertIn('TOOLS_DIR="${REPO_ROOT}/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools"', joined)
+        self.assertNotIn('TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")', joined)
+
+    def test_repo_head_and_hash_identity_verified_before_launch(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn('EXPECTED_HEAD="8c912a9de0d821e9e8c8561f2ec1e6c6ad2504d8"', joined)
+        self.assertIn("ACTUAL_HEAD=", joined)
+        self.assertIn("STAGE3_COMMITTED_SHA256", joined)
+        self.assertIn("git diff --quiet", joined)
+
+    def test_execution_script_preserved_and_hashed(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn('EXECUTION_SCRIPT_COPY="${OUT_DIR}/execution_script.sh"', joined)
+        self.assertIn('cp -- "${BASH_SOURCE[0]}" "${EXECUTION_SCRIPT_COPY}"', joined)
+        self.assertIn('"$(basename "${EXECUTION_SCRIPT_COPY}")"', joined)
+
+    def test_final_status_incorporates_every_required_failure_source(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        for reason in (
+            'FAILURE_REASONS+=("HARNESS_EXIT=',
+            'FAILURE_REASONS+=("CLEANUP_EXIT=',
+            'FAILURE_REASONS+=("RESIDUAL_PROCESS_DETECTED")',
+            'FAILURE_REASONS+=("VERIFIER_JSON_INVALID")',
+            'FAILURE_REASONS+=("VERIFIER_EXIT=',
+            'FAILURE_REASONS+=("HASHING_FAILED")',
+            'FAILURE_REASONS+=("HASH_VERIFICATION_FAILED")',
+        ):
+            self.assertIn(reason, joined)
+
+    def test_verifier_residual_process_flag_passed_when_cleanup_or_residual_failed(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("--residual-process-detected", joined)
+        self.assertIn(
+            'if [[ "${CLEANUP_EXIT}" -ne 0 || "${POST_RUN_RESIDUAL_PROCESS_CHECK}" == "FAIL" ]]; then',
+            joined,
+        )
+
+    def test_hash_verification_present_and_checked(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("sha256sum -c", joined)
+        self.assertIn("HASH_VERIFY_STATUS", joined)
 
     def test_cooperative_avoider_launched_via_resolved_direct_executable_not_ros2_run(self):
         # `ros2 run epuck2_comm cooperative_avoider` was live-tested
@@ -758,9 +893,9 @@ class RunbookCommandContractTest(unittest.TestCase):
     def test_cooperative_avoider_cleanup_is_exact_owned_process_group_only(self):
         # Cleanup must call terminate_owned_process_group() with the
         # captured owned identity, and must NEVER use `pgrep`/`pkill`
-        # output to select what gets signalled (pgrep -af is permitted
-        # elsewhere in this document ONLY for the pre-run/post-run
-        # read-only diagnostic checks, asserted separately below).
+        # output to select what gets signalled (pgrep is used ONLY inside
+        # the separately-defined, read-only _forbidden_process_scan(),
+        # never as a literal call inside cleanup() itself).
         joined = "\n".join(_runbook_bash_code_lines())
         self.assertIn(
             'terminate_owned_process_group \\\n        "${COOP_PID}" "${COOP_PGID}" "${COOP_START_TIME}" "${COOP_EXE_PATH}" "cooperative_avoider"',
@@ -768,22 +903,43 @@ class RunbookCommandContractTest(unittest.TestCase):
         )
         self.assertNotIn("pkill", joined)
         cleanup_start = joined.index("cleanup() {")
-        cleanup_end = joined.index("\ntrap cleanup", cleanup_start)
+        cleanup_end = joined.index("run_cleanup_once() {")
         cleanup_body = joined[cleanup_start:cleanup_end]
-        # The only pgrep inside cleanup() itself is the final read-only
-        # post-run residual check -- never used to pick a kill target.
-        self.assertEqual(cleanup_body.count("pgrep"), 1)
+        self.assertNotIn("pgrep", cleanup_body)
+        self.assertNotIn("pkill", cleanup_body)
+        # The post-run residual check is performed via exactly one call to
+        # the self-match-safe scan function, never a literal pgrep here.
+        self.assertEqual(cleanup_body.count("_forbidden_process_scan"), 1)
         self.assertIn("POST_RUN_RESIDUAL_PROCESS_CHECK", cleanup_body)
 
     def test_owned_identity_helper_functions_never_use_name_based_discovery(self):
         joined = "\n".join(_runbook_bash_code_lines())
-        for fn_name in ("_proc_start_time", "_proc_exe_path", "_owned_identity_still_matches", "terminate_owned_process_group"):
+        for fn_name in ("_proc_start_time", "_proc_exe_path", "_owned_identity_still_matches", "terminate_owned_process_group", "terminate_owned_pid"):
             self.assertIn(f"{fn_name}()", joined)
         fn_start = joined.index("_proc_start_time() {")
-        fn_end = joined.index("if pgrep -af 'webots-bin", fn_start)
+        fn_end = joined.index("cleanup() {", fn_start)
         helper_block = joined[fn_start:fn_end]
         self.assertNotIn("pgrep", helper_block)
         self.assertNotIn("pkill", helper_block)
+
+    def test_forbidden_process_scan_is_self_match_safe_and_read_only(self):
+        # _forbidden_process_scan() must exclude this script's own PID
+        # ($$) from the match set before the emptiness test is applied at
+        # each call site, so it can never match its own invocation
+        # regardless of where the script happens to be staged -- proven
+        # structurally (not merely by the bracket-quoting idiom, which
+        # only protects pgrep's own argv from matching its own pattern).
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("SELF_PID=$$", joined)
+        self.assertIn("_forbidden_process_scan() {", joined)
+        fn_start = joined.index("_forbidden_process_scan() {")
+        fn_end = joined.index("if FORBIDDEN_MATCHES=")
+        fn_body = joined[fn_start:fn_end]
+        self.assertIn('awk -v self="${SELF_PID}" \'$1 != self\'', fn_body)
+        # Called exactly twice: once pre-run, once inside cleanup() -- and
+        # in both cases only to decide whether to ABORT/report, never to
+        # supply a kill target.
+        self.assertEqual(joined.count("_forbidden_process_scan"), 3)  # definition + 2 call sites
 
     def test_evidence_hashing_present_and_manifest_excludes_itself(self):
         joined = "\n".join(_runbook_bash_code_lines())
@@ -795,6 +951,173 @@ class RunbookCommandContractTest(unittest.TestCase):
         sha_call_end = joined.index(")", sha_call_start)
         sha_call_text = joined[sha_call_start:sha_call_end]
         self.assertNotIn('basename "${SHA256SUMS_FILE}"', sha_call_text)
+
+
+def _extract_trap_cleanup_block() -> str:
+    """Extracts the REAL trap/cleanup/helper function definitions
+    (from `wait_for_log_pattern() {` through `trap on_exit EXIT`)
+    verbatim from the committed runbook's own executable bash block --
+    never a reimplementation -- for use by a harness that drives them
+    with dummy processes instead of ROS nodes."""
+    joined = "\n".join(_runbook_bash_code_lines())
+    start = joined.index("wait_for_log_pattern() {")
+    end = joined.index("trap on_exit EXIT") + len("trap on_exit EXIT")
+    return joined[start:end]
+
+
+class ShellControlFlowRegressionTest(unittest.TestCase):
+    """Pure, hardware-free, ROS-free regression proof of the runbook's
+    own trap/cleanup state machine: extracts the REAL function bodies
+    (never a reimplementation) and drives them against a single dummy
+    background process (`sleep`, renamed via `exec -a` to a name unique
+    to this test so residual checks can never collide with an
+    unrelated real `sleep` invocation elsewhere on the system) plus
+    plain marker files standing in for "steps". No ROS_DOMAIN_ID is
+    set, no ROS package is imported, no cooperative_avoider/ros2
+    process is ever started.
+    """
+
+    DUMMY_TAG = "stage3_shell_control_regression_dummy"
+
+    def _run_scenario(self, body: str, timeout_s: float = 10.0):
+        extracted = _extract_trap_cleanup_block()
+        prologue = (
+            "#!/usr/bin/env bash\n"
+            "set -Eeuo pipefail\n"
+            'RECORDER_PID=""\nGUARD_PID=""\nADAPTER_PID=""\n'
+            'COOP_PID=""\nCOOP_PGID=""\nCOOP_START_TIME=""\nCOOP_EXE_PATH=""\n'
+            'COOP_CLEANUP_CLASSIFICATION="normal"\nHARNESS_PID=""\nPEER_PID=""\n'
+            "CLEANUP_DONE=0\nCLEANUP_EXIT=0\n"
+            'POST_RUN_RESIDUAL_PROCESS_CHECK="UNKNOWN"\n'
+            "SELF_PID=$$\n"
+            "FORBIDDEN_PROCESS_PATTERN='__no_such_process_for_this_test__'\n"
+            "_forbidden_process_scan() {\n"
+            '    pgrep -af "${FORBIDDEN_PROCESS_PATTERN}" 2>/dev/null | awk -v self="${SELF_PID}" \'$1 != self\'\n'
+            "}\n\n"
+        )
+        # Instrument CLEANUP_DONE=1 to also increment an on-disk counter,
+        # so the test can prove cleanup ran AT MOST ONCE regardless of
+        # how many of INT/TERM/EXIT eventually fired.
+        extracted_instrumented = extracted.replace(
+            "CLEANUP_DONE=1",
+            'CLEANUP_DONE=1\n    echo $(( $(cat "${MARKER_DIR}/cleanup_count") + 1 )) > "${MARKER_DIR}/cleanup_count"',
+        )
+        script = prologue + extracted_instrumented + "\n\nMARKER_DIR=\"$1\"\n" + body
+        with tempfile.TemporaryDirectory() as marker_dir:
+            script_path = os.path.join(marker_dir, "harness.sh")
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(script)
+            with open(os.path.join(marker_dir, "cleanup_count"), "w", encoding="utf-8") as f:
+                f.write("0")
+            proc = subprocess.run(
+                ["bash", script_path, marker_dir],
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, timeout=timeout_s,
+            )
+            cleanup_count = int(open(os.path.join(marker_dir, "cleanup_count")).read().strip())
+            step1_done = os.path.exists(os.path.join(marker_dir, "step1_done"))
+            step2_done = os.path.exists(os.path.join(marker_dir, "step2_done"))
+        return proc.returncode, cleanup_count, step1_done, step2_done, proc.stderr
+
+    def _assert_no_residual_dummy(self):
+        residual = subprocess.run(
+            ["pgrep", "-af", f"[e]xec -a {self.DUMMY_TAG}"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(
+            residual.stdout.strip(), "",
+            f"dummy process from this regression test was left running: {residual.stdout}",
+        )
+
+    def _dummy_launch_line(self):
+        return f'exec -a {self.DUMMY_TAG} sleep 30 >/dev/null 2>&1 &\nPEER_PID="$!"\n'
+
+    def test_normal_completion_runs_cleanup_once_and_stops_dummy(self):
+        body = self._dummy_launch_line() + 'touch "${MARKER_DIR}/step1_done"\ntouch "${MARKER_DIR}/step2_done"\nexit 0\n'
+        returncode, cleanup_count, step1, step2, stderr = self._run_scenario(body)
+        self.assertEqual(returncode, 0, stderr)
+        self.assertEqual(cleanup_count, 1)
+        self.assertTrue(step1)
+        self.assertTrue(step2)
+        self._assert_no_residual_dummy()
+
+    def test_mid_script_failure_stops_before_next_step_and_still_cleans_up(self):
+        # A bare `false` mirrors a nonzero readiness-gate return under
+        # `set -Eeuo pipefail` -- errexit must abort before step2 ever runs.
+        body = self._dummy_launch_line() + 'touch "${MARKER_DIR}/step1_done"\nfalse\ntouch "${MARKER_DIR}/step2_done"\n'
+        returncode, cleanup_count, step1, step2, stderr = self._run_scenario(body)
+        self.assertNotEqual(returncode, 0)
+        self.assertEqual(cleanup_count, 1)
+        self.assertTrue(step1)
+        self.assertFalse(step2, "a failure must prevent any subsequent step from running")
+        self._assert_no_residual_dummy()
+
+    def test_sigint_ends_with_130_and_does_not_resume_normal_execution(self):
+        body = self._dummy_launch_line() + 'touch "${MARKER_DIR}/step1_done"\nkill -INT $$\nsleep 5\ntouch "${MARKER_DIR}/step2_done"\n'
+        returncode, cleanup_count, step1, step2, stderr = self._run_scenario(body)
+        self.assertEqual(returncode, 130, stderr)
+        self.assertEqual(cleanup_count, 1)
+        self.assertTrue(step1)
+        self.assertFalse(step2, "execution must not resume after SIGINT")
+        self._assert_no_residual_dummy()
+
+    def test_sigterm_ends_with_143_and_does_not_resume_normal_execution(self):
+        body = self._dummy_launch_line() + 'touch "${MARKER_DIR}/step1_done"\nkill -TERM $$\nsleep 5\ntouch "${MARKER_DIR}/step2_done"\n'
+        returncode, cleanup_count, step1, step2, stderr = self._run_scenario(body)
+        self.assertEqual(returncode, 143, stderr)
+        self.assertEqual(cleanup_count, 1)
+        self.assertTrue(step1)
+        self.assertFalse(step2, "execution must not resume after SIGTERM")
+        self._assert_no_residual_dummy()
+
+    def test_cleanup_failure_overrides_an_otherwise_successful_exit_status(self):
+        # cleanup()'s own return status is forced nonzero here (simulating
+        # a process that failed to stop) -- the script itself still exits
+        # 0 normally, but on_exit() must surface CLEANUP_EXIT instead of
+        # silently reporting success.
+        extracted = _extract_trap_cleanup_block()
+        self.assertIn('return "${failed}"\n}', extracted, "expected cleanup()'s own return statement to patch for this test")
+        forced_failure = extracted.replace(
+            'return "${failed}"\n}',
+            'return "${failed}"\n}\n\n'
+            '# TEST-ONLY override: force cleanup() to report failure, to prove\n'
+            '# on_exit() surfaces CLEANUP_EXIT rather than a false success.\n'
+            'eval "$(declare -f cleanup | sed \'s/return "${failed}"/return 1/\')"',
+        )
+        body = self._dummy_launch_line() + 'touch "${MARKER_DIR}/step1_done"\ntouch "${MARKER_DIR}/step2_done"\nexit 0\n'
+        # _run_scenario always re-extracts the block itself; for this one
+        # test we need the forced-failure variant, so inline the same
+        # logic here rather than reusing _run_scenario verbatim.
+        prologue = (
+            "#!/usr/bin/env bash\nset -Eeuo pipefail\n"
+            'RECORDER_PID=""\nGUARD_PID=""\nADAPTER_PID=""\n'
+            'COOP_PID=""\nCOOP_PGID=""\nCOOP_START_TIME=""\nCOOP_EXE_PATH=""\n'
+            'COOP_CLEANUP_CLASSIFICATION="normal"\nHARNESS_PID=""\nPEER_PID=""\n'
+            "CLEANUP_DONE=0\nCLEANUP_EXIT=0\n"
+            'POST_RUN_RESIDUAL_PROCESS_CHECK="UNKNOWN"\nSELF_PID=$$\n'
+            "FORBIDDEN_PROCESS_PATTERN='__no_such_process_for_this_test__'\n"
+            "_forbidden_process_scan() {\n"
+            '    pgrep -af "${FORBIDDEN_PROCESS_PATTERN}" 2>/dev/null | awk -v self="${SELF_PID}" \'$1 != self\'\n'
+            "}\n\n"
+        )
+        instrumented = forced_failure.replace(
+            "CLEANUP_DONE=1",
+            'CLEANUP_DONE=1\n    echo $(( $(cat "${MARKER_DIR}/cleanup_count") + 1 )) > "${MARKER_DIR}/cleanup_count"',
+        )
+        script = prologue + instrumented + "\n\nMARKER_DIR=\"$1\"\n" + body
+        with tempfile.TemporaryDirectory() as marker_dir:
+            script_path = os.path.join(marker_dir, "harness.sh")
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(script)
+            with open(os.path.join(marker_dir, "cleanup_count"), "w", encoding="utf-8") as f:
+                f.write("0")
+            proc = subprocess.run(
+                ["bash", script_path, marker_dir],
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, timeout=10.0,
+            )
+            cleanup_count = int(open(os.path.join(marker_dir, "cleanup_count")).read().strip())
+        self.assertNotEqual(proc.returncode, 0, "a cleanup failure must not be reported as a successful run")
+        self.assertEqual(cleanup_count, 1)
+        self._assert_no_residual_dummy()
 
 
 if __name__ == "__main__":
