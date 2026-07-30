@@ -22,6 +22,7 @@ any hardware.
 """
 from __future__ import annotations
 
+import json
 import sys
 import time
 import unittest
@@ -29,6 +30,7 @@ from pathlib import Path
 
 import rclpy
 from rclpy.executors import SingleThreadedExecutor
+from std_msgs.msg import String
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(
@@ -39,7 +41,11 @@ sys.path.insert(
 from epuck2_comm_interfaces.msg import EpuckState, GoalAnnouncement, NavigationIntent  # noqa: E402
 
 import hil_virtual_peer  # noqa: E402
-from hil_goal_announcement_evidence import build_evidence_navigator_class  # noqa: E402
+from hil_goal_announcement_evidence import (  # noqa: E402
+    STAGE4_ADOPTION_EVIDENCE_SCHEMA_VERSION,
+    STAGE4_ADOPTION_EVIDENCE_TOPIC,
+    build_evidence_navigator_class,
+)
 import goal_navigator  # noqa: E402
 
 STATE_TOPIC = "/pytest_isolated/epuck1/state"
@@ -194,6 +200,60 @@ class GoalAnnouncementAdoptionTest(unittest.TestCase):
         )
         for name, _types in publisher_names_and_types:
             self.assertNotIn("cmd_vel", name)
+
+    def test_adoption_evidence_message_is_published_machine_readably_on_acceptance(self):
+        """Stage 4 addition: the Stage 4 motion supervisor's online adoption
+        gate must never scrape the HIL_GOAL_ANNOUNCEMENT_EVIDENCE log line.
+        This asserts the machine-readable replacement actually exists, is
+        published exactly once for the one real announcement, and carries
+        goal_id/coordinates/accepted/duplicate matching the log line's own
+        values."""
+        received = []
+        self.receiver.create_subscription(
+            String, STAGE4_ADOPTION_EVIDENCE_TOPIC, lambda m: received.append(json.loads(m.data)), 10,
+        )
+
+        adopted = _spin_until(self.executor, lambda: self.receiver.target_state.switched_to_goal)
+        self.assertTrue(adopted)
+        _spin_until(self.executor, lambda: len(received) >= 1, timeout_s=3.0)
+
+        self.assertEqual(len(received), 1)
+        record = received[0]
+        self.assertEqual(record["schema_version"], STAGE4_ADOPTION_EVIDENCE_SCHEMA_VERSION)
+        self.assertIn("adapter_receive_monotonic_s", record)
+        self.assertIsInstance(record["adapter_receive_monotonic_s"], float)
+        self.assertEqual(record["goal_id"], "shared_exit")
+        self.assertEqual(record["source_robot_id"], 2)
+        self.assertTrue(record["valid"])
+        self.assertTrue(record["accepted"])
+        self.assertFalse(record["duplicate"])
+        self.assertAlmostEqual(record["target_x_m"], VIRTUAL_PEER_TARGET[0], places=6)
+        self.assertAlmostEqual(record["target_y_m"], VIRTUAL_PEER_TARGET[1], places=6)
+
+    def test_adoption_evidence_message_marks_duplicate_as_not_accepted(self):
+        received = []
+        self.receiver.create_subscription(
+            String, STAGE4_ADOPTION_EVIDENCE_TOPIC, lambda m: received.append(json.loads(m.data)), 10,
+        )
+        _spin_until(self.executor, lambda: self.receiver.target_state.switched_to_goal)
+        _spin_until(self.executor, lambda: len(received) >= 1, timeout_s=3.0)
+
+        duplicate_pub = self.virtual_peer.create_publisher(GoalAnnouncement, GOAL_ANNOUNCEMENT_TOPIC, 10)
+        duplicate_msg = GoalAnnouncement()
+        duplicate_msg.protocol_version = GoalAnnouncement.PROTOCOL_VERSION
+        duplicate_msg.source_robot_id = 2
+        duplicate_msg.sequence = 999
+        duplicate_msg.production_stamp = self.virtual_peer.get_clock().now().to_msg()
+        duplicate_msg.goal_id = "shared_exit"
+        duplicate_msg.goal_x_m = DUPLICATE_GOAL[0]
+        duplicate_msg.goal_y_m = DUPLICATE_GOAL[1]
+        duplicate_msg.valid = True
+        duplicate_pub.publish(duplicate_msg)
+
+        self.assertTrue(_spin_until(self.executor, lambda: len(received) >= 2, timeout_s=3.0))
+        self.assertFalse(received[1]["accepted"])
+        self.assertTrue(received[1]["duplicate"])
+        self.virtual_peer.destroy_publisher(duplicate_pub)
 
 
 if __name__ == "__main__":

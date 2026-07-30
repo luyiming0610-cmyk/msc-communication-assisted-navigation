@@ -47,8 +47,15 @@ assert_true() {
     fi
 }
 
-if [[ "${ROS_DOMAIN_ID:-}" != "89" ]]; then
-    echo "OUTPUT_ROOT_E2E_TEST_ABORT_ROS_DOMAIN_ID_NOT_ISOLATED(got='${ROS_DOMAIN_ID:-<unset>}', expected='89')"
+# 90, matching run_isolated_test_suite.sh's own TEST_ROS_DOMAIN_ID
+# (changed from 89 on 2026-07-30: 89 collides with
+# test_hil_offline_stage3_harness_live.py's own
+# FORBIDDEN_ROS_DOMAIN_IDS safety guard -- see run_isolated_test_suite.sh
+# for the full explanation). This script only asserts isolation from the
+# default/production domain, so it must track whatever isolated domain
+# the sanctioned runner actually uses, not a hardcoded historical value.
+if [[ "${ROS_DOMAIN_ID:-}" != "90" ]]; then
+    echo "OUTPUT_ROOT_E2E_TEST_ABORT_ROS_DOMAIN_ID_NOT_ISOLATED(got='${ROS_DOMAIN_ID:-<unset>}', expected='90')"
     exit 1
 fi
 echo "ros_domain_id_confirmed_isolated=${ROS_DOMAIN_ID}"

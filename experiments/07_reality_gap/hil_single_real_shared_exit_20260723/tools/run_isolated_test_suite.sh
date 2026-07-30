@@ -47,7 +47,18 @@ source ~/epuck_ws/install/setup.bash
 set -u
 
 PHYSICAL_PATTERN='state_publisher|wsl_epuck_tcp_bridge|hil_cmd_vel_guard|hil_virtual_peer|hil_topic_adapter|cooperative_avoider|goal_navigator'
-TEST_ROS_DOMAIN_ID=89
+# 90, not 89: test_hil_offline_stage3_harness_live.py's own
+# FORBIDDEN_ROS_DOMAIN_IDS = frozenset({0, 89, 77}) safety guard refuses
+# to run under domain 89 (or 0 or 77), and separately refuses domain 91
+# (reserved for the real Stage 3 run) -- 89 was this runner's own prior
+# choice, silently colliding with that guard for every test in that
+# module and in test_hil_offline_stage3_recorder_verifier_integration.py
+# (confirmed via a differential audit against parent HEAD
+# 3f1e59fecddaf568445d196bcb89841b46f6571f, 2026-07-30: byte-identical
+# 25/25 + 2/2 failures on both sides, both purely from this domain
+# mismatch, not a regression). 90 is not in that forbidden set and is
+# not otherwise reserved (91=Stage 3 real, 93=Stage 4 rehearsal).
+TEST_ROS_DOMAIN_ID=90
 
 # Every test module that MUST be collected and run for this suite to
 # mean anything -- if any of these is silently missing (a typo'd path,
@@ -76,6 +87,11 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_hil_ground_single_pulse_test"
     "test_run_isolated_test_suite_shebang"
     "test_new_field_single_pulse_command_sheet_static"
+    "test_hil_stage4_motion_supervisor"
+    "test_hil_stage4_post_run_verifier"
+    "test_run_hil_stage4_trial_static"
+    "test_hil_stage4_live_graph_rehearsal"
+    "test_run_isolated_test_suite_env_contract"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(
     "test_pi_epuck_tcp_server_sensors_audited"
@@ -86,7 +102,15 @@ _assert_isolated_domain() {
         echo "SAFE_TEST_RUNNER_ABORT_ROS_DOMAIN_ID_NOT_ISOLATED(got='${ROS_DOMAIN_ID:-<unset>}', expected='${TEST_ROS_DOMAIN_ID}')"
         exit 1
     fi
+    # Required by test_hil_offline_stage3_harness_live.py's own setUp
+    # (HarnessLiveTestBase) -- asserted here, at the runner level, so a
+    # future change to this runner cannot silently drop it again.
+    if [[ "${ROS_LOCALHOST_ONLY:-}" != "1" ]]; then
+        echo "SAFE_TEST_RUNNER_ABORT_ROS_LOCALHOST_ONLY_NOT_SET(got='${ROS_LOCALHOST_ONLY:-<unset>}', expected='1')"
+        exit 1
+    fi
     echo "ros_domain_id_confirmed_isolated=${ROS_DOMAIN_ID}"
+    echo "ros_localhost_only_confirmed=${ROS_LOCALHOST_ONLY}"
 }
 
 _assert_modules_collected() {
@@ -127,8 +151,9 @@ if [[ "${BEFORE}" != "TOPIC_NOT_PRESENT" && "${BEFORE}" != "0" ]]; then
 fi
 
 echo ""
-echo "=== [3/11] Switching to isolated ROS_DOMAIN_ID=${TEST_ROS_DOMAIN_ID} ==="
+echo "=== [3/11] Switching to isolated ROS_DOMAIN_ID=${TEST_ROS_DOMAIN_ID}, ROS_LOCALHOST_ONLY=1 ==="
 export ROS_DOMAIN_ID="${TEST_ROS_DOMAIN_ID}"
+export ROS_LOCALHOST_ONLY=1
 _assert_isolated_domain
 
 FAIL=0
@@ -137,8 +162,8 @@ echo ""
 echo "=== [4/11] HIL unit test suite (includes command-evidence recorder, zero-publisher proofs, sync-logic tests) ==="
 _assert_isolated_domain
 HIL_OUTPUT="$(cd "${SCRIPT_DIR}" && python3 -m unittest discover -s . -p "test_*.py" -v 2>&1)"
-echo "${HIL_OUTPUT}"
 HIL_EXIT=$?
+echo "${HIL_OUTPUT}"
 if ! _assert_modules_collected "HIL" "${HIL_OUTPUT}" "${REQUIRED_HIL_TEST_MODULES[@]}"; then
     FAIL=1
 fi
@@ -147,8 +172,8 @@ echo ""
 echo "=== [5/11] Pi command-audit test suite (pure logic, no rclpy) ==="
 _assert_isolated_domain
 PI_OUTPUT="$(cd "${PI_AUDIT_DIR}" && python3 -m unittest discover -s . -p "test_*.py" -v 2>&1)"
-echo "${PI_OUTPUT}"
 PI_EXIT=$?
+echo "${PI_OUTPUT}"
 if ! _assert_modules_collected "PI_AUDIT" "${PI_OUTPUT}" "${REQUIRED_PI_AUDIT_TEST_MODULES[@]}"; then
     FAIL=1
 fi
@@ -157,29 +182,29 @@ echo ""
 echo "=== [6/11] Synthetic sync/build script end-to-end test (never touches ~/epuck_ws) ==="
 _assert_isolated_domain
 E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_sync_and_build_epuck2_comm_e2e.sh" 2>&1)"
-echo "${E2E_OUTPUT}"
 E2E_EXIT=$?
+echo "${E2E_OUTPUT}"
 
 echo ""
 echo "=== [7/11] Command-evidence recorder end-to-end test (private test-only topics, never the real physical stack) ==="
 _assert_isolated_domain
 RECORDER_E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_run_hil_command_evidence_recorder_e2e.sh" 2>&1)"
-echo "${RECORDER_E2E_OUTPUT}"
 RECORDER_E2E_EXIT=$?
+echo "${RECORDER_E2E_OUTPUT}"
 
 echo ""
 echo "=== [8/11] Command-evidence recorder --output-root end-to-end test (private test-only topics, never the real physical stack) ==="
 _assert_isolated_domain
 RECORDER_OUTPUT_ROOT_E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_run_hil_command_evidence_recorder_output_root_e2e.sh" 2>&1)"
-echo "${RECORDER_OUTPUT_ROOT_E2E_OUTPUT}"
 RECORDER_OUTPUT_ROOT_E2E_EXIT=$?
+echo "${RECORDER_OUTPUT_ROOT_E2E_OUTPUT}"
 
 echo ""
 echo "=== [9/11] New-field GROUND_DIAGNOSTIC_PARAMS override end-to-end test (read-only, offline, never contacts the Pi) ==="
 _assert_isolated_domain
 NEW_FIELD_OVERRIDE_E2E_OUTPUT="$(bash "${SCRIPT_DIR}/test_run_ground_diagnostic_preflight_new_field_override_e2e.sh" 2>&1)"
-echo "${NEW_FIELD_OVERRIDE_E2E_OUTPUT}"
 NEW_FIELD_OVERRIDE_E2E_EXIT=$?
+echo "${NEW_FIELD_OVERRIDE_E2E_OUTPUT}"
 
 echo ""
 echo "=== [10/11] colcon test: epuck2_comm, epuck2_comm_interfaces (isolated domain) ==="
@@ -191,6 +216,7 @@ COLCON_EXIT=$?
 echo ""
 echo "=== [11/11] Real /cmd_vel publisher count, default domain, AFTER ==="
 unset ROS_DOMAIN_ID
+unset ROS_LOCALHOST_ONLY
 AFTER="$(ros2 topic info /cmd_vel 2>/dev/null | grep 'Publisher count' | grep -o '[0-9]*' || true)"
 if [[ -z "${AFTER}" ]]; then
     AFTER="TOPIC_NOT_PRESENT"

@@ -111,17 +111,46 @@ def _import_goal_navigator():
     return goal_navigator
 
 
+#: Stage-4-only additive interface (see build_evidence_navigator_class()
+#: docstring below for why this exists). Not part of the Stage 3 contract.
+STAGE4_ADOPTION_EVIDENCE_TOPIC = "/hil/adoption_evidence"
+
+#: Frozen schema version for the /hil/adoption_evidence payload (design
+#: review, 2026-07-30, revision 3). Any consumer (the Stage 4 motion
+#: supervisor) must reject a payload whose schema_version does not
+#: match this exactly -- see
+#: hil_stage4_motion_supervisor.ADOPTION_EVIDENCE_SCHEMA_VERSION, which
+#: must be kept identical to this constant.
+STAGE4_ADOPTION_EVIDENCE_SCHEMA_VERSION = "1.0.0"
+
+
 def build_evidence_navigator_class():
     """Returns the HilGoalAnnouncementEvidenceNavigator class, importing
     goal_navigator.py lazily (same pattern as hil_topic_adapter.py) so
     this module can be imported for its pure helpers without requiring
     rclpy/epuck2_comm_interfaces to be available."""
     goal_navigator = _import_goal_navigator()
+    from std_msgs.msg import String
 
     class HilGoalAnnouncementEvidenceNavigator(goal_navigator.GoalNavigator):
         """Identical to GoalNavigator in every respect except one
-        additional evidence log line per received GoalAnnouncement. No
-        navigation-state field, threshold, or timing is changed."""
+        additional evidence log line, and one additional machine-readable
+        adoption-evidence message, per received GoalAnnouncement. No
+        navigation-state field, threshold, or timing is changed.
+
+        Stage-4 addition (2026-07-30): the log line below is human-
+        readable only and must never be used as a safety gate input.
+        Stage 4's motion supervisor needs to know, online and without
+        scraping logs, whether THIS receiver adopted the exact announced
+        goal_id/coordinates. GoalNavigator itself never republishes a
+        received announcement onto any topic (see module docstring), so
+        no such signal existed before this addition. This publisher is
+        the smallest additive fix: one JSON-encoded std_msgs/String per
+        received announcement, carrying the same facts already computed
+        for the log line, added after it, never replacing it.
+        """
+
+        _stage4_adoption_evidence_pub = None
 
         def _announcement_cb(self, msg) -> None:
             adapter_receive_time_s = self.get_clock().now().nanoseconds / 1.0e9
@@ -151,5 +180,30 @@ def build_evidence_navigator_class():
                 f"duplicate={duplicate} "
                 f"current_target=({tx:.4f},{ty:.4f})"
             )
+
+            if self._stage4_adoption_evidence_pub is None:
+                self._stage4_adoption_evidence_pub = self.create_publisher(
+                    String, STAGE4_ADOPTION_EVIDENCE_TOPIC, 10
+                )
+            import json
+            import time as _time
+
+            evidence_msg = String()
+            evidence_msg.data = json.dumps({
+                "schema_version": STAGE4_ADOPTION_EVIDENCE_SCHEMA_VERSION,
+                "receiver_robot_id": self.args.robot_id,
+                "goal_id": msg.goal_id,
+                "source_robot_id": msg.source_robot_id,
+                "source_sequence": int(msg.sequence),
+                "source_stamp_s": source_stamp_s,
+                "adapter_receive_time_s": adapter_receive_time_s,
+                "adapter_receive_monotonic_s": _time.monotonic(),
+                "valid": bool(msg.valid),
+                "accepted": accepted,
+                "duplicate": duplicate,
+                "target_x_m": tx,
+                "target_y_m": ty,
+            })
+            self._stage4_adoption_evidence_pub.publish(evidence_msg)
 
     return HilGoalAnnouncementEvidenceNavigator
