@@ -17,20 +17,96 @@ and adoption-state at THIS receiving node only.
 """
 from __future__ import annotations
 
-import os
+import importlib
 import sys
+from pathlib import Path
 
-_TOOLS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "10_cooperative_exit_navigation_20260720",
-    "tools",
-)
+# Resolved once, at import time, from this file's own on-disk location
+# via pathlib -- never from the current working directory, and never by
+# counting `os.path.dirname()` calls. See hil_topic_adapter.py's own
+# docstring for the exact defect this replaces (identical dirname-chain
+# bug, same file depth, hit live in the same execution attempt).
+_THIS_FILE = Path(__file__).resolve()
+_REQUIRED_RELATIVE_TOOLS_PATH = ("experiments", "10_cooperative_exit_navigation_20260720", "tools")
+
+
+class GoalNavigatorImportError(RuntimeError):
+    """Raised before any ROS/rclpy usage or adapter/node construction if
+    goal_navigator.py cannot be located and identity-verified at its one
+    intended committed path."""
+
+
+def _resolve_repo_root() -> Path:
+    try:
+        return _THIS_FILE.parents[4]
+    except IndexError as e:
+        raise GoalNavigatorImportError(
+            f"this file's location ({_THIS_FILE}) is shallower than expected relative to "
+            "the repository root -- repository layout may have changed"
+        ) from e
 
 
 def _import_goal_navigator():
-    if _TOOLS_DIR not in sys.path:
-        sys.path.insert(0, _TOOLS_DIR)
-    import goal_navigator  # noqa: E402  (path adjusted above by design)
+    repo_root = _resolve_repo_root()
+    tools_dir = repo_root.joinpath(*_REQUIRED_RELATIVE_TOOLS_PATH)
+    goal_navigator_file = tools_dir / "goal_navigator.py"
+
+    try:
+        tools_dir = tools_dir.resolve(strict=True)
+    except FileNotFoundError as e:
+        raise GoalNavigatorImportError(
+            f"expected goal_navigator tools directory does not exist: {tools_dir}"
+        ) from e
+    try:
+        goal_navigator_file = goal_navigator_file.resolve(strict=True)
+    except FileNotFoundError as e:
+        raise GoalNavigatorImportError(
+            f"expected goal_navigator.py does not exist: {goal_navigator_file}"
+        ) from e
+
+    cached = sys.modules.get("goal_navigator")
+    if cached is not None:
+        cached_file = getattr(cached, "__file__", None)
+        if cached_file is None:
+            raise GoalNavigatorImportError(
+                "a 'goal_navigator' module is already cached in sys.modules but exposes no "
+                "__file__ -- refusing to trust an unidentifiable cached module"
+            )
+        if Path(cached_file).resolve() != goal_navigator_file:
+            raise GoalNavigatorImportError(
+                "a 'goal_navigator' module is already cached in sys.modules but resolves to "
+                f"{cached_file!r}, not the intended committed file {goal_navigator_file}"
+            )
+        return cached
+
+    tools_dir_str = str(tools_dir)
+    original_sys_path = list(sys.path)
+    # Ensure the intended tools directory is at the FRONT of the search
+    # path even if the identical string was already present later in
+    # sys.path -- never merely skip re-insertion in that case, since a
+    # decoy earlier in sys.path would otherwise win the import.
+    sys.path = [p for p in sys.path if p != tools_dir_str]
+    sys.path.insert(0, tools_dir_str)
+
+    importlib.invalidate_caches()
+
+    try:
+        import goal_navigator  # noqa: E402  (path adjusted above by design)
+    except Exception as e:
+        sys.path = original_sys_path
+        sys.modules.pop("goal_navigator", None)
+        raise GoalNavigatorImportError(
+            f"failed to import 'goal_navigator' from {tools_dir}"
+        ) from e
+
+    imported_file = getattr(goal_navigator, "__file__", None)
+    if imported_file is None or Path(imported_file).resolve() != goal_navigator_file:
+        sys.path = original_sys_path
+        sys.modules.pop("goal_navigator", None)
+        raise GoalNavigatorImportError(
+            f"imported 'goal_navigator' module resolved to {imported_file!r}, "
+            f"not the intended committed file {goal_navigator_file}"
+        )
 
     return goal_navigator
 
