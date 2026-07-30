@@ -1057,30 +1057,236 @@ run_cleanup_once() {
     return "${CLEANUP_EXIT}"
 }
 
+# --- Incremental, atomic owned-process manifest + failure-stage
+# tracking + always-run evidence finalization. Written so that ANY exit
+# path (normal completion, INT, TERM, or an early errexit-triggered
+# abort at any readiness gate) leaves a truthful, self-describing
+# record of exactly what was launched, what stage was last attempted,
+# and whether behavioural execution ever began -- never only at the
+# tail of a fully successful run. ---
+LAST_ATTEMPTED_STAGE="pre-launch"
+EVIDENCE_FINALIZED=0
+RECORDER_CONFIRMED_STOPPED=0
+FINALIZE_EXIT=0
+ORIGINAL_EXIT_CODE=0
+READINESS_TIMEOUT_RESULT="NONE"
+
+COMPONENT_ORDER=()
+declare -A COMPONENT_PID=()
+declare -A COMPONENT_PGID=()
+declare -A COMPONENT_START_TIME=()
+declare -A COMPONENT_EXE=()
+declare -A COMPONENT_LAUNCH_TS=()
+declare -A COMPONENT_READY=()
+declare -A COMPONENT_EXIT=()
+
+# Atomic write: build the full JSON in a sibling temp file, then rename
+# it over the real target in one filesystem operation -- a reader can
+# never observe a partially written pid_manifest.json.
+write_pid_manifest_atomic() {
+    local tmp_file="${PID_MANIFEST}.tmp.$$"
+    local rows=""
+    local name
+    for name in "${COMPONENT_ORDER[@]}"; do
+        rows+="${name}"$'\t'"${COMPONENT_PID[${name}]:-}"$'\t'"${COMPONENT_PGID[${name}]:-}"$'\t'
+        rows+="${COMPONENT_START_TIME[${name}]:-}"$'\t'"${COMPONENT_EXE[${name}]:-}"$'\t'
+        rows+="${COMPONENT_LAUNCH_TS[${name}]:-}"$'\t'"${COMPONENT_READY[${name}]:-PENDING}"$'\t'
+        rows+="${COMPONENT_EXIT[${name}]:-}"$'\n'
+    done
+    printf '%s' "${rows}" | python3 -c "
+import json, sys
+components = []
+for line in sys.stdin:
+    line = line.rstrip('\n')
+    if not line:
+        continue
+    name, pid, pgid, start_time, exe, launch_ts, ready, exit_status = line.split('\t')
+    components.append({
+        'component': name,
+        'pid': pid or None,
+        'pgid': pgid or None,
+        'start_time_token': start_time or None,
+        'expected_executable': exe or None,
+        'launch_timestamp_utc': launch_ts or None,
+        'readiness_state': ready,
+        'observed_exit_status': exit_status or None,
+    })
+manifest = {'run_id': '${RUN_ID}', 'components': components}
+with open('${tmp_file}', 'w', encoding='utf-8') as f:
+    json.dump(manifest, f, indent=2)
+"
+    mv -f -- "${tmp_file}" "${PID_MANIFEST}"
+}
+
+record_component_launch() {
+    local component="$1" pid="$2" pgid="$3" start_time="$4" exe="$5"
+    COMPONENT_ORDER+=("${component}")
+    COMPONENT_PID["${component}"]="${pid}"
+    COMPONENT_PGID["${component}"]="${pgid}"
+    COMPONENT_START_TIME["${component}"]="${start_time}"
+    COMPONENT_EXE["${component}"]="${exe}"
+    COMPONENT_LAUNCH_TS["${component}"]="$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
+    COMPONENT_READY["${component}"]="PENDING"
+    write_pid_manifest_atomic
+}
+
+record_component_ready() {
+    local component="$1"
+    COMPONENT_READY["${component}"]="READY"
+    write_pid_manifest_atomic
+}
+
+record_component_exit() {
+    local component="$1" exit_status="$2"
+    COMPONENT_EXIT["${component}"]="${exit_status}"
+    write_pid_manifest_atomic
+}
+
+# Recorder-stopped verification -- required before hashing evidence.csv
+# / summary.json are ever treated as a stable final record. Distinct
+# from (and stronger than) the plain cleanup() PID-based stop check:
+# this is the specific gate the hashing step below depends on.
+verify_recorder_stopped() {
+    if [[ -z "${RECORDER_PID}" ]]; then
+        # Recorder was never launched -- trivially "stopped" (nothing
+        # to confirm), matches an early pre-recorder-launch abort.
+        RECORDER_CONFIRMED_STOPPED=1
+        return 0
+    fi
+    if kill -0 "${RECORDER_PID}" 2>/dev/null; then
+        RECORDER_CONFIRMED_STOPPED=0
+        return 1
+    fi
+    RECORDER_CONFIRMED_STOPPED=1
+    return 0
+}
+
+# Always-run finalization. `behavioral_verifier_status`/`behavioral_result`
+# are "RUN"/<real verdict> on the happy path (called after the verifier
+# completes) or "NOT_RUN"/"NOT_OBTAINED" for any early abort (called from
+# on_exit()). Never fabricates evidence for a stage that never started;
+# never runs the behavioural verifier itself here (that decision is made
+# by the caller, before this function is invoked); never treats hashing
+# or JSON-validation failure as anything but a nonzero FINALIZE_EXIT.
+finalize_evidence() {
+    local behavioral_verifier_status="$1" behavioral_result="$2"
+    local run_completion="COMPLETE"
+    if [[ "${behavioral_verifier_status}" != "RUN" ]]; then
+        run_completion="INCOMPLETE_BRINGUP"
+    fi
+
+    write_pid_manifest_atomic
+
+    if ! verify_recorder_stopped; then
+        echo "ABORT: recorder PID ${RECORDER_PID} could not be confirmed stopped -- evidence finalization/integrity failure, refusing to treat hashes as a stable final record." >&2
+        FINALIZE_EXIT=1
+        run_completion="${run_completion}_RECORDER_NOT_CONFIRMED_STOPPED"
+    fi
+
+    local status_tmp="${STATUS_RECORD_JSON}.tmp.$$"
+    python3 -c "
+import json
+status = {
+    'run_id': '${RUN_ID}',
+    'run_completion': '${run_completion}',
+    'last_attempted_stage': '${LAST_ATTEMPTED_STAGE}',
+    'original_exit_status': ${ORIGINAL_EXIT_CODE:-0},
+    'harness_exit': '${HARNESS_EXIT}' or None,
+    'cleanup_exit': ${CLEANUP_EXIT},
+    'readiness_timeout_result': '${READINESS_TIMEOUT_RESULT:-NONE}',
+    'residual_process_check': '${POST_RUN_RESIDUAL_PROCESS_CHECK}',
+    'recorder_confirmed_stopped': bool(${RECORDER_CONFIRMED_STOPPED}),
+    'behavioral_verifier_status': '${behavioral_verifier_status}',
+    'behavioral_result': '${behavioral_result}',
+}
+with open('${status_tmp}', 'w', encoding='utf-8') as f:
+    json.dump(status, f, indent=2)
+"
+    mv -f -- "${status_tmp}" "${STATUS_RECORD_JSON}"
+
+    # Validate both JSON files were written and parse cleanly.
+    if ! python3 -c "
+import json
+json.load(open('${PID_MANIFEST}', encoding='utf-8'))
+json.load(open('${STATUS_RECORD_JSON}', encoding='utf-8'))
+"; then
+        echo "ABORT: pid_manifest.json / launcher_status.json failed JSON validation." >&2
+        FINALIZE_EXIT=1
+    fi
+
+    # Hash only files that actually exist right now, deterministic
+    # (sorted) order, excluding SHA256SUMS.txt itself and any leftover
+    # *.tmp.* files from a partially-written atomic swap.
+    if (
+        cd "${OUT_DIR}" && find . -maxdepth 1 -type f \
+            ! -name "$(basename "${SHA256SUMS_FILE}")" ! -name "*.tmp.*" -print0 \
+            | sort -z | xargs -0 sha256sum > "$(basename "${SHA256SUMS_FILE}")"
+    ); then
+        HASHING_EXIT=0
+    else
+        HASHING_EXIT=$?
+        FINALIZE_EXIT=1
+    fi
+
+    if HASH_VERIFY_OUTPUT="$(cd "${OUT_DIR}" && sha256sum -c "$(basename "${SHA256SUMS_FILE}")" 2>&1)"; then
+        HASH_VERIFY_STATUS=0
+    else
+        HASH_VERIFY_STATUS=$?
+        FINALIZE_EXIT=1
+    fi
+    echo "${HASH_VERIFY_OUTPUT}"
+    echo "HASHING_EXIT=${HASHING_EXIT}"
+    echo "HASH_VERIFY_STATUS=${HASH_VERIFY_STATUS}"
+    echo "RUN_COMPLETION=${run_completion}"
+    echo "BEHAVIORAL_VERIFIER_STATUS=${behavioral_verifier_status}"
+    echo "BEHAVIORAL_RESULT=${behavioral_result}"
+
+    EVIDENCE_FINALIZED=1
+    return "${FINALIZE_EXIT}"
+}
+
+# Cleanup, then always-run evidence finalization (guarded to never
+# create anything before OUT_DIR exists, and never to double-finalize
+# if the happy-path tail already did so with the real verifier result),
+# then determine the final exit code -- preserving the original
+# exit/signal status unless cleanup or finalization itself introduced a
+# NEW failure into what would otherwise have been a successful/clean
+# exit. Shared by on_int/on_term/on_exit so SIGINT/SIGTERM finalize
+# evidence exactly like an errexit-triggered abort does.
+run_cleanup_and_finalize() {
+    local intended_exit_code="$1"
+    ORIGINAL_EXIT_CODE="${intended_exit_code}"
+    run_cleanup_once || true
+    if [[ -d "${OUT_DIR:-}" ]] && [[ "${EVIDENCE_FINALIZED}" -ne 1 ]]; then
+        finalize_evidence "NOT_RUN" "NOT_OBTAINED" || true
+    fi
+    if [[ "${intended_exit_code}" -eq 0 ]]; then
+        if [[ "${CLEANUP_EXIT}" -ne 0 ]]; then
+            exit "${CLEANUP_EXIT}"
+        fi
+        if [[ "${FINALIZE_EXIT}" -ne 0 ]]; then
+            exit "${FINALIZE_EXIT}"
+        fi
+    fi
+    exit "${intended_exit_code}"
+}
+
 on_int() {
     trap - INT TERM EXIT
-    echo "[signal] SIGINT received -- running cleanup once, then exiting 130" >&2
-    run_cleanup_once || true
-    exit 130
+    echo "[signal] SIGINT received -- running cleanup+finalization once, then exiting 130" >&2
+    run_cleanup_and_finalize 130
 }
 
 on_term() {
     trap - INT TERM EXIT
-    echo "[signal] SIGTERM received -- running cleanup once, then exiting 143" >&2
-    run_cleanup_once || true
-    exit 143
+    echo "[signal] SIGTERM received -- running cleanup+finalization once, then exiting 143" >&2
+    run_cleanup_and_finalize 143
 }
 
 on_exit() {
     local exit_code=$?
     trap - INT TERM EXIT
-    run_cleanup_once || true
-    # Preserve the script's own exit status unless cleanup itself
-    # introduced a NEW failure into an otherwise-successful run.
-    if [[ "${exit_code}" -eq 0 && "${CLEANUP_EXIT}" -ne 0 ]]; then
-        exit "${CLEANUP_EXIT}"
-    fi
-    exit "${exit_code}"
+    run_cleanup_and_finalize "${exit_code}"
 }
 
 trap on_int INT
@@ -1097,6 +1303,7 @@ trap on_exit EXIT
 # ============================================================
 
 # --- Step 3: evidence recorder (started first) ---
+LAST_ATTEMPTED_STAGE="recorder launch/readiness"
 python3 hil_offline_stage3_evidence_recorder.py \
     --own-state-topic "${OWN_STATE_TOPIC}" \
     --virtual-peer-source-topic "${VP_SOURCE_TOPIC}" \
@@ -1113,9 +1320,15 @@ python3 hil_offline_stage3_evidence_recorder.py \
     --output-summary-json "${SUMMARY_JSON}" \
     > "${RECORDER_LOG}" 2>&1 &
 RECORDER_PID="$!"
-wait_for_log_pattern "${RECORDER_LOG}" "HIL_OFFLINE_STAGE3_EVIDENCE_RECORDER_READY output_csv=${EVIDENCE_CSV}" 15
+record_component_launch "recorder" "${RECORDER_PID}" "$(ps -o pgid= -p "${RECORDER_PID}" | tr -d ' ')" "$(_proc_start_time "${RECORDER_PID}")" "$(_proc_exe_path "${RECORDER_PID}")"
+if ! wait_for_log_pattern "${RECORDER_LOG}" "HIL_OFFLINE_STAGE3_EVIDENCE_RECORDER_READY output_csv=${EVIDENCE_CSV}" 15; then
+    READINESS_TIMEOUT_RESULT="recorder"
+    exit 1
+fi
+record_component_ready "recorder"
 
 # --- Step 4: guard (DISARMED by default) ---
+LAST_ATTEMPTED_STAGE="guard launch/readiness"
 python3 hil_cmd_vel_guard.py \
     --upstream-cmd-vel-topic "${REQUESTED_CMD_VEL_TOPIC}" \
     --guarded-cmd-vel-topic "${GUARDED_CMD_VEL_TOPIC}" \
@@ -1131,9 +1344,15 @@ python3 hil_cmd_vel_guard.py \
     --required-validity-flags 7 \
     > "${GUARD_LOG}" 2>&1 &
 GUARD_PID="$!"
-wait_for_log_pattern "${GUARD_LOG}" "HIL_CMD_VEL_GUARD_READY armed=False (DISARMED by default) max_linear_speed_mps=${TEST_ONLY_LINEAR_BOUND_MPS} max_angular_speed_rps=${TEST_ONLY_ANGULAR_BOUND_RPS}" 15
+record_component_launch "guard" "${GUARD_PID}" "$(ps -o pgid= -p "${GUARD_PID}" | tr -d ' ')" "$(_proc_start_time "${GUARD_PID}")" "$(_proc_exe_path "${GUARD_PID}")"
+if ! wait_for_log_pattern "${GUARD_LOG}" "HIL_CMD_VEL_GUARD_READY armed=False (DISARMED by default) max_linear_speed_mps=${TEST_ONLY_LINEAR_BOUND_MPS} max_angular_speed_rps=${TEST_ONLY_ANGULAR_BOUND_RPS}" 15; then
+    READINESS_TIMEOUT_RESULT="guard"
+    exit 1
+fi
+record_component_ready "guard"
 
 # --- Step 5: adapter-hosted navigator ---
+LAST_ATTEMPTED_STAGE="adapter launch/readiness"
 python3 hil_topic_adapter.py \
     --robot-id 1 \
     --state-topic "${OWN_STATE_TOPIC}" \
@@ -1149,12 +1368,18 @@ python3 hil_topic_adapter.py \
     --goal-hold-time-s 1.0 \
     > "${ADAPTER_LOG}" 2>&1 &
 ADAPTER_PID="$!"
-wait_for_log_pattern "${ADAPTER_LOG}" "goal_navigator READY robot_id=1 mode=search target=(0.0, 0.0) announce=False listens_for_announcement=True exit_region=(5.0000,5.0000,r=0.1000) parking_region=(9.0000,9.0000,r=0.1000) goal_hold_time_s=1.000" 15
+record_component_launch "adapter" "${ADAPTER_PID}" "$(ps -o pgid= -p "${ADAPTER_PID}" | tr -d ' ')" "$(_proc_start_time "${ADAPTER_PID}")" "$(_proc_exe_path "${ADAPTER_PID}")"
+if ! wait_for_log_pattern "${ADAPTER_LOG}" "goal_navigator READY robot_id=1 mode=search target=(0.0, 0.0) announce=False listens_for_announcement=True exit_region=(5.0000,5.0000,r=0.1000) parking_region=(9.0000,9.0000,r=0.1000) goal_hold_time_s=1.000" 15; then
+    READINESS_TIMEOUT_RESULT="adapter"
+    exit 1
+fi
+record_component_ready "adapter"
 
 # --- Step 6: cooperative_avoider (real, unmodified). Direct executable
 # (COOP_EXE, never `ros2 run`), with `set -m` enabled ONLY for this one
 # launch so bash job control assigns the background job its own
 # process group (PGID == its own PID -- confirmed live). ---
+LAST_ATTEMPTED_STAGE="cooperative_avoider launch/readiness"
 set -m
 "${COOP_EXE}" --ros-args \
     -r "state:=${OWN_STATE_TOPIC}" \
@@ -1178,10 +1403,16 @@ set +m
 COOP_PGID="$(ps -o pgid= -p "${COOP_PID}" | tr -d ' ')"
 COOP_START_TIME="$(_proc_start_time "${COOP_PID}")"
 COOP_EXE_PATH="$(_proc_exe_path "${COOP_PID}")"
-wait_for_log_pattern "${COOP_LOG}" "robot=1 peer=${VP_GATE_INPUT_TOPIC} armed=True heading=0.000rad" 15
+record_component_launch "cooperative_avoider" "${COOP_PID}" "${COOP_PGID}" "${COOP_START_TIME}" "${COOP_EXE_PATH}"
+if ! wait_for_log_pattern "${COOP_LOG}" "robot=1 peer=${VP_GATE_INPUT_TOPIC} armed=True heading=0.000rad" 15; then
+    READINESS_TIMEOUT_RESULT="cooperative_avoider"
+    exit 1
+fi
 ros2 node list 2>/dev/null | grep -qx '/cooperative_avoider'
+record_component_ready "cooperative_avoider"
 
 # --- Step 7: Stage 3 harness (--auto-run is mandatory) ---
+LAST_ATTEMPTED_STAGE="harness launch/readiness"
 python3 hil_offline_stage3_harness.py \
     --own-state-topic "${OWN_STATE_TOPIC}" \
     --bridge-status-topic "${BRIDGE_STATUS_TOPIC}" \
@@ -1207,9 +1438,15 @@ python3 hil_offline_stage3_harness.py \
     --runner-duplicate-goal-id shared_exit \
     > "${HARNESS_LOG}" 2>&1 &
 HARNESS_PID="$!"
-wait_for_log_pattern "${HARNESS_LOG}" "HIL_OFFLINE_STAGE3_HARNESS_READY phase=INITIALISING own_state_topic=${OWN_STATE_TOPIC} virtual_peer_guard_input_topic=${VP_GATE_INPUT_TOPIC} gate_decision_topic=${GATE_DECISION_TOPIC}" 15
+record_component_launch "harness" "${HARNESS_PID}" "$(ps -o pgid= -p "${HARNESS_PID}" | tr -d ' ')" "$(_proc_start_time "${HARNESS_PID}")" "$(_proc_exe_path "${HARNESS_PID}")"
+if ! wait_for_log_pattern "${HARNESS_LOG}" "HIL_OFFLINE_STAGE3_HARNESS_READY phase=INITIALISING own_state_topic=${OWN_STATE_TOPIC} virtual_peer_guard_input_topic=${VP_GATE_INPUT_TOPIC} gate_decision_topic=${GATE_DECISION_TOPIC}" 15; then
+    READINESS_TIMEOUT_RESULT="harness"
+    exit 1
+fi
+record_component_ready "harness"
 
 # --- Step 8: virtual peer (target == start position) ---
+LAST_ATTEMPTED_STAGE="virtual-peer launch/readiness"
 python3 hil_virtual_peer.py \
     --robot-id 2 \
     --state-topic "${VP_SOURCE_TOPIC}" \
@@ -1221,18 +1458,25 @@ python3 hil_virtual_peer.py \
     --max-angular-rps 0.2 --rate-hz 20 \
     > "${PEER_LOG}" 2>&1 &
 PEER_PID="$!"
-wait_for_log_pattern "${PEER_LOG}" "HIL_VIRTUAL_PEER_READY namespace=epuck_virtual_peer announce_enabled=True" 15
+record_component_launch "virtual_peer" "${PEER_PID}" "$(ps -o pgid= -p "${PEER_PID}" | tr -d ' ')" "$(_proc_start_time "${PEER_PID}")" "$(_proc_exe_path "${PEER_PID}")"
+if ! wait_for_log_pattern "${PEER_LOG}" "HIL_VIRTUAL_PEER_READY namespace=epuck_virtual_peer announce_enabled=True" 15; then
+    READINESS_TIMEOUT_RESULT="virtual_peer"
+    exit 1
+fi
+record_component_ready "virtual_peer"
 
 # ============================================================
 # Step 9: wait for harness completion, capture HARNESS_EXIT (protected
 # from errexit by the explicit if/else -- a nonzero harness exit is
 # recorded data, not itself a reason to skip cleanup/verification).
 # ============================================================
+LAST_ATTEMPTED_STAGE="behavioural execution"
 if wait "${HARNESS_PID}"; then
     HARNESS_EXIT=0
 else
     HARNESS_EXIT=$?
 fi
+record_component_exit "harness" "${HARNESS_EXIT}"
 echo "HARNESS_EXIT=${HARNESS_EXIT}"
 
 # ============================================================
@@ -1240,6 +1484,7 @@ echo "HARNESS_EXIT=${HARNESS_EXIT}"
 # last (explicit call -- not deferred to the EXIT trap, so the
 # verifier below never runs while any producer is still active).
 # ============================================================
+LAST_ATTEMPTED_STAGE="cleanup"
 run_cleanup_once || true
 echo "CLEANUP_EXIT=${CLEANUP_EXIT}"
 
@@ -1274,6 +1519,7 @@ echo "POST_RUN_RESIDUAL_PROCESS_CHECK=${POST_RUN_RESIDUAL_PROCESS_CHECK}"
 # reported a problem, this is passed to the verifier's own
 # --residual-process-detected flag rather than silently omitted.
 # ============================================================
+LAST_ATTEMPTED_STAGE="verification"
 VERIFIER_ARGS=(
     --csv "${EVIDENCE_CSV}" --summary-json "${SUMMARY_JSON}"
     --test-only-angular-bound-rps "${TEST_ONLY_ANGULAR_BOUND_RPS}"
@@ -1320,90 +1566,28 @@ print('TASK_OUTCOME=' + str(result['TASK_OUTCOME']))
 fi
 
 # ============================================================
-# Step 15: record harness/cleanup/verifier status, source identity,
-# and PID/PGID/start-time identities -- BEFORE hashing.
+# Step 15-16: unified, always-run evidence finalization (same function
+# used for an early abort in on_exit/on_int/on_term) -- records
+# harness/cleanup/verifier/residual status, the incremental PID
+# manifest, then hashes and verifies whatever evidence files actually
+# exist. Behavioural execution DID complete on this path (Steps 3-9 all
+# succeeded), so the real verifier result is passed through rather than
+# the early-abort NOT_RUN/NOT_OBTAINED placeholder.
 # ============================================================
-python3 -c "
-import json
-status = {
-    'harness_exit': ${HARNESS_EXIT},
-    'cleanup_exit': ${CLEANUP_EXIT},
-    'post_run_residual_process_check': '${POST_RUN_RESIDUAL_PROCESS_CHECK}',
-    'coop_cleanup_classification': '${COOP_CLEANUP_CLASSIFICATION}',
-    'verifier_exit': ${VERIFIER_EXIT},
-    'verifier_json_valid': ${VERIFIER_JSON_VALID},
-    'data_validity': '${DATA_VALIDITY_VALUE}',
-    'task_outcome': '${TASK_OUTCOME_VALUE}',
-}
-with open('${STATUS_RECORD_JSON}', 'w', encoding='utf-8') as f:
-    json.dump(status, f, indent=2)
-"
-
-python3 -c "
-import json
-manifest = {
-    'run_id': '${RUN_ID}',
-    'source_head': '${ACTUAL_HEAD}',
-    'source_identity_manifest': '$(basename "${SOURCE_IDENTITY_MANIFEST_JSON}")',
-    'resolved_cooperative_avoider_executable': '${COOP_EXE}',
-    'ros_domain_id': ${ROS_DOMAIN_ID},
-    'ros_localhost_only': ${ROS_LOCALHOST_ONLY},
-    'pids': {
-        'recorder': ${RECORDER_PID},
-        'guard': ${GUARD_PID},
-        'adapter': ${ADAPTER_PID},
-        'cooperative_avoider': {
-            'pid': ${COOP_PID}, 'pgid': ${COOP_PGID},
-            'start_time': '${COOP_START_TIME}', 'exe_path': '${COOP_EXE_PATH}',
-        },
-        'harness': ${HARNESS_PID},
-        'virtual_peer': ${PEER_PID},
-    },
-}
-with open('${PID_MANIFEST}', 'w', encoding='utf-8') as f:
-    json.dump(manifest, f, indent=2)
-"
-
-# ============================================================
-# Step 16: evidence hashing -- only after every writer has stopped,
-# evidence.csv/summary.json are finalized, the verifier JSON is
-# validated, and status records are written. SHA256SUMS.txt does NOT
-# hash itself. Immediately verified with `sha256sum -c`.
-# ============================================================
-if (
-    cd "${OUT_DIR}" && sha256sum \
-        "$(basename "${EVIDENCE_CSV}")" \
-        "$(basename "${SUMMARY_JSON}")" \
-        "$(basename "${VERIFIER_JSON}")" \
-        "$(basename "${VERIFIER_EXIT_FILE}")" \
-        "$(basename "${STATUS_RECORD_JSON}")" \
-        "$(basename "${PID_MANIFEST}")" \
-        "$(basename "${SOURCE_IDENTITY_MANIFEST_JSON}")" \
-        "$(basename "${EXECUTION_SCRIPT_COPY}")" \
-        "$(basename "${RECORDER_LOG}")" "$(basename "${GUARD_LOG}")" \
-        "$(basename "${ADAPTER_LOG}")" "$(basename "${COOP_LOG}")" \
-        "$(basename "${HARNESS_LOG}")" "$(basename "${PEER_LOG}")" \
-        > "$(basename "${SHA256SUMS_FILE}")"
-); then
-    HASHING_EXIT=0
+LAST_ATTEMPTED_STAGE="hashing"
+if finalize_evidence "RUN" "${TASK_OUTCOME_VALUE}"; then
+    FINALIZE_EXIT=0
 else
-    HASHING_EXIT=$?
+    FINALIZE_EXIT=$?
 fi
-
-if HASH_VERIFY_OUTPUT="$(cd "${OUT_DIR}" && sha256sum -c "$(basename "${SHA256SUMS_FILE}")" 2>&1)"; then
-    HASH_VERIFY_STATUS=0
-else
-    HASH_VERIFY_STATUS=$?
-fi
-echo "${HASH_VERIFY_OUTPUT}"
-echo "HASHING_EXIT=${HASHING_EXIT}"
-echo "HASH_VERIFY_STATUS=${HASH_VERIFY_STATUS}"
+EVIDENCE_FINALIZED=1
 
 # ============================================================
 # Step 17: final launcher exit status. Never reports success when the
 # harness failed, cleanup failed, a residual process was detected, the
 # verifier's JSON was missing/invalid, the verifier itself returned
-# nonzero, or hashing/hash-verification failed.
+# nonzero, or evidence finalization (hashing/hash-verification/JSON
+# validation/recorder-stopped confirmation) failed.
 # ============================================================
 FAILURE_REASONS=()
 if [[ "${HARNESS_EXIT}" -ne 0 ]]; then FAILURE_REASONS+=("HARNESS_EXIT=${HARNESS_EXIT}"); fi
@@ -1411,8 +1595,7 @@ if [[ "${CLEANUP_EXIT}" -ne 0 ]]; then FAILURE_REASONS+=("CLEANUP_EXIT=${CLEANUP
 if [[ "${POST_RUN_RESIDUAL_PROCESS_CHECK}" == "FAIL" ]]; then FAILURE_REASONS+=("RESIDUAL_PROCESS_DETECTED"); fi
 if [[ "${VERIFIER_JSON_VALID}" -ne 1 ]]; then FAILURE_REASONS+=("VERIFIER_JSON_INVALID"); fi
 if [[ "${VERIFIER_EXIT}" -ne 0 ]]; then FAILURE_REASONS+=("VERIFIER_EXIT=${VERIFIER_EXIT}"); fi
-if [[ "${HASHING_EXIT}" -ne 0 ]]; then FAILURE_REASONS+=("HASHING_FAILED"); fi
-if [[ "${HASH_VERIFY_STATUS}" -ne 0 ]]; then FAILURE_REASONS+=("HASH_VERIFICATION_FAILED"); fi
+if [[ "${FINALIZE_EXIT}" -ne 0 ]]; then FAILURE_REASONS+=("EVIDENCE_FINALIZATION_FAILED"); fi
 
 if [[ ${#FAILURE_REASONS[@]} -gt 0 ]]; then
     echo "FINAL_LAUNCHER_STATUS=FAIL (${FAILURE_REASONS[*]})" >&2

@@ -11,6 +11,7 @@ gating -- all against private /hil_offline_stage3/... test topics only.
 """
 from __future__ import annotations
 
+import json
 import math
 import os
 import re
@@ -773,8 +774,13 @@ class RunbookCommandContractTest(unittest.TestCase):
         # earlier design) is no longer present -- INT/TERM/EXIT must be
         # handled by three separate functions.
         self.assertNotIn("trap cleanup EXIT INT TERM", joined)
-        self.assertIn("exit 130", joined)  # on_int's own exit status
-        self.assertIn("exit 143", joined)  # on_term's own exit status
+        # on_int/on_term delegate their intended exit status to the
+        # shared run_cleanup_and_finalize() function (which also
+        # performs always-run evidence finalization) rather than
+        # exiting with a literal number directly.
+        self.assertIn("run_cleanup_and_finalize 130", joined)  # on_int's own exit status
+        self.assertIn("run_cleanup_and_finalize 143", joined)  # on_term's own exit status
+        self.assertIn('exit "${intended_exit_code}"', joined)
         self.assertIn("CLEANUP_DONE", joined)  # idempotency guard
         # Each signal handler disables all three traps before its own
         # final exit, preventing recursive re-entry.
@@ -803,7 +809,11 @@ class RunbookCommandContractTest(unittest.TestCase):
         cleanup_call_index = joined.index("run_cleanup_once || true")
         finalization_index = joined.index('_wait_for_file_ready "${EVIDENCE_CSV}" 5')
         verifier_call_index = joined.index('python3 hil_offline_stage3_post_run_verifier.py "${VERIFIER_ARGS[@]}"')
-        hashing_index = joined.index("sha256sum \\")
+        # Hashing now happens inside the shared finalize_evidence() call
+        # on the happy path -- find the REAL invocation site (after the
+        # verifier), not finalize_evidence's own definition earlier in
+        # the file.
+        hashing_index = joined.index('finalize_evidence "RUN" "${TASK_OUTCOME_VALUE}"')
         self.assertLess(cleanup_call_index, finalization_index)
         self.assertLess(finalization_index, verifier_call_index)
         self.assertLess(verifier_call_index, hashing_index)
@@ -944,7 +954,13 @@ class RunbookCommandContractTest(unittest.TestCase):
         mkdir_index = joined.index('mkdir -p "${OUT_DIR}"')
         manifest_write_index = joined.index("SOURCE_IDENTITY_MANIFEST_JSON=")
         self.assertLess(mkdir_index, manifest_write_index)
-        self.assertIn('"$(basename "${SOURCE_IDENTITY_MANIFEST_JSON}")"', joined)
+        # Hashing no longer lists explicit basenames -- finalize_evidence()
+        # hashes every file that actually exists directly under OUT_DIR
+        # (excluding only SHA256SUMS.txt itself and *.tmp.* atomic-write
+        # temp files), so source_identity_manifest.json is swept up by
+        # construction, not by an explicit per-file listing.
+        self.assertIn('find . -maxdepth 1 -type f', joined)
+        self.assertIn('! -name "*.tmp.*"', joined)
 
     def test_ros_sourcing_nounset_workaround_present(self):
         # /opt/ros/humble/setup.bash references AMENT_TRACE_SETUP_FILES
@@ -962,7 +978,10 @@ class RunbookCommandContractTest(unittest.TestCase):
         joined = "\n".join(_runbook_bash_code_lines())
         self.assertIn('EXECUTION_SCRIPT_COPY="${OUT_DIR}/execution_script.sh"', joined)
         self.assertIn('cp -- "${BASH_SOURCE[0]}" "${EXECUTION_SCRIPT_COPY}"', joined)
-        self.assertIn('"$(basename "${EXECUTION_SCRIPT_COPY}")"', joined)
+        # Swept up by finalize_evidence()'s dynamic find-based hashing
+        # (every file that actually exists under OUT_DIR), not listed
+        # explicitly -- see test_source_identity_manifest_created_only_after_out_dir_and_hashed.
+        self.assertIn('find . -maxdepth 1 -type f', joined)
 
     def test_final_status_incorporates_every_required_failure_source(self):
         joined = "\n".join(_runbook_bash_code_lines())
@@ -972,8 +991,11 @@ class RunbookCommandContractTest(unittest.TestCase):
             'FAILURE_REASONS+=("RESIDUAL_PROCESS_DETECTED")',
             'FAILURE_REASONS+=("VERIFIER_JSON_INVALID")',
             'FAILURE_REASONS+=("VERIFIER_EXIT=',
-            'FAILURE_REASONS+=("HASHING_FAILED")',
-            'FAILURE_REASONS+=("HASH_VERIFICATION_FAILED")',
+            # Hashing failure, hash-verification failure, JSON-validation
+            # failure, and recorder-not-confirmed-stopped are now all
+            # unified under one FINALIZE_EXIT-driven reason -- see
+            # finalize_evidence()'s own internal FINALIZE_EXIT=1 sites.
+            'FAILURE_REASONS+=("EVIDENCE_FINALIZATION_FAILED")',
         ):
             self.assertIn(reason, joined)
 
@@ -1079,12 +1101,12 @@ class RunbookCommandContractTest(unittest.TestCase):
         joined = "\n".join(_runbook_bash_code_lines())
         self.assertIn("sha256sum", joined)
         self.assertIn("SHA256SUMS_FILE", joined)
-        # The sha256sum invocation's own argument list must not include
-        # the SHA256SUMS output file's own basename.
-        sha_call_start = joined.index("sha256sum \\")
-        sha_call_end = joined.index(")", sha_call_start)
-        sha_call_text = joined[sha_call_start:sha_call_end]
-        self.assertNotIn('basename "${SHA256SUMS_FILE}"', sha_call_text)
+        # The dynamic find-based hashing must explicitly exclude the
+        # SHA256SUMS output file's own basename from what it hashes.
+        self.assertIn(
+            '! -name "$(basename "${SHA256SUMS_FILE}")"',
+            joined,
+        )
 
 
 def _extract_trap_cleanup_block() -> str:
@@ -1251,6 +1273,276 @@ class ShellControlFlowRegressionTest(unittest.TestCase):
             cleanup_count = int(open(os.path.join(marker_dir, "cleanup_count")).read().strip())
         self.assertNotEqual(proc.returncode, 0, "a cleanup failure must not be reported as a successful run")
         self.assertEqual(cleanup_count, 1)
+        self._assert_no_residual_dummy()
+
+
+class IncrementalManifestAndFinalizationTest(unittest.TestCase):
+    """Pure, hardware-free, ROS-free proof of the runbook's incremental
+    atomic PID manifest, failure-stage tracking, and always-run evidence
+    finalization (write_pid_manifest_atomic/record_component_*/
+    verify_recorder_stopped/finalize_evidence/run_cleanup_and_finalize) --
+    extracts the REAL function bodies (the same `_extract_trap_cleanup_block()`
+    used by ShellControlFlowRegressionTest, never a reimplementation) and
+    drives them with dummy background processes standing in for
+    recorder/guard/adapter/etc. No ROS_DOMAIN_ID is set, no ROS package
+    is imported, no cooperative_avoider/ros2 process is ever started."""
+
+    DUMMY_TAG = "stage3_finalize_regression_dummy"
+
+    def _run_scenario(self, body: str, timeout_s: float = 10.0):
+        extracted = _extract_trap_cleanup_block()
+        prologue = (
+            "#!/usr/bin/env bash\n"
+            "set -Eeuo pipefail\n"
+            'RUN_ID="dummy_test_run"\n'
+            'OUT_DIR="$1"\n'
+            'PID_MANIFEST="${OUT_DIR}/pid_manifest.json"\n'
+            'STATUS_RECORD_JSON="${OUT_DIR}/launcher_status.json"\n'
+            'SHA256SUMS_FILE="${OUT_DIR}/SHA256SUMS.txt"\n'
+            'RECORDER_LOG="${OUT_DIR}/recorder.log"\nGUARD_LOG="${OUT_DIR}/guard.log"\n'
+            'ADAPTER_LOG="${OUT_DIR}/adapter.log"\nCOOP_LOG="${OUT_DIR}/coop.log"\n'
+            'HARNESS_LOG="${OUT_DIR}/harness.log"\nPEER_LOG="${OUT_DIR}/peer.log"\n'
+            'RECORDER_PID=""\nGUARD_PID=""\nADAPTER_PID=""\n'
+            'COOP_PID=""\nCOOP_PGID=""\nCOOP_START_TIME=""\nCOOP_EXE_PATH=""\n'
+            'COOP_CLEANUP_CLASSIFICATION="normal"\nHARNESS_PID=""\nPEER_PID=""\n'
+            'HARNESS_EXIT=""\n'
+            "CLEANUP_DONE=0\nCLEANUP_EXIT=0\n"
+            'POST_RUN_RESIDUAL_PROCESS_CHECK="UNKNOWN"\n'
+            "SELF_PID=$$\n"
+            "FORBIDDEN_PROCESS_PATTERN='__no_such_process_for_this_test__'\n"
+            "_forbidden_process_scan() {\n"
+            '    pgrep -af "${FORBIDDEN_PROCESS_PATTERN}" 2>/dev/null | awk -v self="${SELF_PID}" \'$1 != self\'\n'
+            "}\n\n"
+        )
+        script = prologue + extracted + "\n\n" + body
+        with tempfile.TemporaryDirectory() as out_dir:
+            script_path = os.path.join(out_dir, "..", "harness.sh")
+            script_path = os.path.abspath(script_path)
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(script)
+            proc = subprocess.run(
+                ["bash", script_path, out_dir],
+                capture_output=True, text=True, timeout=timeout_s,
+            )
+            status = None
+            manifest = None
+            status_path = os.path.join(out_dir, "launcher_status.json")
+            manifest_path = os.path.join(out_dir, "pid_manifest.json")
+            if os.path.exists(status_path):
+                with open(status_path, encoding="utf-8") as f:
+                    status = json.load(f)
+            if os.path.exists(manifest_path):
+                with open(manifest_path, encoding="utf-8") as f:
+                    manifest = json.load(f)
+            sha_exists = os.path.exists(os.path.join(out_dir, "SHA256SUMS.txt"))
+        try:
+            os.remove(script_path)
+        except OSError:
+            pass
+        return proc.returncode, status, manifest, sha_exists, proc.stderr
+
+    def _assert_no_residual_dummy(self):
+        residual = subprocess.run(
+            ["pgrep", "-af", f"[e]xec -a {self.DUMMY_TAG}"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(residual.stdout.strip(), "", f"dummy process left running: {residual.stdout}")
+
+    def _dummy(self, label: str) -> str:
+        return f"exec -a {self.DUMMY_TAG}_{label} sleep 30"
+
+    def test_failure_before_any_child_launch(self):
+        returncode, status, manifest, sha_exists, stderr = self._run_scenario('false\n')
+        self.assertNotEqual(returncode, 0, stderr)
+        self.assertEqual(status["run_completion"], "INCOMPLETE_BRINGUP")
+        self.assertEqual(status["behavioral_verifier_status"], "NOT_RUN")
+        self.assertEqual(status["behavioral_result"], "NOT_OBTAINED")
+        self.assertEqual(manifest["components"], [])
+        self.assertTrue(sha_exists)
+        self._assert_no_residual_dummy()
+
+    def test_recorder_launch_failure_readiness_timeout(self):
+        body = (
+            f'LAST_ATTEMPTED_STAGE="recorder launch/readiness"\n'
+            f'( {self._dummy("s2")} ) > "${{RECORDER_LOG}}" 2>&1 &\n'
+            'RECORDER_PID="$!"\n'
+            'record_component_launch "recorder" "${RECORDER_PID}" "$(ps -o pgid= -p "${RECORDER_PID}" | tr -d " ")" "$(_proc_start_time "${RECORDER_PID}")" "$(_proc_exe_path "${RECORDER_PID}")"\n'
+            'if ! wait_for_log_pattern "${RECORDER_LOG}" "NEVER_APPEARS" 1; then\n'
+            '    READINESS_TIMEOUT_RESULT="recorder"\n'
+            "    exit 1\n"
+            "fi\n"
+        )
+        returncode, status, manifest, sha_exists, stderr = self._run_scenario(body)
+        self.assertNotEqual(returncode, 0, stderr)
+        self.assertEqual(status["last_attempted_stage"], "recorder launch/readiness")
+        self.assertEqual(status["readiness_timeout_result"], "recorder")
+        self.assertEqual([c["component"] for c in manifest["components"]], ["recorder"])
+        self._assert_no_residual_dummy()
+
+    def test_recorder_ready_guard_failure(self):
+        body = (
+            'echo "RECORDER_READY" > "${RECORDER_LOG}" &\n'
+            'RECORDER_PID="$!"\n'
+            'record_component_launch "recorder" "${RECORDER_PID}" "$(ps -o pgid= -p "${RECORDER_PID}" | tr -d " ")" "$(_proc_start_time "${RECORDER_PID}")" "$(_proc_exe_path "${RECORDER_PID}")"\n'
+            'wait_for_log_pattern "${RECORDER_LOG}" "RECORDER_READY" 5\n'
+            'record_component_ready "recorder"\n'
+            f'LAST_ATTEMPTED_STAGE="guard launch/readiness"\n'
+            f'( {self._dummy("s4")} ) > "${{GUARD_LOG}}" 2>&1 &\n'
+            'GUARD_PID="$!"\n'
+            'record_component_launch "guard" "${GUARD_PID}" "$(ps -o pgid= -p "${GUARD_PID}" | tr -d " ")" "$(_proc_start_time "${GUARD_PID}")" "$(_proc_exe_path "${GUARD_PID}")"\n'
+            'if ! wait_for_log_pattern "${GUARD_LOG}" "NEVER" 1; then\n'
+            '    READINESS_TIMEOUT_RESULT="guard"\n'
+            "    exit 1\n"
+            "fi\n"
+        )
+        returncode, status, manifest, sha_exists, stderr = self._run_scenario(body)
+        self.assertNotEqual(returncode, 0, stderr)
+        self.assertEqual(status["last_attempted_stage"], "guard launch/readiness")
+        self.assertEqual([c["component"] for c in manifest["components"]], ["recorder", "guard"])
+        self.assertEqual(manifest["components"][0]["readiness_state"], "READY")
+        self.assertEqual(manifest["components"][1]["readiness_state"], "PENDING")
+        self._assert_no_residual_dummy()
+
+    def test_recorder_guard_ready_adapter_crash(self):
+        body = (
+            'echo "RECORDER_READY" > "${RECORDER_LOG}" &\nRECORDER_PID="$!"\n'
+            'record_component_launch "recorder" "${RECORDER_PID}" "$(ps -o pgid= -p "${RECORDER_PID}" | tr -d " ")" "$(_proc_start_time "${RECORDER_PID}")" "$(_proc_exe_path "${RECORDER_PID}")"\n'
+            'wait_for_log_pattern "${RECORDER_LOG}" "RECORDER_READY" 5\nrecord_component_ready "recorder"\n'
+            'echo "GUARD_READY" > "${GUARD_LOG}" &\nGUARD_PID="$!"\n'
+            'record_component_launch "guard" "${GUARD_PID}" "$(ps -o pgid= -p "${GUARD_PID}" | tr -d " ")" "$(_proc_start_time "${GUARD_PID}")" "$(_proc_exe_path "${GUARD_PID}")"\n'
+            'wait_for_log_pattern "${GUARD_LOG}" "GUARD_READY" 5\nrecord_component_ready "guard"\n'
+            f'LAST_ATTEMPTED_STAGE="adapter launch/readiness"\n'
+            f'( {self._dummy("s5")}; ) > "${{ADAPTER_LOG}}" 2>&1 &\nADAPTER_PID="$!"\n'
+            'record_component_launch "adapter" "${ADAPTER_PID}" "$(ps -o pgid= -p "${ADAPTER_PID}" | tr -d " ")" "$(_proc_start_time "${ADAPTER_PID}")" "$(_proc_exe_path "${ADAPTER_PID}")"\n'
+            'if ! wait_for_log_pattern "${ADAPTER_LOG}" "NEVER" 1; then\n'
+            '    READINESS_TIMEOUT_RESULT="adapter"\n    exit 1\nfi\n'
+        )
+        returncode, status, manifest, sha_exists, stderr = self._run_scenario(body)
+        self.assertNotEqual(returncode, 0, stderr)
+        self.assertEqual(status["last_attempted_stage"], "adapter launch/readiness")
+        self.assertEqual([c["component"] for c in manifest["components"]], ["recorder", "guard", "adapter"])
+        self.assertTrue(sha_exists)
+        self._assert_no_residual_dummy()
+
+    def test_sigint_finalizes_evidence_and_stops_recorder_last(self):
+        body = (
+            'echo "RECORDER_READY" > "${RECORDER_LOG}" &\nRECORDER_PID="$!"\n'
+            'record_component_launch "recorder" "${RECORDER_PID}" "$(ps -o pgid= -p "${RECORDER_PID}" | tr -d " ")" "$(_proc_start_time "${RECORDER_PID}")" "$(_proc_exe_path "${RECORDER_PID}")"\n'
+            'wait_for_log_pattern "${RECORDER_LOG}" "RECORDER_READY" 5\nrecord_component_ready "recorder"\n'
+            "kill -INT $$\nsleep 5\n"
+        )
+        returncode, status, manifest, sha_exists, stderr = self._run_scenario(body)
+        self.assertEqual(returncode, 130, stderr)
+        self.assertEqual(status["run_completion"], "INCOMPLETE_BRINGUP")
+        self.assertEqual(status["behavioral_verifier_status"], "NOT_RUN")
+        self._assert_no_residual_dummy()
+
+    def test_sigterm_finalizes_evidence(self):
+        body = (
+            'echo "RECORDER_READY" > "${RECORDER_LOG}" &\nRECORDER_PID="$!"\n'
+            'record_component_launch "recorder" "${RECORDER_PID}" "$(ps -o pgid= -p "${RECORDER_PID}" | tr -d " ")" "$(_proc_start_time "${RECORDER_PID}")" "$(_proc_exe_path "${RECORDER_PID}")"\n'
+            'wait_for_log_pattern "${RECORDER_LOG}" "RECORDER_READY" 5\nrecord_component_ready "recorder"\n'
+            "kill -TERM $$\nsleep 5\n"
+        )
+        returncode, status, manifest, sha_exists, stderr = self._run_scenario(body)
+        self.assertEqual(returncode, 143, stderr)
+        self.assertEqual(status["run_completion"], "INCOMPLETE_BRINGUP")
+        self._assert_no_residual_dummy()
+
+    def test_recorder_refuses_to_stop_is_reported_as_integrity_failure(self):
+        extracted = _extract_trap_cleanup_block()
+        broken = extracted.replace(
+            'terminate_owned_pid() {\n    local pid="$1" label="$2"',
+            'terminate_owned_pid() {\n    local pid="$1" label="$2"\n'
+            '    if [[ "${label}" == "recorder" ]]; then return 1; fi',
+        )
+        self.assertNotEqual(broken, extracted, "expected to be able to patch terminate_owned_pid for this test")
+        prologue = (
+            "#!/usr/bin/env bash\nset -Eeuo pipefail\n"
+            'RUN_ID="dummy_test_run"\nOUT_DIR="$1"\n'
+            'PID_MANIFEST="${OUT_DIR}/pid_manifest.json"\nSTATUS_RECORD_JSON="${OUT_DIR}/launcher_status.json"\n'
+            'SHA256SUMS_FILE="${OUT_DIR}/SHA256SUMS.txt"\nRECORDER_LOG="${OUT_DIR}/recorder.log"\n'
+            'GUARD_LOG="${OUT_DIR}/guard.log"\nADAPTER_LOG="${OUT_DIR}/adapter.log"\nCOOP_LOG="${OUT_DIR}/coop.log"\n'
+            'HARNESS_LOG="${OUT_DIR}/harness.log"\nPEER_LOG="${OUT_DIR}/peer.log"\n'
+            'RECORDER_PID=""\nGUARD_PID=""\nADAPTER_PID=""\n'
+            'COOP_PID=""\nCOOP_PGID=""\nCOOP_START_TIME=""\nCOOP_EXE_PATH=""\n'
+            'COOP_CLEANUP_CLASSIFICATION="normal"\nHARNESS_PID=""\nPEER_PID=""\nHARNESS_EXIT=""\n'
+            "CLEANUP_DONE=0\nCLEANUP_EXIT=0\n"
+            'POST_RUN_RESIDUAL_PROCESS_CHECK="UNKNOWN"\nSELF_PID=$$\n'
+            "FORBIDDEN_PROCESS_PATTERN='__no_such_process_for_this_test__'\n"
+            "_forbidden_process_scan() {\n"
+            '    pgrep -af "${FORBIDDEN_PROCESS_PATTERN}" 2>/dev/null | awk -v self="${SELF_PID}" \'$1 != self\'\n'
+            "}\n\n"
+        )
+        body = (
+            f'( {self._dummy("stuck")} ) > "${{RECORDER_LOG}}" 2>&1 &\nRECORDER_PID="$!"\n'
+            'record_component_launch "recorder" "${RECORDER_PID}" "$(ps -o pgid= -p "${RECORDER_PID}" | tr -d " ")" "$(_proc_start_time "${RECORDER_PID}")" "$(_proc_exe_path "${RECORDER_PID}")"\n'
+            "false\n"
+        )
+        script = prologue + broken + "\n\n" + body
+        with tempfile.TemporaryDirectory() as out_dir:
+            script_path = os.path.abspath(os.path.join(out_dir, "..", "stuck_harness.sh"))
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(script)
+            proc = subprocess.run(["bash", script_path, out_dir], capture_output=True, text=True, timeout=10.0)
+            with open(os.path.join(out_dir, "launcher_status.json"), encoding="utf-8") as f:
+                status = json.load(f)
+        # Clean up the genuinely-still-alive dummy process (the broken
+        # terminate_owned_pid never signals it) and the script file --
+        # this manual cleanup is test-harness housekeeping, not part of
+        # the mechanism under test.
+        subprocess.run(["pkill", "-f", f"{self.DUMMY_TAG}_stuck"], capture_output=True)
+        try:
+            os.remove(script_path)
+        except OSError:
+            pass
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertFalse(status["recorder_confirmed_stopped"])
+        self.assertIn("RECORDER_NOT_CONFIRMED_STOPPED", status["run_completion"])
+
+    def test_normal_successful_path_runs_verifier_placeholder_once_and_reports_complete(self):
+        body = (
+            'echo "RECORDER_READY" > "${RECORDER_LOG}" &\nRECORDER_PID="$!"\n'
+            'record_component_launch "recorder" "${RECORDER_PID}" "$(ps -o pgid= -p "${RECORDER_PID}" | tr -d " ")" "$(_proc_start_time "${RECORDER_PID}")" "$(_proc_exe_path "${RECORDER_PID}")"\n'
+            'wait_for_log_pattern "${RECORDER_LOG}" "RECORDER_READY" 5\nrecord_component_ready "recorder"\n'
+            'VERIFIER_RUN_COUNT_FILE="${OUT_DIR}/verifier_run_count"\n'
+            'echo 0 > "${VERIFIER_RUN_COUNT_FILE}"\n'
+            'run_behavioral_verifier_placeholder() {\n'
+            '    echo $(( $(cat "${VERIFIER_RUN_COUNT_FILE}") + 1 )) > "${VERIFIER_RUN_COUNT_FILE}"\n'
+            '    TASK_OUTCOME_VALUE="PASS"\n'
+            "}\n"
+            "LAST_ATTEMPTED_STAGE=\"cleanup\"\n"
+            "run_cleanup_once || true\n"
+            "LAST_ATTEMPTED_STAGE=\"verification\"\n"
+            "run_behavioral_verifier_placeholder\n"
+            "LAST_ATTEMPTED_STAGE=\"hashing\"\n"
+            'if finalize_evidence "RUN" "${TASK_OUTCOME_VALUE}"; then FINALIZE_EXIT=0; else FINALIZE_EXIT=$?; fi\n'
+            "EVIDENCE_FINALIZED=1\n"
+            'exit $(( FINALIZE_EXIT ))\n'
+        )
+        returncode, status, manifest, sha_exists, stderr = self._run_scenario(body)
+        self.assertEqual(returncode, 0, stderr)
+        self.assertEqual(status["run_completion"], "COMPLETE")
+        self.assertEqual(status["behavioral_verifier_status"], "RUN")
+        self.assertEqual(status["behavioral_result"], "PASS")
+        self.assertTrue(sha_exists)
+        self._assert_no_residual_dummy()
+
+    def test_incomplete_bringup_never_runs_behavioral_verifier(self):
+        # Across every early-abort scenario above, no post_run_verification.json
+        # or verifier invocation occurs -- proven directly for one
+        # representative case (adapter crash) by asserting the verifier
+        # output file was never created.
+        body = (
+            f'LAST_ATTEMPTED_STAGE="adapter launch/readiness"\n'
+            f'( {self._dummy("s_noverify")} ) > "${{ADAPTER_LOG}}" 2>&1 &\nADAPTER_PID="$!"\n'
+            'record_component_launch "adapter" "${ADAPTER_PID}" "$(ps -o pgid= -p "${ADAPTER_PID}" | tr -d " ")" "$(_proc_start_time "${ADAPTER_PID}")" "$(_proc_exe_path "${ADAPTER_PID}")"\n'
+            'if ! wait_for_log_pattern "${ADAPTER_LOG}" "NEVER" 1; then\n'
+            '    READINESS_TIMEOUT_RESULT="adapter"\n    exit 1\nfi\n'
+        )
+        returncode, status, manifest, sha_exists, stderr = self._run_scenario(body)
+        self.assertNotEqual(returncode, 0, stderr)
+        self.assertEqual(status["behavioral_verifier_status"], "NOT_RUN")
         self._assert_no_residual_dummy()
 
 
