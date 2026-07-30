@@ -817,12 +817,146 @@ class RunbookCommandContractTest(unittest.TestCase):
         self.assertIn('TOOLS_DIR="${REPO_ROOT}/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools"', joined)
         self.assertNotIn('TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")', joined)
 
-    def test_repo_head_and_hash_identity_verified_before_launch(self):
+    def test_no_self_referential_expected_head_or_self_hash_embedded(self):
+        # A tracked file cannot correctly predict its own post-commit
+        # identity -- a real, hardware-free execution attempt against
+        # this runbook's own previous revision proved exactly this: its
+        # embedded EXPECTED_HEAD necessarily referred to the *parent* of
+        # the commit that introduced it, so it could never pass on its
+        # own introducing commit. No literal 40-hex-char commit id may
+        # ever be assigned to EXPECTED_HEAD, and no hardcoded SHA-256
+        # table of this runbook's own path (or any other required path)
+        # may be embedded anywhere in this document.
         joined = "\n".join(_runbook_bash_code_lines())
-        self.assertIn('EXPECTED_HEAD="8c912a9de0d821e9e8c8561f2ec1e6c6ad2504d8"', joined)
-        self.assertIn("ACTUAL_HEAD=", joined)
-        self.assertIn("STAGE3_COMMITTED_SHA256", joined)
-        self.assertIn("git diff --quiet", joined)
+        self.assertNotRegex(joined, r'EXPECTED_HEAD="[0-9a-f]{40}"')
+        self.assertNotIn("STAGE3_COMMITTED_SHA256", joined)
+        self.assertNotRegex(
+            joined,
+            r'HIL_OFFLINE_STAGE3_RUNBOOK\.md"\]="[0-9a-f]{64}"',
+            "no hardcoded SHA-256 of this runbook's own path may be embedded",
+        )
+
+    def test_expected_head_required_externally_run_id_required_only_after_identity_checks(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        expected_head_idx = joined.index(':' + ' "${EXPECTED_HEAD:?')
+        run_id_idx = joined.index(':' + ' "${RUN_ID:?')
+        source_clean_idx = joined.index('echo "PRE_RUN_SOURCE_IDENTITY_CHECK=CLEAN"')
+        self.assertGreaterEqual(expected_head_idx, 0)
+        # RUN_ID must be required strictly AFTER both identity layers have
+        # already passed -- a failed identity check must never reach the
+        # RUN_ID gate at all.
+        self.assertLess(source_clean_idx, run_id_idx)
+        self.assertLess(expected_head_idx, source_clean_idx)
+
+    def test_expected_head_format_existence_and_head_match_checks_present(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn(r'if [[ ! "${EXPECTED_HEAD}" =~ ^[0-9a-f]{40}$ ]]; then', joined)
+        self.assertIn('git -C "${REPO_ROOT}" cat-file -e "${EXPECTED_HEAD}^{commit}"', joined)
+        self.assertIn('ACTUAL_HEAD="$(git -C "${REPO_ROOT}" rev-parse HEAD)"', joined)
+        self.assertIn('if [[ "${ACTUAL_HEAD}" != "${EXPECTED_HEAD}" ]]; then', joined)
+
+    def test_required_source_paths_list_is_complete(self):
+        # 23 paths: the 22 from the prior revision plus setup.py --
+        # the tracked file that DEFINES the cooperative_avoider
+        # console_scripts mapping (deployment/entry-point metadata,
+        # reached by the installed launcher/entry-point verification,
+        # not by any Python runtime import).
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn("REQUIRED_SOURCE_PATHS=(", joined)
+        for path in (
+            "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/HIL_OFFLINE_STAGE3_RUNBOOK.md",
+            "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_offline_stage3_harness.py",
+            "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_offline_stage3_evidence_recorder.py",
+            "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_offline_stage3_post_run_verifier.py",
+            "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_cmd_vel_guard.py",
+            "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_topic_adapter.py",
+            "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_virtual_peer.py",
+            "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_goal_announcement_evidence.py",
+            "experiments/10_cooperative_exit_navigation_20260720/tools/goal_navigator.py",
+            "experiments/10_cooperative_exit_navigation_20260720/tools/goal_hold_tracker.py",
+            "experiments/10_cooperative_exit_navigation_20260720/tools/navigation_target_state.py",
+            "src/epuck2_comm/epuck2_comm/__init__.py",
+            "src/epuck2_comm/epuck2_comm/cooperative_avoider.py",
+            "src/epuck2_comm/epuck2_comm/command_smoothing.py",
+            "src/epuck2_comm/epuck2_comm/collision_math.py",
+            "src/epuck2_comm/epuck2_comm/local_obstacle_logic.py",
+            "src/epuck2_comm/epuck2_comm/models.py",
+            "src/epuck2_comm/epuck2_comm/neighbor_cache.py",
+            "src/epuck2_comm/epuck2_comm/transmission_policy.py",
+            "src/epuck2_comm/setup.py",
+            "src/epuck2_comm_interfaces/msg/EpuckState.msg",
+            "src/epuck2_comm_interfaces/msg/GoalAnnouncement.msg",
+            "src/epuck2_comm_interfaces/msg/NavigationIntent.msg",
+        ):
+            self.assertIn(f'"{path}"', joined)
+
+    def test_git_blob_comparison_mechanism_present_never_manual_sha256_table(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn('git -C "${REPO_ROOT}" rev-parse --verify -q "${EXPECTED_HEAD}:${src_path}"', joined)
+        # Path-aware: attribute lookup (.gitattributes eol/text rules) is
+        # keyed off the explicit --path value, never a plain hash-object
+        # call relying on incidental cwd/argv-path resolution.
+        self.assertIn('git -C "${REPO_ROOT}" hash-object --path="${src_path}" -- "${full_path}"', joined)
+        self.assertIn('if [[ "${expected_blob}" != "${worktree_blob}" ]]; then', joined)
+
+    def test_installed_runtime_identity_mechanism_present(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn(': "${INSTALL_ROOT:?', joined)
+        self.assertIn("INSTALLED_PY_TO_SOURCE", joined)
+        self.assertIn('git -C "${REPO_ROOT}" hash-object --path="${src_path}" -- "${installed_path}"', joined)
+        self.assertIn("INSTALLED_RUNTIME_IDENTITY=BLOCKED", joined)
+        self.assertIn("cooperative_avoider = epuck2_comm.cooperative_avoider:main", joined)
+
+    def test_index_staged_change_check_uses_cached_diff_not_status(self):
+        # Must use `git diff --cached --quiet` (real content comparison,
+        # immune to the documented WSL stat-cache anomaly) -- never
+        # `git status` or a plain (non---cached) `git diff`.
+        joined = "\n".join(_runbook_bash_code_lines())
+        self.assertIn('git -C "${REPO_ROOT}" diff --cached --quiet -- "${src_path}"', joined)
+        self.assertNotIn("git status", joined)
+
+    def test_source_verification_precedes_ros_sourcing_coop_resolution_and_run_id_use(self):
+        # ROS is now sourced INSIDE Step C (message-schema verification),
+        # i.e. before RUN_ID/OUT_DIR, not after -- `source
+        # /opt/ros/humble/setup.bash` legitimately appears twice in this
+        # document (once in the small illustrative "Environment setup"
+        # example near the top, once in the real Step C script);
+        # ordering here is checked strictly within the real script, so
+        # the LAST occurrence (Step C's) is used.
+        joined = "\n".join(_runbook_bash_code_lines())
+        ros_source_index = joined.rindex("source /opt/ros/humble/setup.bash")
+        source_check_index = joined.index('echo "PRE_RUN_SOURCE_IDENTITY_CHECK=CLEAN"')
+        out_dir_use_index = joined.index('OUT_DIR="${HIL_ROOT}/hil_offline_stage3_${RUN_ID}"')
+        coop_resolve_index = joined.index('COOP_PREFIX="$(ros2 pkg prefix epuck2_comm)"')
+        mkdir_index = joined.index('mkdir -p "${OUT_DIR}"')
+        # This exact filename also legitimately appears earlier, inside
+        # REQUIRED_SOURCE_PATHS itself -- search only after mkdir_index
+        # for the real Step 3 launch line.
+        step3_index = joined.index("hil_offline_stage3_evidence_recorder.py", mkdir_index)
+        self.assertLess(ros_source_index, source_check_index)
+        self.assertLess(source_check_index, out_dir_use_index)
+        self.assertLess(out_dir_use_index, coop_resolve_index)
+        self.assertLess(coop_resolve_index, mkdir_index)
+        self.assertLess(mkdir_index, step3_index)
+
+    def test_source_identity_manifest_created_only_after_out_dir_and_hashed(self):
+        joined = "\n".join(_runbook_bash_code_lines())
+        mkdir_index = joined.index('mkdir -p "${OUT_DIR}"')
+        manifest_write_index = joined.index("SOURCE_IDENTITY_MANIFEST_JSON=")
+        self.assertLess(mkdir_index, manifest_write_index)
+        self.assertIn('"$(basename "${SOURCE_IDENTITY_MANIFEST_JSON}")"', joined)
+
+    def test_ros_sourcing_nounset_workaround_present(self):
+        # /opt/ros/humble/setup.bash references AMENT_TRACE_SETUP_FILES
+        # without a safe default and aborts under `set -u` -- confirmed
+        # live. `set +u` must bracket only the two ROS `source` calls,
+        # restored immediately afterward.
+        joined = "\n".join(_runbook_bash_code_lines())
+        set_plus_u_index = joined.index("set +u")
+        ros_source_index = joined.index("source /opt/ros/humble/setup.bash", set_plus_u_index)
+        set_minus_u_index = joined.index("set -u", ros_source_index)
+        self.assertLess(set_plus_u_index, ros_source_index)
+        self.assertLess(ros_source_index, set_minus_u_index)
 
     def test_execution_script_preserved_and_hashed(self):
         joined = "\n".join(_runbook_bash_code_lines())
@@ -1118,6 +1252,716 @@ class ShellControlFlowRegressionTest(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0, "a cleanup failure must not be reported as a successful run")
         self.assertEqual(cleanup_count, 1)
         self._assert_no_residual_dummy()
+
+
+def _extract_source_identity_block() -> str:
+    """Extracts the REAL source-identity verification block verbatim
+    from the committed runbook -- from its own leading comment through
+    the final `PRE_RUN_SOURCE_IDENTITY_CHECK=CLEAN` echo -- for use by a
+    harness that runs it against a disposable synthetic git repository
+    instead of the real one. Deliberately starts AFTER the runbook's own
+    REPO_ROOT/TOOLS_DIR/HIL_ROOT assignments so a caller can supply its
+    own REPO_ROOT (pointing at the synthetic repo) without it being
+    clobbered by the real runbook's hardcoded path."""
+    joined = "\n".join(_runbook_bash_code_lines())
+    start = joined.index(': "${EXPECTED_HEAD:?')
+    end = joined.index('echo "PRE_RUN_SOURCE_IDENTITY_CHECK=CLEAN"') + len('echo "PRE_RUN_SOURCE_IDENTITY_CHECK=CLEAN"')
+    return joined[start:end]
+
+
+def _extract_source_identity_block_through_step_b() -> str:
+    """Same extraction as `_extract_source_identity_block()`, but stops
+    at the end of Step B (Git source paths + installed modules +
+    installed launcher + installed entry-point metadata), BEFORE Step C
+    sources the real ROS environment. Step C's message-schema check
+    necessarily resolves messages from the one real ROS workspace this
+    machine has installed (its `source .../setup.bash` targets a fixed
+    real path, not a parameter) -- so a synthetic INSTALL_ROOT can
+    exercise Steps A/B fully offline, but not Step C. Step C's own logic
+    is instead proven directly and separately (never reimplemented) by
+    `MessageSchemaVerificationTest`, which extracts and runs its embedded
+    Python verbatim against synthetic fixture message classes -- no ROS,
+    no bash, no synthetic git repo needed for that part at all."""
+    joined = "\n".join(_runbook_bash_code_lines())
+    start = joined.index(': "${EXPECTED_HEAD:?')
+    end = joined.index('echo "INSTALLED_ENTRYPOINT_METADATA_CHECK=CLEAN"') + len('echo "INSTALLED_ENTRYPOINT_METADATA_CHECK=CLEAN"')
+    return joined[start:end]
+
+
+def _extract_embedded_python(marker_substring: str) -> str:
+    """Extracts one embedded `python3 - ... <<'PYEOF' ... PYEOF` payload
+    verbatim from the RAW runbook text (not the comment/blank-stripped
+    `_runbook_bash_code_lines()`, which would corrupt Python comments and
+    the intentional blank lines inside the launcher's golden-template
+    string literal). Both embedded Python payloads live in the SAME
+    fenced ```bash block, so `marker_substring` locates a position
+    inside that block first, then the enclosing `<<'PYEOF' ... PYEOF`
+    region around that exact position is extracted -- never just the
+    first heredoc in the block."""
+    bash_blocks = _runbook_bash_blocks()
+    target_block = next(b for b in bash_blocks if marker_substring in b)
+    marker_idx = target_block.index(marker_substring)
+    heredoc_open = target_block.rindex("<<'PYEOF'\n", 0, marker_idx)
+    heredoc_start = heredoc_open + len("<<'PYEOF'\n")
+    heredoc_end = target_block.index("\nPYEOF", heredoc_start)
+    return target_block[heredoc_start:heredoc_end]
+
+
+class SourceIdentityMechanismTest(unittest.TestCase):
+    """Pure, hardware-free, ROS-free proof of the runbook's real
+    two-tier source-identity verification block (extracted verbatim,
+    never a reimplementation): Git source-path identity (22 paths,
+    proven-complete dependency closure) AND installed-runtime identity
+    (~/epuck_ws/install stand-in). Every mutation happens in a disposable
+    synthetic git repository AND a disposable synthetic install
+    directory built fresh per test -- never the real repository, its
+    index, or the real ~/epuck_ws/install. No ROS_DOMAIN_ID is set, no
+    ROS package is imported, no rclpy.init, no RUN_ID is ever generated
+    or consumed by this block."""
+
+    # Mirrors the real, proven-complete REQUIRED_SOURCE_PATHS in
+    # source_identity_block_v3.sh -- 14 tool/message paths plus the 8
+    # paths the dependency-closure audit found missing from the prior
+    # proposal (goal_hold_tracker.py, navigation_target_state.py,
+    # command_smoothing.py, collision_math.py, and the epuck2_comm
+    # package's own __init__.py/models.py/neighbor_cache.py/
+    # transmission_policy.py, all reached because cooperative_avoider.py
+    # is a submodule of the epuck2_comm package and importing any
+    # submodule executes the package's __init__.py first).
+    REQUIRED_RELATIVE_PATHS = (
+        "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/HIL_OFFLINE_STAGE3_RUNBOOK.md",
+        "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_offline_stage3_harness.py",
+        "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_offline_stage3_evidence_recorder.py",
+        "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_offline_stage3_post_run_verifier.py",
+        "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_cmd_vel_guard.py",
+        "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_topic_adapter.py",
+        "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_virtual_peer.py",
+        "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_goal_announcement_evidence.py",
+        "experiments/10_cooperative_exit_navigation_20260720/tools/goal_navigator.py",
+        "experiments/10_cooperative_exit_navigation_20260720/tools/goal_hold_tracker.py",
+        "experiments/10_cooperative_exit_navigation_20260720/tools/navigation_target_state.py",
+        "src/epuck2_comm/epuck2_comm/__init__.py",
+        "src/epuck2_comm/epuck2_comm/cooperative_avoider.py",
+        "src/epuck2_comm/epuck2_comm/command_smoothing.py",
+        "src/epuck2_comm/epuck2_comm/collision_math.py",
+        "src/epuck2_comm/epuck2_comm/local_obstacle_logic.py",
+        "src/epuck2_comm/epuck2_comm/models.py",
+        "src/epuck2_comm/epuck2_comm/neighbor_cache.py",
+        "src/epuck2_comm/epuck2_comm/transmission_policy.py",
+        "src/epuck2_comm/setup.py",
+        "src/epuck2_comm_interfaces/msg/EpuckState.msg",
+        "src/epuck2_comm_interfaces/msg/GoalAnnouncement.msg",
+        "src/epuck2_comm_interfaces/msg/NavigationIntent.msg",
+    )
+
+    GOLDEN_LAUNCHER_SOURCE = (
+        "import re\n"
+        "import sys\n"
+        "\n"
+        "__requires__ = 'epuck2-comm==0.1.0'\n"
+        "\n"
+        "try:\n"
+        "    from importlib.metadata import distribution\n"
+        "except ImportError:\n"
+        "    try:\n"
+        "        from importlib_metadata import distribution\n"
+        "    except ImportError:\n"
+        "        from pkg_resources import load_entry_point\n"
+        "\n"
+        "\n"
+        "def importlib_load_entry_point(spec, group, name):\n"
+        "    dist_name, _, _ = spec.partition('==')\n"
+        "    matches = (\n"
+        "        entry_point\n"
+        "        for entry_point in distribution(dist_name).entry_points\n"
+        "        if entry_point.group == group and entry_point.name == name\n"
+        "    )\n"
+        "    return next(matches).load()\n"
+        "\n"
+        "\n"
+        "globals().setdefault('load_entry_point', importlib_load_entry_point)\n"
+        "\n"
+        "\n"
+        "if __name__ == '__main__':\n"
+        "    sys.argv[0] = re.sub(r'(-script\\.pyw?|\\.exe)?$', '', sys.argv[0])\n"
+        "    sys.exit(load_entry_point('epuck2-comm==0.1.0', 'console_scripts', 'cooperative_avoider')())\n"
+    )
+
+    # Maps each installed artifact's relative location (under a synthetic
+    # INSTALL_ROOT) to the REQUIRED_RELATIVE_PATHS entry it is tied to --
+    # mirrors INSTALLED_PY_TO_SOURCE in source_identity_block_v3.sh
+    # exactly (path shape, not just names).
+    INSTALLED_RELATIVE_TO_SOURCE = {
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/__init__.py": "src/epuck2_comm/epuck2_comm/__init__.py",
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/cooperative_avoider.py": "src/epuck2_comm/epuck2_comm/cooperative_avoider.py",
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/command_smoothing.py": "src/epuck2_comm/epuck2_comm/command_smoothing.py",
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/collision_math.py": "src/epuck2_comm/epuck2_comm/collision_math.py",
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/local_obstacle_logic.py": "src/epuck2_comm/epuck2_comm/local_obstacle_logic.py",
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/models.py": "src/epuck2_comm/epuck2_comm/models.py",
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/neighbor_cache.py": "src/epuck2_comm/epuck2_comm/neighbor_cache.py",
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/transmission_policy.py": "src/epuck2_comm/epuck2_comm/transmission_policy.py",
+        "epuck2_comm_interfaces/share/epuck2_comm_interfaces/msg/EpuckState.msg": "src/epuck2_comm_interfaces/msg/EpuckState.msg",
+        "epuck2_comm_interfaces/share/epuck2_comm_interfaces/msg/GoalAnnouncement.msg": "src/epuck2_comm_interfaces/msg/GoalAnnouncement.msg",
+        "epuck2_comm_interfaces/share/epuck2_comm_interfaces/msg/NavigationIntent.msg": "src/epuck2_comm_interfaces/msg/NavigationIntent.msg",
+    }
+    LAUNCHER_RELATIVE = "epuck2_comm/lib/epuck2_comm/cooperative_avoider"
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = os.path.join(self._tmp.name, "repo")
+        self.install = os.path.join(self._tmp.name, "install")
+        os.makedirs(self.repo)
+        os.makedirs(self.install)
+        subprocess.run(["git", "init", "-q"], cwd=self.repo, check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.local"], cwd=self.repo, check=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=self.repo, check=True)
+        # .gitattributes text/eol rule -- required to prove path-aware
+        # clean-filtering, not just plain content equality.
+        with open(os.path.join(self.repo, ".gitattributes"), "w", encoding="utf-8") as f:
+            f.write("*.py text eol=lf\n*.msg text eol=lf\n*.md text eol=lf\n")
+        for rel in self.REQUIRED_RELATIVE_PATHS:
+            full = os.path.join(self.repo, rel)
+            os.makedirs(os.path.dirname(full), exist_ok=True)
+            with open(full, "w", encoding="utf-8") as f:
+                f.write(f"content of {rel} v1\nline2\n")
+        # setup.py stand-in carrying the real console_scripts mapping the
+        # launcher-audit branch of the block greps for.
+        os.makedirs(os.path.join(self.repo, "src", "epuck2_comm"), exist_ok=True)
+        with open(os.path.join(self.repo, "src", "epuck2_comm", "setup.py"), "w", encoding="utf-8") as f:
+            f.write(
+                'entry_points={"console_scripts": '
+                '["cooperative_avoider = epuck2_comm.cooperative_avoider:main"]},\n'
+            )
+        subprocess.run(["git", "add", "-A"], cwd=self.repo, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "v1"], cwd=self.repo, check=True)
+        self.head_v1 = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.repo, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        self._build_matching_install()
+
+    ENTRY_POINTS_RELATIVE = (
+        "epuck2_comm/lib/python3.10/site-packages/epuck2_comm-0.1.0-py3.10.egg-info/entry_points.txt"
+    )
+
+    def _build_matching_install(self):
+        for installed_rel, src_rel in self.INSTALLED_RELATIVE_TO_SOURCE.items():
+            dst = os.path.join(self.install, installed_rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(os.path.join(self.repo, src_rel), "rb") as fsrc, open(dst, "wb") as fdst:
+                fdst.write(fsrc.read())
+        launcher = os.path.join(self.install, self.LAUNCHER_RELATIVE)
+        os.makedirs(os.path.dirname(launcher), exist_ok=True)
+        with open(launcher, "w", encoding="utf-8") as f:
+            f.write(self.GOLDEN_LAUNCHER_SOURCE)
+        os.chmod(launcher, 0o755)
+        entry_points = os.path.join(self.install, self.ENTRY_POINTS_RELATIVE)
+        os.makedirs(os.path.dirname(entry_points), exist_ok=True)
+        with open(entry_points, "w", encoding="utf-8") as f:
+            f.write("[console_scripts]\ncooperative_avoider = epuck2_comm.cooperative_avoider:main\n")
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _run(self, expected_head, extra_env=None, timeout_s=10.0):
+        # Extracts through the end of Step B only (Git source paths +
+        # installed modules + installed launcher + installed entry-point
+        # metadata) -- Step C (message-schema) necessarily sources this
+        # machine's one real ROS workspace and is proven separately by
+        # MessageSchemaVerificationTest instead. See
+        # `_extract_source_identity_block_through_step_b()`'s docstring.
+        block = _extract_source_identity_block_through_step_b()
+        env = dict(os.environ)
+        env["REPO_ROOT"] = self.repo
+        env["INSTALL_ROOT"] = self.install
+        if expected_head is not None:
+            env["EXPECTED_HEAD"] = expected_head
+        if extra_env:
+            env.update(extra_env)
+        script = "set -Eeuo pipefail\n" + block
+        proc = subprocess.run(
+            ["bash", "-c", script], cwd=self.repo, env=env,
+            capture_output=True, text=True, timeout=timeout_s,
+        )
+        return proc
+
+    def test_matching_commit_worktree_and_install_passes(self):
+        proc = self._run(self.head_v1)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("GIT_SOURCE_IDENTITY_CHECK=CLEAN", proc.stdout)
+        self.assertIn("INSTALLED_RUNTIME_MODULES_CHECK=CLEAN", proc.stdout)
+        self.assertIn("INSTALLED_LAUNCHER_IDENTITY_CHECK=CLEAN", proc.stdout)
+        self.assertIn("INSTALLED_ENTRYPOINT_METADATA_CHECK=CLEAN", proc.stdout)
+
+    def test_missing_expected_head_fails_before_any_further_check(self):
+        proc = self._run(None)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertNotIn("GIT_SOURCE_IDENTITY_CHECK", proc.stdout)
+
+    def test_malformed_expected_head_fails(self):
+        proc = self._run("not-a-valid-hash")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("not a well-formed 40-character", proc.stderr)
+
+    def test_nonexistent_commit_fails(self):
+        proc = self._run("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("does not exist as a commit", proc.stderr)
+
+    def test_head_mismatch_fails(self):
+        with open(os.path.join(self.repo, self.REQUIRED_RELATIVE_PATHS[0]), "a", encoding="utf-8") as f:
+            f.write("v2 edit\n")
+        subprocess.run(["git", "add", "-A"], cwd=self.repo, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "v2"], cwd=self.repo, check=True)
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("HEAD mismatch", proc.stderr)
+
+    def test_required_git_source_path_missing_from_working_tree_fails(self):
+        os.remove(os.path.join(self.repo, "experiments/10_cooperative_exit_navigation_20260720/tools/goal_hold_tracker.py"))
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("missing from working tree", proc.stderr)
+
+    def test_incomplete_dependency_closure_caught_as_missing_from_commit(self):
+        # Simulates the exact defect the dependency-closure audit found in
+        # the prior proposal: a required transitive dependency
+        # (navigation_target_state.py) was never committed/tracked at
+        # all, not merely deleted from disk -- proving the check catches
+        # BOTH "missing from working tree" and "never existed in
+        # EXPECTED_HEAD's tree" incompleteness, not just worktree drift.
+        # `git rm --cached` (never deleting the working-tree copy) so
+        # this exercises the "absent from EXPECTED_HEAD's tree" branch
+        # specifically, distinct from the "missing from working tree"
+        # branch already covered by the previous test.
+        rel = "experiments/10_cooperative_exit_navigation_20260720/tools/navigation_target_state.py"
+        subprocess.run(["git", "rm", "-q", "--cached", rel], cwd=self.repo, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "simulate incomplete closure"], cwd=self.repo, check=True)
+        head_v2 = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.repo, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        proc = self._run(head_v2)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("does not exist in EXPECTED_HEAD's tree", proc.stderr)
+
+    def test_commit_blob_worktree_blob_mismatch_fails(self):
+        with open(os.path.join(self.repo, "src/epuck2_comm/epuck2_comm/cooperative_avoider.py"), "a", encoding="utf-8") as f:
+            f.write("TAMPERED\n")
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("source-identity mismatch", proc.stderr)
+
+    def test_staged_content_change_fails_even_if_index_check_is_reached(self):
+        rel = "src/epuck2_comm/epuck2_comm/local_obstacle_logic.py"
+        with open(os.path.join(self.repo, rel), "a", encoding="utf-8") as f:
+            f.write("STAGED_TAMPER\n")
+        subprocess.run(["git", "add", rel], cwd=self.repo, check=True)
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+
+    def test_crlf_worktree_variant_passes_via_path_aware_clean_filter(self):
+        # A CRLF worktree representation of a *.py path (covered by the
+        # committed .gitattributes `text eol=lf` rule) must be treated as
+        # logically identical to the committed LF blob -- proves the
+        # `git hash-object --path=<repo-relative-path> --` invocation is
+        # genuinely path-aware, not merely equivalent to a plain
+        # `hash-object` call by coincidence of this repo's layout.
+        target = os.path.join(self.repo, "src/epuck2_comm/epuck2_comm/collision_math.py")
+        with open(target, "rb") as f:
+            content = f.read()
+        with open(target, "wb") as f:
+            f.write(content.replace(b"\n", b"\r\n"))
+        proc = self._run(self.head_v1)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("GIT_SOURCE_IDENTITY_CHECK=CLEAN", proc.stdout)
+
+    def test_matching_blobs_pass_despite_simulated_stat_cache_only_status_entry(self):
+        target = os.path.join(self.repo, "src/epuck2_comm/epuck2_comm/models.py")
+        os.utime(target, (2000000000, 2000000000))
+        proc = self._run(self.head_v1)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("INSTALLED_ENTRYPOINT_METADATA_CHECK=CLEAN", proc.stdout)
+
+    def test_runbooks_own_path_is_verified_through_commit_derived_blob_identity(self):
+        with open(os.path.join(self.repo, self.REQUIRED_RELATIVE_PATHS[0]), "a", encoding="utf-8") as f:
+            f.write("TAMPERED_RUNBOOK_ITSELF\n")
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("source-identity mismatch", proc.stderr)
+        self.assertIn(self.REQUIRED_RELATIVE_PATHS[0], proc.stderr)
+
+    def test_git_source_identity_passes_before_installed_runtime_identity_is_even_reached(self):
+        # A Git-layer failure must abort before Step B (installed-runtime)
+        # ever runs -- proven by also breaking the install tree in the
+        # SAME scenario and observing only the Git-layer error, never an
+        # installed-runtime error.
+        with open(os.path.join(self.repo, "src/epuck2_comm/epuck2_comm/models.py"), "a", encoding="utf-8") as f:
+            f.write("GIT_LAYER_TAMPER\n")
+        os.remove(os.path.join(
+            self.install, "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/models.py",
+        ))
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("source-identity mismatch", proc.stderr)
+        self.assertNotIn("installed runtime artifact", proc.stderr)
+        self.assertNotIn("GIT_SOURCE_IDENTITY_CHECK=CLEAN", proc.stdout)
+
+    def test_missing_installed_module_artifact_fails_after_git_layer_passes(self):
+        os.remove(os.path.join(
+            self.install, "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/command_smoothing.py",
+        ))
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("GIT_SOURCE_IDENTITY_CHECK=CLEAN", proc.stdout)
+        self.assertIn("installed runtime artifact missing", proc.stderr)
+
+    def test_missing_installed_message_artifact_fails(self):
+        os.remove(os.path.join(
+            self.install, "epuck2_comm_interfaces/share/epuck2_comm_interfaces/msg/GoalAnnouncement.msg",
+        ))
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("installed runtime artifact missing", proc.stderr)
+
+    def test_missing_installed_launcher_fails(self):
+        os.remove(os.path.join(self.install, self.LAUNCHER_RELATIVE))
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("launcher missing", proc.stderr)
+
+    def test_installed_artifact_content_mismatch_fails_stale_build(self):
+        # Simulates a stale colcon build: source edited since the last
+        # build, install tree left untouched.
+        installed = os.path.join(
+            self.install, "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/collision_math.py",
+        )
+        with open(installed, "a", encoding="utf-8") as f:
+            f.write("# stale, pre-edit build artifact\n")
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("does not match reviewed source", proc.stderr)
+
+    def test_installed_artifact_crlf_only_variant_still_passes(self):
+        # An installed copy built on a different line-ending convention
+        # than the worktree must not false-fail -- installed-vs-source
+        # comparison uses the same path-aware git-blob identity as the
+        # Git-source layer, never raw byte/sha256 equality.
+        installed = os.path.join(
+            self.install, "epuck2_comm/lib/python3.10/site-packages/epuck2_comm/transmission_policy.py",
+        )
+        with open(installed, "rb") as f:
+            content = f.read()
+        with open(installed, "wb") as f:
+            f.write(content.replace(b"\n", b"\r\n"))
+        proc = self._run(self.head_v1)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_run_id_never_required_or_expanded_in_this_block(self):
+        # Structural proof that this block cannot consume, validate, or
+        # cancel a RUN_ID -- it does not even reference the variable.
+        block = _extract_source_identity_block()
+        self.assertNotIn("${RUN_ID}", block)
+        self.assertNotIn("RUN_ID:?", block)
+
+    def test_source_failure_creates_no_out_dir_reference_in_this_block(self):
+        # Structural proof this block never creates or references
+        # OUT_DIR/mkdir -- evidence-root creation lives strictly after
+        # it, in the runbook's Step 2, gated on this block's success.
+        block = _extract_source_identity_block()
+        self.assertNotIn("OUT_DIR", block)
+        self.assertNotIn("mkdir", block)
+
+    def test_installed_entrypoint_metadata_wrong_mapping_fails(self):
+        # The installed entry_points.txt disagreeing with the committed
+        # setup.py (even though the launcher itself is structurally
+        # fine) must fail closed -- proves the 3-way agreement
+        # requirement, not just launcher-alone verification.
+        entry_points = os.path.join(self.install, self.ENTRY_POINTS_RELATIVE)
+        with open(entry_points, "w", encoding="utf-8") as f:
+            f.write("[console_scripts]\ncooperative_avoider = epuck2_comm.some_other_wrong_module:main\n")
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("does not map cooperative_avoider", proc.stderr)
+
+    def test_zero_entrypoint_metadata_candidates_fails(self):
+        os.remove(os.path.join(self.install, self.ENTRY_POINTS_RELATIVE))
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("INSTALLED_ENTRYPOINT_METADATA_NOT_FOUND", proc.stderr)
+
+    def test_exactly_one_correct_entrypoint_metadata_candidate_passes(self):
+        # Baseline: `_build_matching_install()` already places exactly
+        # one candidate (the golden fixture in setUp) -- this test just
+        # makes that single-candidate-passes case explicit and named.
+        proc = self._run(self.head_v1)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("INSTALLED_ENTRYPOINT_METADATA_CHECK=CLEAN", proc.stdout)
+
+    def test_two_entrypoint_metadata_candidates_fails_even_if_both_correct(self):
+        # A second, distinct candidate location (egg-info AND dist-info
+        # both present, both with the correct mapping) must still fail
+        # closed -- ambiguity itself is the defect, never resolved by
+        # silently picking the first glob/find result.
+        egg_info_dir = os.path.dirname(os.path.join(self.install, self.ENTRY_POINTS_RELATIVE))
+        dist_info_dir = egg_info_dir.replace("-py3.10.egg-info", "-py3.10.dist-info")
+        os.makedirs(dist_info_dir, exist_ok=True)
+        with open(os.path.join(dist_info_dir, "entry_points.txt"), "w", encoding="utf-8") as f:
+            f.write("[console_scripts]\ncooperative_avoider = epuck2_comm.cooperative_avoider:main\n")
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("INSTALLED_ENTRYPOINT_METADATA_AMBIGUOUS(count=2)", proc.stderr)
+
+    def test_entrypoint_metadata_failure_precedes_run_id_and_out_dir(self):
+        # Structural + behavioural proof combined: the ambiguity/missing
+        # checks live entirely inside the Step-B-only extracted block
+        # (which itself never references RUN_ID or OUT_DIR/mkdir -- see
+        # test_run_id_never_required_or_expanded_in_this_block and
+        # test_source_failure_creates_no_out_dir_reference_in_this_block),
+        # and this test additionally proves the zero-candidate scenario
+        # concretely fails without ever reaching those later gates.
+        os.remove(os.path.join(self.install, self.ENTRY_POINTS_RELATIVE))
+        proc = self._run(self.head_v1)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertNotIn("RUN_ID", proc.stdout)
+        self.assertNotIn("OUT_DIR", proc.stdout)
+        self.assertIn("INSTALLED_ENTRYPOINT_METADATA_NOT_FOUND", proc.stderr)
+
+
+class LauncherStructuralIdentityTest(unittest.TestCase):
+    """Pure, offline, fail-closed proof of the runbook's REAL embedded
+    launcher AST-structural check (extracted verbatim from the
+    committed runbook's Step B2 heredoc, never reimplemented) -- never
+    executes the launcher, never touches the real repository or the
+    real ~/epuck_ws/install."""
+
+    GOLDEN = SourceIdentityMechanismTest.GOLDEN_LAUNCHER_SOURCE
+
+    def _check(self, launcher_source: str):
+        script = _extract_embedded_python("def normalize(source):")
+        with tempfile.TemporaryDirectory() as tmp:
+            launcher_path = os.path.join(tmp, "cooperative_avoider")
+            with open(launcher_path, "w", encoding="utf-8") as f:
+                f.write(launcher_source)
+            proc = subprocess.run(
+                ["python3", "-", launcher_path, "epuck2-comm==0.1.0", "console_scripts", "cooperative_avoider"],
+                input=script, capture_output=True, text=True, timeout=10.0,
+            )
+        return proc
+
+    def test_accepted_golden_launcher_passes(self):
+        proc = self._check(self.GOLDEN)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("PASS", proc.stdout)
+
+    def test_wrong_distribution_fails(self):
+        mutated = self.GOLDEN.replace("epuck2-comm==0.1.0", "some-other-pkg==9.9.9")
+        proc = self._check(mutated)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("BLOCKED", proc.stdout)
+
+    def test_wrong_console_script_name_fails(self):
+        mutated = self.GOLDEN.replace("'cooperative_avoider'", "'state_publisher'")
+        proc = self._check(mutated)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("BLOCKED", proc.stdout)
+
+    def test_wrong_target_mapping_is_out_of_scope_for_launcher_ast_alone(self):
+        # The launcher's AST encodes only (dist, group, name) -- it never
+        # encodes the target module:function mapping, which lives solely
+        # in entry_points.txt/setup.py. A launcher with the CORRECT
+        # (dist, group, name) therefore still passes AST validation even
+        # if the target mapping is wrong elsewhere -- that disagreement
+        # is caught by the separate 3-way agreement check instead (see
+        # SourceIdentityMechanismTest.test_installed_entrypoint_metadata_wrong_mapping_fails).
+        proc = self._check(self.GOLDEN)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+    def test_extra_code_before_dispatch_fails(self):
+        mutated = "import os\nos.system('echo injected')\n" + self.GOLDEN
+        proc = self._check(mutated)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("BLOCKED", proc.stdout)
+
+    def test_extra_code_after_dispatch_fails(self):
+        mutated = self.GOLDEN + "\nimport subprocess\nsubprocess.run(['echo', 'injected-after'])\n"
+        proc = self._check(mutated)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("BLOCKED", proc.stdout)
+
+    def test_missing_launcher_handled_by_caller_existence_check(self):
+        # The runbook checks `[[ ! -e "${LAUNCHER}" ]]` BEFORE ever
+        # invoking this Python check -- proven structurally, since the
+        # check script itself assumes the file exists (open() would
+        # raise, which is also fail-closed, but the runbook never
+        # reaches that path for a missing launcher).
+        joined = "\n".join(_runbook_bash_code_lines())
+        launcher_exists_check_idx = joined.index('if [[ ! -e "${LAUNCHER}" ]]; then')
+        ast_check_idx = joined.index("LAUNCHER_AST_RESULT=")
+        self.assertLess(launcher_exists_check_idx, ast_check_idx)
+        self.assertIn('echo "INSTALLED_LAUNCHER_IDENTITY=BLOCKED" >&2', joined)
+
+
+class MessageSchemaVerificationTest(unittest.TestCase):
+    """Pure, offline, ROS-free proof of the runbook's REAL embedded
+    runtime message-schema verification (extracted verbatim from the
+    committed runbook's Step C heredoc, never reimplemented), run
+    against synthetic fixture message classes/modules -- never rclpy,
+    never a real ROS node, never the real installed messages."""
+
+    def _script(self) -> str:
+        return _extract_embedded_python("def parse_msg_file(")
+
+    def _build_fixture(self, tmp, epuck_state_fields_literal: str):
+        install_area = os.path.join(tmp, "install_area")
+        msg_pkg = os.path.join(install_area, "epuck2_comm_interfaces", "msg")
+        os.makedirs(msg_pkg, exist_ok=True)
+        with open(os.path.join(install_area, "epuck2_comm_interfaces", "__init__.py"), "w", encoding="utf-8") as f:
+            f.write("")
+        with open(os.path.join(msg_pkg, "__init__.py"), "w", encoding="utf-8") as f:
+            f.write(
+                "class _Base:\n"
+                "    @classmethod\n"
+                "    def get_fields_and_field_types(cls):\n"
+                "        return cls._FIELDS\n"
+                "\n"
+                f"class EpuckState(_Base):\n    _FIELDS = {epuck_state_fields_literal}\n"
+                "\n"
+                "class GoalAnnouncement(_Base):\n"
+                "    _FIELDS = {\n"
+                "        'protocol_version': 'uint32', 'source_robot_id': 'uint32',\n"
+                "        'sequence': 'uint32', 'production_stamp': 'builtin_interfaces/Time',\n"
+                "        'goal_id': 'string', 'goal_x_m': 'double', 'goal_y_m': 'double',\n"
+                "        'valid': 'boolean',\n"
+                "    }\n"
+                "\n"
+                "class NavigationIntent(_Base):\n"
+                "    _FIELDS = {\n"
+                "        'protocol_version': 'uint32', 'source_robot_id': 'uint32',\n"
+                "        'sequence': 'uint32', 'production_stamp': 'builtin_interfaces/Time',\n"
+                "        'desired_heading_rad': 'double', 'desired_linear_speed_mps': 'double',\n"
+                "        'navigation_phase': 'string', 'valid': 'boolean',\n"
+                "    }\n"
+            )
+        msgfiles = os.path.join(tmp, "msgfiles")
+        os.makedirs(msgfiles, exist_ok=True)
+        with open(os.path.join(msgfiles, "EpuckState.msg"), "w", encoding="utf-8") as f:
+            f.write(
+                "uint8 PROTOCOL_VERSION=1\nuint8 version\nuint16 robot_id\nuint32 sequence\n"
+                "builtin_interfaces/Time stamp\nfloat32 x_m\nfloat32 y_m\n"
+            )
+        with open(os.path.join(msgfiles, "GoalAnnouncement.msg"), "w", encoding="utf-8") as f:
+            f.write(
+                "uint32 PROTOCOL_VERSION=1\nuint32 protocol_version\nuint32 source_robot_id\n"
+                "uint32 sequence\nbuiltin_interfaces/Time production_stamp\nstring goal_id\n"
+                "float64 goal_x_m\nfloat64 goal_y_m\nbool valid\n"
+            )
+        with open(os.path.join(msgfiles, "NavigationIntent.msg"), "w", encoding="utf-8") as f:
+            f.write(
+                "uint32 PROTOCOL_VERSION=1\nuint32 protocol_version\nuint32 source_robot_id\n"
+                "uint32 sequence\nbuiltin_interfaces/Time production_stamp\n"
+                "double desired_heading_rad\ndouble desired_linear_speed_mps\n"
+                "string navigation_phase\nbool valid\n"
+            )
+        return install_area, msgfiles
+
+    def _run(self, tmp, install_area, msgfiles, install_root_override=None):
+        env = dict(os.environ)
+        env["PYTHONPATH"] = install_area
+        env["INSTALL_ROOT"] = install_root_override if install_root_override is not None else install_area
+        proc = subprocess.run(
+            [
+                "python3", "-",
+                os.path.join(msgfiles, "EpuckState.msg"),
+                os.path.join(msgfiles, "GoalAnnouncement.msg"),
+                os.path.join(msgfiles, "NavigationIntent.msg"),
+            ],
+            input=self._script(), env=env, capture_output=True, text=True, timeout=10.0,
+        )
+        return proc
+
+    def test_matching_schema_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            install_area, msgfiles = self._build_fixture(
+                tmp,
+                "{'version': 'uint8', 'robot_id': 'uint16', 'sequence': 'uint32', "
+                "'stamp': 'builtin_interfaces/Time', 'x_m': 'float', 'y_m': 'float'}",
+            )
+            proc = self._run(tmp, install_area, msgfiles)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn('"overall_result": "PASS"', proc.stdout)
+
+    def test_missing_field_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            install_area, msgfiles = self._build_fixture(
+                tmp,
+                "{'version': 'uint8', 'robot_id': 'uint16', 'sequence': 'uint32', "
+                "'stamp': 'builtin_interfaces/Time', 'x_m': 'float'}",
+            )
+            proc = self._run(tmp, install_area, msgfiles)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("MISSING_FIELDS", proc.stdout)
+
+    def test_extra_field_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            install_area, msgfiles = self._build_fixture(
+                tmp,
+                "{'version': 'uint8', 'robot_id': 'uint16', 'sequence': 'uint32', "
+                "'stamp': 'builtin_interfaces/Time', 'x_m': 'float', 'y_m': 'float', "
+                "'debug_flag': 'uint8'}",
+            )
+            proc = self._run(tmp, install_area, msgfiles)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("EXTRA_FIELDS", proc.stdout)
+
+    def test_wrong_field_type_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            install_area, msgfiles = self._build_fixture(
+                tmp,
+                "{'version': 'uint8', 'robot_id': 'uint16', 'sequence': 'uint32', "
+                "'stamp': 'builtin_interfaces/Time', 'x_m': 'double', 'y_m': 'float'}",
+            )
+            proc = self._run(tmp, install_area, msgfiles)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("FIELD_TYPE_MISMATCH", proc.stdout)
+
+    def test_wrong_field_order_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            install_area, msgfiles = self._build_fixture(
+                tmp,
+                "{'version': 'uint8', 'robot_id': 'uint16', 'sequence': 'uint32', "
+                "'stamp': 'builtin_interfaces/Time', 'y_m': 'float', 'x_m': 'float'}",
+            )
+            proc = self._run(tmp, install_area, msgfiles)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("FIELD_ORDER_MISMATCH", proc.stdout)
+
+    def test_resolved_outside_expected_install_root_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            install_area, msgfiles = self._build_fixture(
+                tmp,
+                "{'version': 'uint8', 'robot_id': 'uint16', 'sequence': 'uint32', "
+                "'stamp': 'builtin_interfaces/Time', 'x_m': 'float', 'y_m': 'float'}",
+            )
+            proc = self._run(tmp, install_area, msgfiles, install_root_override="/tmp/unrelated_root_for_test")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("RESOLVED_OUTSIDE_INSTALL_ROOT", proc.stdout)
+
+    def test_missing_generated_class_import_failure_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _install_area, msgfiles = self._build_fixture(
+                tmp,
+                "{'version': 'uint8', 'robot_id': 'uint16', 'sequence': 'uint32', "
+                "'stamp': 'builtin_interfaces/Time', 'x_m': 'float', 'y_m': 'float'}",
+            )
+            empty_pythonpath = os.path.join(tmp, "empty")
+            os.makedirs(empty_pythonpath, exist_ok=True)
+            proc = self._run(tmp, empty_pythonpath, msgfiles)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("IMPORT_FAILED", proc.stdout)
+
+    def test_does_not_initialise_ros(self):
+        script = self._script()
+        self.assertNotIn("rclpy", script)
+        self.assertNotIn("import rclpy", script)
 
 
 if __name__ == "__main__":
