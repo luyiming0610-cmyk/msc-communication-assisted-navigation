@@ -19,15 +19,20 @@ fi
 echo "[$(date -Iseconds)] shutting down HIL processes from manifest: $MANIFEST"
 
 # Reverse-order shutdown: guard first (stop new commands from being
-# guarded/passed through), then the controllers/adapters/peer that
-# feed it, then the recorder/monitor last (so they capture the
-# clean-stop tail of everything else).
-ORDER='["hil_cmd_vel_guard","cooperative_avoider","hil_topic_adapter","hil_virtual_peer","task_completion_monitor","recorder_bag"]'
+# guarded/passed through), then the controllers/supervisor/adapters/peer
+# that feed it, then the recorder/monitor last (so they capture the
+# clean-stop tail of everything else). Keys must match record_process's
+# own naming in run_hil_stage4_trial.sh exactly -- "recorder", not
+# "recorder_bag" -- and must list every orchestrator-owned process,
+# including hil_stage4_motion_supervisor (both were silently skipped by
+# this list before, discovered live during RUN_ID stage4_20260731_151052).
+ORDER='["hil_cmd_vel_guard","cooperative_avoider","hil_stage4_motion_supervisor","hil_topic_adapter","hil_virtual_peer","task_completion_monitor","recorder"]'
 
 python3 - "$MANIFEST" "$ORDER" <<'PYEOF'
 import json
 import os
 import signal
+import subprocess
 import sys
 import time
 
@@ -39,35 +44,64 @@ order = json.loads(order_json)
 processes = manifest.get("processes", {})
 results = {}
 
+
+def alive(pid):
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def child_pids(pid):
+    # Exact PID/PPID process-tree lookup -- never a name-based match.
+    # `ros2 run` spawns the real node as a child of its own wrapper
+    # process; pid_manifest.json only ever records the wrapper's PID
+    # ($!), so a SIGINT to that PID alone can leave the real child
+    # orphaned and running (observed live: cooperative_avoider's wrapper
+    # PID 963 did not exit within 10s while its real node, child PID
+    # 978, kept running under it).
+    proc = subprocess.run(
+        ["ps", "--ppid", str(pid), "-o", "pid="],
+        capture_output=True, text=True, check=False,
+    )
+    return [int(line) for line in proc.stdout.split() if line.strip()]
+
+
 for name in order:
     entry = processes.get(name)
     if not entry:
         continue
     pid = int(entry["pid"])
-    try:
-        os.kill(pid, 0)
-    except OSError:
+    if not alive(pid):
         results[name] = {"pid": pid, "status": "ALREADY_STOPPED"}
         continue
-    try:
-        os.kill(pid, signal.SIGINT)
-    except OSError as exc:
-        results[name] = {"pid": pid, "status": f"KILL_FAILED: {exc}"}
+    targets = child_pids(pid) + [pid]
+    kill_failed = None
+    for target in targets:
+        try:
+            os.kill(target, signal.SIGINT)
+        except OSError as exc:
+            kill_failed = exc
+    if kill_failed is not None:
+        results[name] = {"pid": pid, "status": f"KILL_FAILED: {kill_failed}"}
         continue
     stopped = False
     for _ in range(20):
-        try:
-            os.kill(pid, 0)
-        except OSError:
+        if not alive(pid) and not any(alive(t) for t in targets):
             stopped = True
             break
         time.sleep(0.5)
-    results[name] = {"pid": pid, "status": "STOPPED" if stopped else "STILL_ALIVE_AFTER_10S"}
+    still_alive = [t for t in targets if alive(t)]
+    results[name] = {
+        "pid": pid,
+        "status": "STOPPED" if stopped else f"STILL_ALIVE_AFTER_10S:{still_alive}",
+    }
 
 for name, result in results.items():
     print(f"{name}: pid={result['pid']} status={result['status']}")
 
-any_still_alive = any(r["status"] == "STILL_ALIVE_AFTER_10S" for r in results.values())
+any_still_alive = any(r["status"].startswith("STILL_ALIVE_AFTER_10S") for r in results.values())
 print("PROCESSES_CLEAN" if not any_still_alive else "PROCESSES_NOT_CLEAN")
 sys.exit(0 if not any_still_alive else 1)
 PYEOF

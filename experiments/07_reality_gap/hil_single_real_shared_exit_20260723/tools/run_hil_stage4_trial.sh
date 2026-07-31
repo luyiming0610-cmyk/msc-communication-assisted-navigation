@@ -291,6 +291,55 @@ EOF
             ros2 topic info "$1" 2>/dev/null | grep 'Publisher count' | grep -o '[0-9]*' || echo 0
         }
 
+        # BEGIN_READINESS_RETRY_FUNCTION
+        # (extracted verbatim by test_stage4_readiness_retry.py --
+        # keep markers exact, each on its own line)
+        # `publisher_count` is a single one-shot `ros2 topic info` CLI
+        # call with no retry: each invocation spins up its own fresh
+        # discovery participant, which can rarely return a stale zero
+        # read for a topic whose real publisher is alive and healthy
+        # (observed live: hil_cmd_vel_guard.log showed continuous
+        # self-publishing through and after RUN_ID
+        # stage4_20260731_151052's abort at exactly this check). This
+        # bounded, discovery-aware retry applies ONLY to the two
+        # post-start/pre-motion exactly-one-publisher gates (guarded
+        # /cmd_vel, real /epuck1/state) -- never to the preflight
+        # zero-publisher checks, and never loosened to "at least one".
+        # A count > 1 is a genuine safety violation and fails
+        # immediately, never retried. A count = 0 is retried, since
+        # discovery lag is the only known cause of a transient zero on
+        # an otherwise-healthy topic. PASS requires exactly one on two
+        # CONSECUTIVE reads -- a single 1-read is not sufficient.
+        require_exactly_one_publisher_with_retry() {
+            local topic="$1"
+            local label="$2"
+            local prev_was_one="false"
+            local attempt count
+            for attempt in 1 2 3 4 5; do
+                count="$(publisher_count "${topic}")"
+                echo "readiness_check(${label}) attempt=${attempt} topic=${topic} count=${count}"
+                if [[ "${count}" -gt 1 ]]; then
+                    echo "readiness_check(${label}) decision=FAIL reason=publisher_count_exceeds_one count=${count}"
+                    return 1
+                fi
+                if [[ "${count}" == "1" ]]; then
+                    if [[ "${prev_was_one}" == "true" ]]; then
+                        echo "readiness_check(${label}) decision=PASS reason=two_consecutive_count_1_reads"
+                        return 0
+                    fi
+                    prev_was_one="true"
+                else
+                    prev_was_one="false"
+                fi
+                if [[ "${attempt}" -lt 5 ]]; then
+                    sleep 0.5
+                fi
+            done
+            echo "readiness_check(${label}) decision=FAIL reason=two_consecutive_count_1_not_observed_within_5_attempts"
+            return 1
+        }
+        # END_READINESS_RETRY_FUNCTION
+
         for topic in "${RAW_CMD_VEL_TOPIC}" "${UPSTREAM_CMD_VEL_TOPIC}" "${GUARDED_CMD_VEL_TOPIC}" \
                      "${GOAL_ANNOUNCEMENT_TOPIC}" "${ADOPTION_EVIDENCE_TOPIC}" "${VIRTUAL_STATE_TOPIC}"; do
             count="$(publisher_count "${topic}")"
@@ -582,16 +631,12 @@ PYEOF
         write_manifest
         write_launcher_status
         echo "[$(date -Iseconds)] step 7: post-start readiness/zero/publisher-count re-check"
-        GUARDED_COUNT="$(publisher_count "${GUARDED_CMD_VEL_TOPIC}")"
-        echo "post_start_publisher_count(${GUARDED_CMD_VEL_TOPIC})=${GUARDED_COUNT}"
-        if [[ "${GUARDED_COUNT}" != "1" ]]; then
-            echo "ABORT: expected exactly 1 publisher on ${GUARDED_CMD_VEL_TOPIC} (the guard) after start, found ${GUARDED_COUNT}." >&2
+        if ! require_exactly_one_publisher_with_retry "${GUARDED_CMD_VEL_TOPIC}" "guarded_cmd_vel_post_start"; then
+            echo "ABORT: expected exactly 1 publisher on ${GUARDED_CMD_VEL_TOPIC} (the guard) after start (bounded discovery-aware retry exhausted)." >&2
             exit 1
         fi
-        REAL_STATE_COUNT_POST_START="$(publisher_count "${PHYSICAL_STATE_TOPIC}")"
-        echo "post_start_publisher_count(${PHYSICAL_STATE_TOPIC})=${REAL_STATE_COUNT_POST_START}"
-        if [[ "${REAL_STATE_COUNT_POST_START}" != "1" ]]; then
-            echo "ABORT: expected exactly 1 publisher on ${PHYSICAL_STATE_TOPIC} (the real state_publisher) immediately before release, found ${REAL_STATE_COUNT_POST_START}." >&2
+        if ! require_exactly_one_publisher_with_retry "${PHYSICAL_STATE_TOPIC}" "real_state_post_start"; then
+            echo "ABORT: expected exactly 1 publisher on ${PHYSICAL_STATE_TOPIC} (the real state_publisher) immediately before release (bounded discovery-aware retry exhausted)." >&2
             exit 1
         fi
 
