@@ -269,6 +269,7 @@ class Stage4MotionSupervisor:
         goal_id: str,
         expected_target_x_m: float,
         expected_target_y_m: float,
+        scout_announcement_timeout_s: float,
         run_id: str = "",
         now_fn: Callable[[], float] = time.monotonic,
         ros_now_fn: Callable[[], Optional[float]] = lambda: None,
@@ -277,6 +278,15 @@ class Stage4MotionSupervisor:
         self.goal_id = goal_id
         self.expected_target_x_m = expected_target_x_m
         self.expected_target_y_m = expected_target_y_m
+        # No module-level default on purpose: this must be derived by
+        # the caller from the virtual peer's own configured start/
+        # target/speed/arrival-radius (see run_hil_stage4_trial.sh),
+        # never a guessed constant here. Root cause (RUN_ID
+        # stage4_20260731_174014): ADOPTION_TIMEOUT_S (5.0s) used to be
+        # the only timer covering the entire release-to-adoption
+        # window, firing ~52s before the virtual peer's real ~56.7s
+        # travel time could ever produce an announcement.
+        self.scout_announcement_timeout_s = scout_announcement_timeout_s
         self.run_id = run_id
         self._now = now_fn
         self._ros_now = ros_now_fn
@@ -289,6 +299,7 @@ class Stage4MotionSupervisor:
         self._approval_used = False
         self._event_wait_start_s: Optional[float] = None
         self._released_at_s: Optional[float] = None
+        self._announcement_observed_at_s: Optional[float] = None
         self._adopted_at_s: Optional[float] = None
         self._active_start_s: Optional[float] = None
 
@@ -350,6 +361,25 @@ class Stage4MotionSupervisor:
             return
         self._released_at_s = self._now()
         self._record("VIRTUAL_SCOUT_RELEASED")
+
+    def on_goal_announcement_observed(self) -> None:
+        """Fed from a direct, read-only subscription to the raw
+        GoalAnnouncement topic (see hil_virtual_peer.py) -- this only
+        marks the moment an announcement was transmitted, so the
+        ADOPTION_TIMEOUT clock (below, in tick_timeouts) starts from
+        here rather than from release. It never itself authorises
+        adoption -- that still requires the full validated
+        /hil/adoption_evidence path in on_adoption_evidence below, so a
+        wrong/irrelevant announcement can only make the adoption
+        window tighter, never looser. Ignored outside
+        WAITING_FOR_EVENT, before release, or if already
+        observed/adopted (idempotent)."""
+        if self.state != State.WAITING_FOR_EVENT or self._released_at_s is None:
+            return
+        if self._announcement_observed_at_s is not None or self._adopted_at_s is not None:
+            return
+        self._announcement_observed_at_s = self._now()
+        self._record("GOAL_ANNOUNCEMENT_OBSERVED")
 
     def on_unexpected_adoption_evidence_publisher_count(self, count: int) -> None:
         """Called by the orchestrator/node wrapper (ROS-level publisher
@@ -486,8 +516,14 @@ class Stage4MotionSupervisor:
             if now - self._event_wait_start_s > EVENT_TIMEOUT_S:
                 self._latch_failed("EVENT_TIMEOUT")
 
-        elif self.state == State.WAITING_FOR_EVENT and self._released_at_s is not None and self._adopted_at_s is None:
-            if now - self._released_at_s > ADOPTION_TIMEOUT_S:
+        elif (self.state == State.WAITING_FOR_EVENT and self._released_at_s is not None
+                and self._announcement_observed_at_s is None):
+            if now - self._released_at_s > self.scout_announcement_timeout_s:
+                self._latch_failed("SCOUT_ANNOUNCEMENT_TIMEOUT")
+
+        elif (self.state == State.WAITING_FOR_EVENT and self._announcement_observed_at_s is not None
+                and self._adopted_at_s is None):
+            if now - self._announcement_observed_at_s > ADOPTION_TIMEOUT_S:
                 self._latch_failed("ADOPTION_TIMEOUT")
 
         elif self.state == State.VALIDATING_RAW_COMMAND:
@@ -518,7 +554,7 @@ def _build_node():
     from rclpy.node import Node
     from std_msgs.msg import Bool, String
 
-    from epuck2_comm_interfaces.msg import EpuckState
+    from epuck2_comm_interfaces.msg import EpuckState, GoalAnnouncement
 
     class HilStage4MotionSupervisorNode(Node):
         def __init__(self, args):
@@ -530,6 +566,7 @@ def _build_node():
                 goal_id=args.goal_id,
                 expected_target_x_m=args.expected_target_x_m,
                 expected_target_y_m=args.expected_target_y_m,
+                scout_announcement_timeout_s=args.scout_announcement_timeout_s,
                 run_id=args.run_id,
                 now_fn=time.monotonic,
                 ros_now_fn=lambda: self.get_clock().now().nanoseconds / 1.0e9,
@@ -539,6 +576,16 @@ def _build_node():
             self.cmd_pub = self.create_publisher(Twist, args.guarded_output_topic, 10)
 
             self.create_subscription(String, args.adoption_evidence_topic, self._adoption_evidence_cb, 10)
+            # Read-only observation of the raw GoalAnnouncement itself
+            # (published by hil_virtual_peer.py) -- used only to start
+            # the ADOPTION_TIMEOUT clock at the right moment (see
+            # on_goal_announcement_observed's docstring). This callback
+            # does no validation of its own; a wrong/irrelevant
+            # announcement can only make the adoption window tighter,
+            # never authorise anything by itself.
+            self.create_subscription(
+                GoalAnnouncement, args.goal_announcement_topic, self._goal_announcement_cb, 10,
+            )
             # raw_cmd_vel is deliberately NOT subscribed here. Subscribing
             # at startup would let ROS's own message queue (depth 10)
             # buffer pre-adoption samples (e.g. cooperative_avoider's
@@ -615,6 +662,10 @@ def _build_node():
                 self._flush_new_evidence()
                 self._publish_zero()
 
+        def _goal_announcement_cb(self, msg) -> None:
+            self.engine.on_goal_announcement_observed()
+            self._flush_new_evidence()
+
         def _tick(self) -> None:
             if (self.engine.state == State.ACTIVE
                     and (self.last_physical_state_at_s is None
@@ -669,6 +720,8 @@ def _build_node():
         parser.add_argument("--expected-target-x-m", type=float, required=True)
         parser.add_argument("--expected-target-y-m", type=float, required=True)
         parser.add_argument("--adoption-evidence-topic", required=True)
+        parser.add_argument("--goal-announcement-topic", required=True)
+        parser.add_argument("--scout-announcement-timeout-s", type=float, required=True)
         parser.add_argument("--raw-cmd-vel-topic", required=True)
         parser.add_argument("--guarded-output-topic", required=True)
         parser.add_argument("--arm-topic", required=True)

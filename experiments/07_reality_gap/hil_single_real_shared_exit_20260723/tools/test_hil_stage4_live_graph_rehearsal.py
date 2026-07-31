@@ -69,6 +69,19 @@ START_X_M, START_Y_M = 0.30, 0.50
 MAX_LINEAR_MPS = 0.015
 ARRIVAL_RADIUS_M = 0.05
 
+# The rehearsal's virtual peer cruises much faster than the real
+# physical value (see _spawn_virtual_peer's --cruise-linear-mps 0.3)
+# to keep this test fast -- the supervisor's scout-announcement
+# timeout must be derived from that SAME rehearsal speed, using the
+# identical formula run_hil_stage4_trial.sh uses for the real trial,
+# not the production MAX_LINEAR_MPS.
+REHEARSAL_SCOUT_CRUISE_LINEAR_MPS = 0.3
+REHEARSAL_SCOUT_ANNOUNCEMENT_MARGIN_S = 10.0
+SCOUT_ANNOUNCEMENT_TIMEOUT_S = (
+    max(0.0, (TARGET_X_M - START_X_M) - ARRIVAL_RADIUS_M) / REHEARSAL_SCOUT_CRUISE_LINEAR_MPS
+    + REHEARSAL_SCOUT_ANNOUNCEMENT_MARGIN_S
+)
+
 
 def _ros_env() -> dict:
     env = dict(os.environ)
@@ -280,6 +293,8 @@ class Stage4LiveGraphRehearsalTest(unittest.TestCase):
             "--goal-id", GOAL_ID, "--run-id", "pytest_live_rehearsal",
             "--expected-target-x-m", str(TARGET_X_M), "--expected-target-y-m", str(TARGET_Y_M),
             "--adoption-evidence-topic", ADOPTION_EVIDENCE_TOPIC,
+            "--goal-announcement-topic", GOAL_ANNOUNCEMENT_TOPIC,
+            "--scout-announcement-timeout-s", str(SCOUT_ANNOUNCEMENT_TIMEOUT_S),
             "--raw-cmd-vel-topic", RAW_CMD_VEL_TOPIC,
             "--guarded-output-topic", UPSTREAM_CMD_VEL_TOPIC,
             "--arm-topic", ARM_TOPIC,
@@ -344,7 +359,7 @@ class Stage4LiveGraphRehearsalTest(unittest.TestCase):
         return final_state, log_text, events, records
 
     def test_1_complete_successful_automatic_sequence(self):
-        _TIMEOUT_REASONS = {"EVENT_TIMEOUT", "ADOPTION_TIMEOUT", "RAW_COMMAND_TIMEOUT"}
+        _TIMEOUT_REASONS = {"EVENT_TIMEOUT", "SCOUT_ANNOUNCEMENT_TIMEOUT", "ADOPTION_TIMEOUT", "RAW_COMMAND_TIMEOUT"}
         final_state = log_text = events = records = None
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
@@ -464,7 +479,7 @@ class Stage4LiveGraphRehearsalTest(unittest.TestCase):
         last = records[-1]
         self.assertIn("NONZERO_ANGULAR_Z", last.get("reason", ""))
 
-    def test_4_missing_adoption_evidence_timeout(self):
+    def test_4_missing_announcement_timeout(self):
         evidence_path = self.evidence_dir / "supervisor_evidence.jsonl"
         self._spawn_synthetic_physical_state()
         self._spawn_adapter()
@@ -476,14 +491,18 @@ class Stage4LiveGraphRehearsalTest(unittest.TestCase):
         self._release_virtual_scout()
         # announce=False: the virtual peer moves and "arrives" but never
         # publishes a GoalAnnouncement, so no adoption evidence is ever
-        # produced -- this exercises ADOPTION_TIMEOUT_S (5s), not the
-        # much longer EVENT_TIMEOUT_S (30s).
+        # produced -- this now exercises SCOUT_ANNOUNCEMENT_TIMEOUT_S
+        # (~12.83s in this rehearsal, derived the same way as production
+        # from REHEARSAL_SCOUT_CRUISE_LINEAR_MPS), not ADOPTION_TIMEOUT_S
+        # (5s, which only starts once an announcement is actually
+        # observed -- see RUN_ID stage4_20260731_174014's root cause),
+        # nor the much longer EVENT_TIMEOUT_S (30s).
         self._spawn_virtual_peer(announce=False)
 
-        final_state = _wait_for_supervisor_state(evidence_path, {"FAILED"}, timeout_s=10.0)
+        final_state = _wait_for_supervisor_state(evidence_path, {"FAILED"}, timeout_s=20.0)
         self.assertEqual(final_state, "FAILED")
         records = [json.loads(l) for l in evidence_path.read_text(encoding="utf-8").splitlines() if l.strip()]
-        self.assertEqual(records[-1]["reason"], "ADOPTION_TIMEOUT")
+        self.assertEqual(records[-1]["reason"], "SCOUT_ANNOUNCEMENT_TIMEOUT")
 
     def test_5_duplicate_and_wrong_goal_adoption_evidence_rejected(self):
         evidence_path = self.evidence_dir / "supervisor_evidence.jsonl"

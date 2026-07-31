@@ -80,9 +80,19 @@ class FakeClock:
         self._t += dt
 
 
+# Matches the orchestrator's own derivation (run_hil_stage4_trial.sh):
+# (EXIT_CENTER_X_M - START_POSE_X_M - EXIT_RADIUS_M) / MAX_LINEAR_SPEED_MPS
+# + a 20s margin = (1.20-0.30-0.05)/0.015 + 20.0 ~= 76.67s. Generous
+# enough that no existing timing scenario below trips it by accident;
+# tests that specifically exercise this new timeout pass their own
+# smaller value instead.
+DEFAULT_SCOUT_ANNOUNCEMENT_TIMEOUT_S = 76.67
+
+
 def make_supervisor(clock: FakeClock, **kwargs) -> Stage4MotionSupervisor:
     defaults = dict(
         goal_id=GOAL_ID, expected_target_x_m=TARGET_X, expected_target_y_m=TARGET_Y,
+        scout_announcement_timeout_s=DEFAULT_SCOUT_ANNOUNCEMENT_TIMEOUT_S,
         run_id="rehearsal", now_fn=clock,
     )
     defaults.update(kwargs)
@@ -234,14 +244,79 @@ class Stage4RehearsalMatrixTest(unittest.TestCase):
         self.assertEqual(sup.terminal_reason, "EVENT_TIMEOUT")
 
     def test_03_adoption_timeout(self):
+        # Updated for the two-phase timeout split: ADOPTION_TIMEOUT_S
+        # now starts from the announcement being observed, not from
+        # release -- this scenario explicitly observes the
+        # announcement first, then lets only the adoption step itself
+        # time out.
         clock = FakeClock()
         sup = make_supervisor(clock)
         sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
         sup.on_virtual_scout_released()
+        sup.on_goal_announcement_observed()
         clock.advance(ADOPTION_TIMEOUT_S + 0.01)
         sup.tick_timeouts()
         self.assertEqual(sup.state, State.FAILED)
         self.assertEqual(sup.terminal_reason, "ADOPTION_TIMEOUT")
+
+    def test_03a_realistic_scout_travel_then_timely_adoption_passes(self):
+        """RUN_ID stage4_20260731_174014's exact scenario: the virtual
+        peer takes ~57s to reach its exit region and announce. With the
+        two-phase timeout split, this must NOT fail -- the announcement
+        observation resets the clock, and adoption follows normally."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+        sup.on_virtual_scout_released()
+        clock.advance(56.7)  # observed real value
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.WAITING_FOR_EVENT, "must not fail before announcement")
+        sup.on_goal_announcement_observed()
+        clock.advance(0.5)
+        sup.on_adoption_evidence(
+            make_adoption_payload(adapter_receive_time_s=sup._now(), adapter_receive_monotonic_s=sup._now()),
+            now_ros_s=sup._now(),
+        )
+        self.assertEqual(sup.state, State.VALIDATING_RAW_COMMAND)
+        self.assertNotEqual(sup.state, State.FAILED)
+
+    def test_03b_no_announcement_fails_scout_announcement_timeout(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock, scout_announcement_timeout_s=76.67)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+        sup.on_virtual_scout_released()
+        clock.advance(76.67 + 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "SCOUT_ANNOUNCEMENT_TIMEOUT")
+
+    def test_03c_announcement_observed_then_no_adoption_fails_adoption_timeout(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+        sup.on_virtual_scout_released()
+        clock.advance(56.7)
+        sup.on_goal_announcement_observed()
+        clock.advance(ADOPTION_TIMEOUT_S + 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "ADOPTION_TIMEOUT")
+
+    def test_03d_no_command_forwarding_or_arm_before_confirmed_adoption(self):
+        """Across the full scout-travel + announcement-observed window,
+        a raw twist must still never be inspected/forwarded and the arm
+        topic never published until adoption is actually confirmed."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+        sup.on_virtual_scout_released()
+        clock.advance(56.7)
+        sup.on_goal_announcement_observed()
+        sup.on_raw_twist(forward_twist())
+        self.assertEqual(sup.state, State.WAITING_FOR_EVENT)
+        events = [e.event for e in sup.evidence]
+        self.assertNotIn("ARM_PUBLISHED", events)
+        self.assertNotIn("ACTIVE_OPENED", events)
 
     def test_04_raw_command_timeout(self):
         clock = FakeClock()

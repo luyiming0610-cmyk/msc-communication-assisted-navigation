@@ -74,6 +74,29 @@ HEARTBEAT_TIMEOUT_S="0.5"
 PHYSICAL_STATE_TIMEOUT_S="0.5"
 REQUIRED_VALIDITY_FLAGS="7"
 
+# Derived (not arbitrary) bound on how long the supervisor waits, after
+# virtual-scout release, for the GoalAnnouncement itself to be
+# transmitted -- computed from the same frozen start/target/speed/
+# arrival-radius values above (never re-derived from a separately
+# guessed constant), plus a fixed documented margin. Root cause
+# (RUN_ID stage4_20260731_174014): the virtual peer's real straight-
+# line travel time to its arrival radius is ~56.7s
+# ((1.20-0.30-0.05)/0.015), but the supervisor's ADOPTION_TIMEOUT_S
+# (5.0s, unchanged, still the correct bound for the adoption step
+# itself) was previously the ONLY timeout covering the entire
+# release-to-adoption window, so it fired ~52s before the scout could
+# ever have announced -- ADOPTION_TIMEOUT_S must only start once the
+# announcement is actually observed, not at release.
+SCOUT_ANNOUNCEMENT_MARGIN_S="20.0"
+SCOUT_ANNOUNCEMENT_TIMEOUT_S="$(python3 -c "
+import math
+dx = ${EXIT_CENTER_X_M} - ${START_POSE_X_M}
+dy = ${EXIT_CENTER_Y_M} - ${START_POSE_Y_M}
+travel_distance_m = max(0.0, math.hypot(dx, dy) - ${EXIT_RADIUS_M})
+nominal_s = travel_distance_m / ${MAX_LINEAR_SPEED_MPS}
+print(nominal_s + ${SCOUT_ANNOUNCEMENT_MARGIN_S})
+")"
+
 PHYSICAL_STATE_TOPIC="/epuck1/state"
 VIRTUAL_STATE_TOPIC="/epuck_virtual_peer/state"
 GOAL_ANNOUNCEMENT_TOPIC="/hil/goal_announcement"
@@ -617,6 +640,8 @@ PYEOF
             --goal-id "${GOAL_ID}" --run-id "${RUN_ID}" \
             --expected-target-x-m "${EXIT_CENTER_X_M}" --expected-target-y-m "${EXIT_CENTER_Y_M}" \
             --adoption-evidence-topic "${ADOPTION_EVIDENCE_TOPIC}" \
+            --goal-announcement-topic "${GOAL_ANNOUNCEMENT_TOPIC}" \
+            --scout-announcement-timeout-s "${SCOUT_ANNOUNCEMENT_TIMEOUT_S}" \
             --raw-cmd-vel-topic "${RAW_CMD_VEL_TOPIC}" \
             --guarded-output-topic "${UPSTREAM_CMD_VEL_TOPIC}" \
             --arm-topic "${ARM_TOPIC}" \
