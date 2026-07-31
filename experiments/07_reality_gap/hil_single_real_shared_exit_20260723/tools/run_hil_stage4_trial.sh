@@ -291,54 +291,56 @@ EOF
             ros2 topic info "$1" 2>/dev/null | grep 'Publisher count' | grep -o '[0-9]*' || echo 0
         }
 
-        # BEGIN_READINESS_RETRY_FUNCTION
-        # (extracted verbatim by test_stage4_readiness_retry.py --
+        # BEGIN_DIRECT_DISCOVERY_FUNCTION
+        # (extracted verbatim by test_stage4_direct_discovery.py --
         # keep markers exact, each on its own line)
-        # `publisher_count` is a single one-shot `ros2 topic info` CLI
-        # call with no retry: each invocation spins up its own fresh
-        # discovery participant, which can rarely return a stale zero
-        # read for a topic whose real publisher is alive and healthy
-        # (observed live: hil_cmd_vel_guard.log showed continuous
-        # self-publishing through and after RUN_ID
-        # stage4_20260731_151052's abort at exactly this check). This
-        # bounded, discovery-aware retry applies ONLY to the two
-        # post-start/pre-motion exactly-one-publisher gates (guarded
-        # /cmd_vel, real /epuck1/state) -- never to the preflight
-        # zero-publisher checks, and never loosened to "at least one".
-        # A count > 1 is a genuine safety violation and fails
-        # immediately, never retried. A count = 0 is retried, since
-        # discovery lag is the only known cause of a transient zero on
-        # an otherwise-healthy topic. PASS requires exactly one on two
-        # CONSECUTIVE reads -- a single 1-read is not sufficient.
-        require_exactly_one_publisher_with_retry() {
+        # `publisher_count` (above) queries a persistent background
+        # `ros2 daemon`, whose cached graph view can lag a just-started
+        # publisher by roughly 1-2 seconds -- reproduced offline: a
+        # fresh daemon-based query issued immediately after starting a
+        # dummy publisher returned an empty read, catching up only on
+        # the next query a moment later (`hil_cmd_vel_guard.log` also
+        # showed continuous healthy self-publishing through and after
+        # RUN_ID stage4_20260731_151052/stage4_20260731_164028's aborts
+        # at exactly this check, ruling out an actual lost publisher).
+        # This function bypasses that daemon entirely via `--no-daemon
+        # --spin-time`, performing its own bounded, fresh discovery
+        # exactly once per call -- no retry loop, no daemon-cache
+        # dependence. Used ONLY for the two post-start/pre-motion
+        # exactly-one-publisher gates (guarded /cmd_vel, real
+        # /epuck1/state), never for the preflight zero-publisher
+        # checks, and never loosened to "at least one".
+        require_exactly_one_publisher_via_direct_discovery() {
             local topic="$1"
             local label="$2"
-            local prev_was_one="false"
-            local attempt count
-            for attempt in 1 2 3 4 5; do
-                count="$(publisher_count "${topic}")"
-                echo "readiness_check(${label}) attempt=${attempt} topic=${topic} count=${count}"
-                if [[ "${count}" -gt 1 ]]; then
-                    echo "readiness_check(${label}) decision=FAIL reason=publisher_count_exceeds_one count=${count}"
-                    return 1
-                fi
-                if [[ "${count}" == "1" ]]; then
-                    if [[ "${prev_was_one}" == "true" ]]; then
-                        echo "readiness_check(${label}) decision=PASS reason=two_consecutive_count_1_reads"
-                        return 0
-                    fi
-                    prev_was_one="true"
-                else
-                    prev_was_one="false"
-                fi
-                if [[ "${attempt}" -lt 5 ]]; then
-                    sleep 0.5
-                fi
-            done
-            echo "readiness_check(${label}) decision=FAIL reason=two_consecutive_count_1_not_observed_within_5_attempts"
-            return 1
+            local abs_topic="${topic}"
+            if [[ "${abs_topic}" != /* ]]; then
+                abs_topic="/${abs_topic}"
+            fi
+            local output
+            if ! output="$(LC_ALL=C ros2 topic info --no-daemon --spin-time 5 "${abs_topic}" 2>&1)"; then
+                echo "readiness_check(${label}) topic=${abs_topic} decision=FAIL reason=QUERY_ERROR output=${output}"
+                return 1
+            fi
+            local count
+            count="$(printf '%s\n' "${output}" | grep '^Publisher count:' | grep -o '[0-9]\+')"
+            if [[ -z "${count}" ]] || ! [[ "${count}" =~ ^[0-9]+$ ]]; then
+                echo "readiness_check(${label}) topic=${abs_topic} decision=FAIL reason=PARSE_ERROR output=${output}"
+                return 1
+            fi
+            echo "readiness_check(${label}) topic=${abs_topic} count=${count}"
+            if [[ "${count}" -eq 1 ]]; then
+                echo "readiness_check(${label}) decision=PASS"
+                return 0
+            elif [[ "${count}" -gt 1 ]]; then
+                echo "readiness_check(${label}) decision=FAIL reason=publisher_count_exceeds_one count=${count}"
+                return 1
+            else
+                echo "readiness_check(${label}) decision=FAIL reason=zero_publishers_after_bounded_discovery count=${count}"
+                return 1
+            fi
         }
-        # END_READINESS_RETRY_FUNCTION
+        # END_DIRECT_DISCOVERY_FUNCTION
 
         for topic in "${RAW_CMD_VEL_TOPIC}" "${UPSTREAM_CMD_VEL_TOPIC}" "${GUARDED_CMD_VEL_TOPIC}" \
                      "${GOAL_ANNOUNCEMENT_TOPIC}" "${ADOPTION_EVIDENCE_TOPIC}" "${VIRTUAL_STATE_TOPIC}"; do
@@ -631,12 +633,12 @@ PYEOF
         write_manifest
         write_launcher_status
         echo "[$(date -Iseconds)] step 7: post-start readiness/zero/publisher-count re-check"
-        if ! require_exactly_one_publisher_with_retry "${GUARDED_CMD_VEL_TOPIC}" "guarded_cmd_vel_post_start"; then
-            echo "ABORT: expected exactly 1 publisher on ${GUARDED_CMD_VEL_TOPIC} (the guard) after start (bounded discovery-aware retry exhausted)." >&2
+        if ! require_exactly_one_publisher_via_direct_discovery "${GUARDED_CMD_VEL_TOPIC}" "guarded_cmd_vel_post_start"; then
+            echo "ABORT: expected exactly 1 publisher on ${GUARDED_CMD_VEL_TOPIC} (the guard) after start (bounded direct-discovery query failed)." >&2
             exit 1
         fi
-        if ! require_exactly_one_publisher_with_retry "${PHYSICAL_STATE_TOPIC}" "real_state_post_start"; then
-            echo "ABORT: expected exactly 1 publisher on ${PHYSICAL_STATE_TOPIC} (the real state_publisher) immediately before release (bounded discovery-aware retry exhausted)." >&2
+        if ! require_exactly_one_publisher_via_direct_discovery "${PHYSICAL_STATE_TOPIC}" "real_state_post_start"; then
+            echo "ABORT: expected exactly 1 publisher on ${PHYSICAL_STATE_TOPIC} (the real state_publisher) immediately before release (bounded direct-discovery query failed)." >&2
             exit 1
         fi
 

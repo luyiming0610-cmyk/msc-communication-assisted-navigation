@@ -343,11 +343,11 @@ class ScriptContractStaticTest(unittest.TestCase):
 
     def test_physical_mode_rechecks_real_state_publisher_before_release(self):
         self.assertIn(
-            'require_exactly_one_publisher_with_retry "${PHYSICAL_STATE_TOPIC}" "real_state_post_start"',
+            'require_exactly_one_publisher_via_direct_discovery "${PHYSICAL_STATE_TOPIC}" "real_state_post_start"',
             self.code_text,
         )
         self.assertIn(
-            'if ! require_exactly_one_publisher_with_retry "${PHYSICAL_STATE_TOPIC}" "real_state_post_start"; then',
+            'if ! require_exactly_one_publisher_via_direct_discovery "${PHYSICAL_STATE_TOPIC}" "real_state_post_start"; then',
             self.code_text,
         )
 
