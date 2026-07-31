@@ -233,6 +233,7 @@ EOF
         done
         echo "STAGE4_SOURCE_IDENTITY=PASS expected_head=${EXPECTED_HEAD}"
 
+        set +u
         source /opt/ros/humble/setup.bash
         source ~/epuck_ws/install/setup.bash
         set -u

@@ -227,6 +227,29 @@ class ScriptContractStaticTest(unittest.TestCase):
     def test_early_failure_still_finalizes_via_trap(self):
         self.assertIn("trap cleanup EXIT", self.source)
 
+    def test_ros_setup_sourcing_is_bracketed_by_set_plus_minus_u(self):
+        """ROS 2's setup.bash files reference variables (e.g.
+        AMENT_TRACE_SETUP_FILES) that are unset in a fresh shell. Under
+        this script's `set -uo pipefail`, sourcing them unguarded is a
+        fatal, non-interactive shell exit -- discovered live when --run
+        crashed immediately after STAGE4_SOURCE_IDENTITY=PASS, before
+        creating any evidence directory. Both `source` lines must sit
+        directly between a `set +u` and a `set -u`."""
+        opt_ros_idx = next(
+            i for i, line in enumerate(self.code_lines)
+            if "source /opt/ros/humble/setup.bash" in line
+        )
+        epuck_ws_idx = next(
+            i for i, line in enumerate(self.code_lines)
+            if "source ~/epuck_ws/install/setup.bash" in line
+        )
+        self.assertEqual(
+            epuck_ws_idx, opt_ros_idx + 1,
+            "the two ROS setup sourcing lines must be adjacent",
+        )
+        self.assertEqual(self.code_lines[opt_ros_idx - 1].strip(), "set +u")
+        self.assertEqual(self.code_lines[epuck_ws_idx + 1].strip(), "set -u")
+
     def test_physical_mode_never_references_synthetic_publisher(self):
         """Proves --run mode never imports, execs, spawns, or otherwise
         references synthetic_stage4_physical_state_publisher.py anywhere
