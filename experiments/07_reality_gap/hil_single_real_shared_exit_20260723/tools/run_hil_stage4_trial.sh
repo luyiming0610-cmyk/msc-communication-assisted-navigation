@@ -97,6 +97,30 @@ nominal_s = travel_distance_m / ${MAX_LINEAR_SPEED_MPS}
 print(nominal_s + ${SCOUT_ANNOUNCEMENT_MARGIN_S})
 ")"
 
+# cooperative_avoider.py's own existing, already-overridable ROS
+# parameter "max_runtime_s" (default 22.0s, declared in the frozen,
+# UNMODIFIED controller itself -- never changed here) latches it to
+# COMPLETE/zero-forever once elapsed since its own startup exceeds this
+# bound. Root cause (RUN_ID stage4_20260731_182129): cooperative_avoider
+# was previously launched during initial bring-up, well before the
+# physical operator finishes placement/safety confirmation and before
+# virtual-scout release -- its 22s default expired minutes before the
+# scout could ever announce, latching COMPLETE long before adoption.
+# Fixed by (a) launching cooperative_avoider only after
+# operator approval (see the --run case below), immediately before the
+# real motion window can occur, and (b) explicitly overriding its
+# max_runtime_s via this SAME supported parameter interface (never a
+# code/algorithm change) to comfortably exceed every timeout it must
+# survive: scout-announcement + adoption + raw-command + the hard
+# physical-motion maximum, plus a documented margin.
+COOP_MAX_RUNTIME_MARGIN_S="20.0"
+COOP_MAX_RUNTIME_S="$(python3 -c "
+import sys
+sys.path.insert(0, '${SCRIPT_DIR}')
+from hil_stage4_motion_supervisor import ADOPTION_TIMEOUT_S, RAW_COMMAND_TIMEOUT_S, HARD_MAX_NONZERO_DURATION_S
+print(${SCOUT_ANNOUNCEMENT_TIMEOUT_S} + ADOPTION_TIMEOUT_S + RAW_COMMAND_TIMEOUT_S + HARD_MAX_NONZERO_DURATION_S + ${COOP_MAX_RUNTIME_MARGIN_S})
+")"
+
 PHYSICAL_STATE_TOPIC="/epuck1/state"
 VIRTUAL_STATE_TOPIC="/epuck_virtual_peer/state"
 GOAL_ANNOUNCEMENT_TOPIC="/hil/goal_announcement"
@@ -580,29 +604,7 @@ PYEOF
         record_process "hil_topic_adapter" "$!" "${SCRIPT_DIR}/hil_topic_adapter.py"
         write_launcher_status
 
-        echo "[$(date -Iseconds)] step 4: starting cooperative_avoider.py (real robot's frozen controller, UNMODIFIED, output remapped to ${RAW_CMD_VEL_TOPIC})"
-        # cooperative_avoider.py subscribes to two HARDCODED relative
-        # topic names -- "state" and "nav_intent" (no parameters exist
-        # for either) -- caught by the Stage 4 live ROS-graph rehearsal:
-        # without these remaps the node never sees the real robot's pose
-        # or NavigationIntent, and stays at zero forever, silently.
-        ros2 run epuck2_comm cooperative_avoider --ros-args \
-            -r cmd_vel:="${RAW_CMD_VEL_TOPIC}" \
-            -r state:="${PHYSICAL_STATE_TOPIC}" \
-            -r nav_intent:=/epuck1/nav_intent \
-            -p robot_id:=1 -p armed:=true \
-            -p enable_peer_avoidance:=true -p enable_dynamic_heading:=true \
-            -p enable_dynamic_speed:=true -p enable_local_avoidance:=true \
-            -p require_local_sensors:=true -p use_sim_time:=false \
-            -p nominal_speed_mps:="${MAX_LINEAR_SPEED_MPS}" \
-            -p safety_radius_m:=0.14 -p stop_after_recovery:=false \
-            -p peer_state_topic:="${VIRTUAL_STATE_TOPIC}" \
-            > "${OUT_DIR}/cooperative_avoider.log" 2>&1 &
-        record_process "cooperative_avoider" "$!" ""
-        write_launcher_status
-
-        sleep 2
-        echo "[$(date -Iseconds)] step 5: starting hil_cmd_vel_guard.py (DISARMED, independent backstop, max_angular=0)"
+        echo "[$(date -Iseconds)] step 4: starting hil_cmd_vel_guard.py (DISARMED, independent backstop, max_angular=0)"
         python3 "${SCRIPT_DIR}/hil_cmd_vel_guard.py" \
             --physical-state-topic "${PHYSICAL_STATE_TOPIC}" \
             --upstream-cmd-vel-topic "${UPSTREAM_CMD_VEL_TOPIC}" \
@@ -636,6 +638,37 @@ PYEOF
         OPERATOR_APPROVAL_STATE="ACCEPTED"
         write_launcher_status
 
+        # Launched only now (after approval), not during initial
+        # bring-up: cooperative_avoider's own max_runtime_s (overridden
+        # below via its own existing parameter, never a code/algorithm
+        # change) counts down from its own startup, and initial
+        # bring-up can legitimately take the physical operator several
+        # minutes (placement, safety confirmations) -- launching this
+        # early silently consumed most of that budget before the real
+        # motion window could ever occur (RUN_ID stage4_20260731_182129).
+        echo "[$(date -Iseconds)] step 4b: starting cooperative_avoider.py (real robot's frozen controller, UNMODIFIED, output remapped to ${RAW_CMD_VEL_TOPIC}, max_runtime_s=${COOP_MAX_RUNTIME_S})"
+        # cooperative_avoider.py subscribes to two HARDCODED relative
+        # topic names -- "state" and "nav_intent" (no parameters exist
+        # for either) -- caught by the Stage 4 live ROS-graph rehearsal:
+        # without these remaps the node never sees the real robot's pose
+        # or NavigationIntent, and stays at zero forever, silently.
+        ros2 run epuck2_comm cooperative_avoider --ros-args \
+            -r cmd_vel:="${RAW_CMD_VEL_TOPIC}" \
+            -r state:="${PHYSICAL_STATE_TOPIC}" \
+            -r nav_intent:=/epuck1/nav_intent \
+            -p robot_id:=1 -p armed:=true \
+            -p enable_peer_avoidance:=true -p enable_dynamic_heading:=true \
+            -p enable_dynamic_speed:=true -p enable_local_avoidance:=true \
+            -p require_local_sensors:=true -p use_sim_time:=false \
+            -p nominal_speed_mps:="${MAX_LINEAR_SPEED_MPS}" \
+            -p safety_radius_m:=0.14 -p stop_after_recovery:=false \
+            -p peer_state_topic:="${VIRTUAL_STATE_TOPIC}" \
+            -p max_runtime_s:="${COOP_MAX_RUNTIME_S}" \
+            > "${OUT_DIR}/cooperative_avoider.log" 2>&1 &
+        record_process "cooperative_avoider" "$!" ""
+        write_launcher_status
+        sleep 2
+
         python3 "${SCRIPT_DIR}/hil_stage4_motion_supervisor.py" \
             --goal-id "${GOAL_ID}" --run-id "${RUN_ID}" \
             --expected-target-x-m "${EXIT_CENTER_X_M}" --expected-target-y-m "${EXIT_CENTER_Y_M}" \
@@ -664,6 +697,10 @@ PYEOF
         fi
         if ! require_exactly_one_publisher_via_direct_discovery "${PHYSICAL_STATE_TOPIC}" "real_state_post_start"; then
             echo "ABORT: expected exactly 1 publisher on ${PHYSICAL_STATE_TOPIC} (the real state_publisher) immediately before release (bounded direct-discovery query failed)." >&2
+            exit 1
+        fi
+        if ! require_exactly_one_publisher_via_direct_discovery "${RAW_CMD_VEL_TOPIC}" "cooperative_avoider_post_start"; then
+            echo "ABORT: expected exactly 1 publisher on ${RAW_CMD_VEL_TOPIC} (cooperative_avoider) after start (bounded direct-discovery query failed)." >&2
             exit 1
         fi
 

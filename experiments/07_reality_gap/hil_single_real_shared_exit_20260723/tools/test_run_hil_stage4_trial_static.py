@@ -172,6 +172,39 @@ class ScriptContractStaticTest(unittest.TestCase):
         self.assertLess(approval_idx, release_idx)
         self.assertLess(release_idx, peer_start_idx)
 
+    def test_cooperative_avoider_started_only_after_approval_accepted(self):
+        """RUN_ID stage4_20260731_182129: cooperative_avoider's own
+        max_runtime_s (default 22.0s) counted down from a launch during
+        initial bring-up, well before the physical operator finished
+        placement/safety confirmation -- it latched COMPLETE (zero
+        forever) minutes before the real motion window could occur.
+        Launching it only after approval keeps its runtime budget spent
+        on the actual scout-travel/adoption/motion window instead."""
+        approval_accepted_idx = self.source.index('OPERATOR_APPROVAL_STATE="ACCEPTED"')
+        avoider_record_idx = self.source.index('record_process "cooperative_avoider"')
+        self.assertLess(approval_accepted_idx, avoider_record_idx)
+
+    def test_cooperative_avoider_max_runtime_derived_via_existing_parameter(self):
+        """Never a cooperative_avoider.py code/algorithm change: this
+        uses the controller's own existing, already-overridable
+        max_runtime_s ROS parameter (default 22.0s), overridden to
+        comfortably exceed scout-announcement + adoption + raw-command
+        + the hard physical-motion maximum, plus a documented margin --
+        derived from the frozen engine constants, never a guessed
+        literal."""
+        self.assertIn('-p max_runtime_s:="${COOP_MAX_RUNTIME_S}"', self.source)
+        self.assertIn(
+            "from hil_stage4_motion_supervisor import ADOPTION_TIMEOUT_S, RAW_COMMAND_TIMEOUT_S, HARD_MAX_NONZERO_DURATION_S",
+            self.source,
+        )
+
+    def test_raw_cmd_vel_topic_publisher_checked_before_scout_release(self):
+        check_idx = self.source.index(
+            'require_exactly_one_publisher_via_direct_discovery "${RAW_CMD_VEL_TOPIC}"'
+        )
+        release_idx = self.source.index("releasing virtual scout exactly once")
+        self.assertLess(check_idx, release_idx)
+
     def test_no_automatic_retry_or_second_trial(self):
         self.assertIn("does not arm anything itself and does not start a second trial", self.source)
 
