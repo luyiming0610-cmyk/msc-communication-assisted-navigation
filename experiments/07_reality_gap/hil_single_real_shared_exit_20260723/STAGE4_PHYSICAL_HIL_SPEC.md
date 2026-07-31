@@ -227,6 +227,37 @@ proven in
 A supervisor crash mid-trial is classified `FAIL_VALID_EVIDENCE`; no
 automatic restart occurs.
 
+## 10a. Deterministic evidence finalization (revision 5)
+
+`--run` no longer only echoes identity/status information to stdout.
+`source_identity_manifest.json` is written atomically (temp file +
+`os.replace`) as the first file in the evidence directory, immediately
+after identity PASSES and before any process starts; it contains the
+schema version, RUN_ID, expected/actual HEAD, every source-path
+expected/worktree blob pair, every installed-runtime hash pair, the
+entry-point check, and the overall PASS/BLOCKED result.
+`launcher_status.json` is written atomically at every state transition
+(each component launch, operator approval accept/reject, final
+detached-running state, or aborted-cleanup state via the same trap that
+already wrote `residual_check.json`).
+
+A new `--finalize <evidence_root>` mode (run after the trial has ended,
+cleanup has completed, and the operator has transferred Pi evidence and
+authored `physical_measurements.json` into the evidence root) performs
+the two-stage deterministic hashing and verification flow: validate all
+required files present and non-empty; extract adoption evidence from
+the supervisor's own evidence JSONL (no separate recorder exists for
+`/hil/adoption_evidence` itself); build `SHA256SUMS.txt` over every
+evidence file except itself, `FINAL_SHA256SUMS.txt`, and the
+not-yet-created `post_run_verification.json`; verify it with
+`sha256sum -c`; invoke the committed `hil_stage4_post_run_verifier.py
+--mode physical` against that immutable manifest; validate its report;
+build `FINAL_SHA256SUMS.txt` over all final evidence (including
+`SHA256SUMS.txt` and `post_run_verification.json`, excluding only
+itself); verify it with `sha256sum -c`. Any missing Pi evidence,
+measurements, launcher status, source identity, or hash-verification
+failure is `INVALID_EVIDENCE`, never silently defaulted or skipped.
+
 ## 11. Evidence and binding verifier
 
 Supervisor JSONL (`stage4_supervisor_evidence.jsonl`): one record per

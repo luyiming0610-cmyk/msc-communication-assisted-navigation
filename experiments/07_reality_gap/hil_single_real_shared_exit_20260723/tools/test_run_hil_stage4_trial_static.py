@@ -7,12 +7,59 @@ required contract properties that would be unsafe or impractical to
 prove by actually running a physical trial in a unit test."""
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve().parent / "run_hil_stage4_trial.sh"
+
+_SUPERVISOR_EVIDENCE_RECORDS = [
+    {"monotonic_time_s": 1000.0, "ros_time_s": 1000.0, "state": "WAITING_FOR_EVENT", "event": "APPROVAL_ACCEPTED", "reason": "", "raw": None, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1001.0, "ros_time_s": 1001.0, "state": "WAITING_FOR_EVENT", "event": "VIRTUAL_SCOUT_RELEASED", "reason": "", "raw": None, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1002.0, "ros_time_s": 1002.0, "state": "VALIDATING_RAW_COMMAND", "event": "ADOPTION_CONFIRMED", "reason": "", "raw": {"goal_id": "shared_exit", "source_sequence": 1, "target_x_m": 1.2, "target_y_m": 0.5, "schema_version": "1.0.0"}, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1002.05, "ros_time_s": 1002.05, "state": "VALIDATING_RAW_COMMAND", "event": "RAW_TWIST_RECEIVED", "reason": "", "raw": {"linear_x": 0.015, "linear_y": 0.0, "linear_z": 0.0, "angular_x": 0.0, "angular_y": 0.0, "angular_z": 0.0}, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1002.05, "ros_time_s": 1002.05, "state": "VALIDATING_RAW_COMMAND", "event": "ARM_PUBLISHED", "reason": "", "raw": None, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1002.05, "ros_time_s": 1002.05, "state": "ACTIVE", "event": "ACTIVE_OPENED", "reason": "", "raw": None, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1008.55, "ros_time_s": 1008.55, "state": "ZERO_BURST", "event": "ZERO_BURST_OPENED", "reason": "INTERNAL_ACTIVE_CUTOFF_REACHED", "raw": None, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1008.55, "ros_time_s": 1008.55, "state": "ZERO_BURST", "event": "ZERO_PUBLISHED", "reason": "", "raw": None, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1008.55, "ros_time_s": 1008.55, "state": "DISARMED", "event": "DISARM_PUBLISHED", "reason": "", "raw": None, "run_id": "fixture", "goal_id": "shared_exit"},
+    {"monotonic_time_s": 1008.55, "ros_time_s": 1008.55, "state": "COMPLETE", "event": "LATCHED_COMPLETE", "reason": "", "raw": None, "run_id": "fixture", "goal_id": "shared_exit"},
+]
+
+
+def _build_finalize_fixture(root: Path) -> None:
+    (root / "stage4_supervisor_evidence.jsonl").write_text(
+        "\n".join(json.dumps(r) for r in _SUPERVISOR_EVIDENCE_RECORDS) + "\n", encoding="utf-8",
+    )
+    (root / "command_evidence.csv").write_text("topic,linear_x,angular_z\ncmd_vel,0.015,0.0\n", encoding="utf-8")
+    (root / "pid_manifest.json").write_text(
+        json.dumps({"run_id": "fixture", "processes": {"recorder": {"pid": 111, "sha256": ""}}}), encoding="utf-8",
+    )
+    (root / "launcher_status.json").write_text(
+        json.dumps({
+            "run_id": "fixture", "execution_head": "HEADX", "components": {},
+            "operator_approval_state": "ACCEPTED", "supervisor_terminal_state": "COMPLETE",
+            "cleanup": {"result": "RAN"}, "recorder_stopped_last": None,
+            "residual_process_result": "CLEAN", "final_launcher_classification": "ABORTED",
+        }), encoding="utf-8",
+    )
+    (root / "source_identity_manifest.json").write_text(
+        json.dumps({
+            "schema_version": "1.0.0", "run_id": "fixture", "expected_head": "HEADX", "actual_head": "HEADX",
+            "source_paths": [], "installed_runtime": [], "entrypoint_check": {}, "overall_result": "PASS",
+        }), encoding="utf-8",
+    )
+    (root / "residual_check.json").write_text(json.dumps({"residual_process_check": "CLEAN"}), encoding="utf-8")
+    (root / "pi_command_audit.jsonl").write_text(json.dumps({"linear_x": 0.015, "angular_z": 0.0}) + "\n", encoding="utf-8")
+    (root / "pi_verifier_verdict.json").write_text(json.dumps({"verdict": "PASS"}), encoding="utf-8")
+    (root / "physical_measurements.json").write_text(json.dumps({
+        "manual_forward_displacement_m": 0.09, "corridor_crossed": False, "stop_line_crossed": False,
+        "min_boundary_clearance_m": 0.20, "unexpected_rotation": False, "unexpected_direction": False,
+        "unexpected_sound": False, "unexpected_acceleration": False, "run_interrupted": False,
+    }), encoding="utf-8")
 
 
 def _run(args: list, env: dict = None) -> subprocess.CompletedProcess:
@@ -196,6 +243,81 @@ class ScriptContractStaticTest(unittest.TestCase):
         self.assertIn('REAL_STATE_COUNT="$(publisher_count "${PHYSICAL_STATE_TOPIC}")"', self.code_text)
         self.assertIn('if [[ "${REAL_STATE_COUNT}" != "1" ]]; then', self.code_text)
 
+    def test_source_identity_manifest_written_atomically_before_any_process(self):
+        manifest_write_idx = self.source.index("SOURCE_IDENTITY_MANIFEST=")
+        out_dir_idx = self.source.index('mkdir -p "${OUT_DIR}"')
+        first_record_process_idx = self.source.index('record_process "recorder"')
+        self.assertLess(out_dir_idx, manifest_write_idx)
+        self.assertLess(manifest_write_idx, first_record_process_idx)
+        self.assertIn("os.replace(tmp_path, out_path)", self.source)
+
+    def test_launcher_status_updated_at_each_component_launch(self):
+        for name in ("recorder", "hil_topic_adapter", "cooperative_avoider", "hil_cmd_vel_guard"):
+            marker = f'record_process "{name}"'
+            idx = self.source.index(marker)
+            # write_launcher_status must appear shortly after each launch.
+            tail = self.source[idx:idx + 400]
+            self.assertIn("write_launcher_status", tail, f"no write_launcher_status call found after {marker}")
+
+    def test_launcher_status_records_operator_approval_states(self):
+        self.assertIn('OPERATOR_APPROVAL_STATE="ACCEPTED"', self.source)
+        self.assertIn('OPERATOR_APPROVAL_STATE="REJECTED"', self.source)
+
+    def test_finalize_mode_exists_and_is_readonly_except_hash_files(self):
+        self.assertIn("--finalize)", self.source)
+        self.assertIn("EVIDENCE_ROOT=", self.source)
+        finalize_idx = self.source.index("--finalize)")
+        finalize_block = self.source[finalize_idx:]
+        for forbidden in ("ros2 run", "ros2 topic pub", "source /opt/ros"):
+            self.assertNotIn(forbidden, finalize_block, f"--finalize must never do {forbidden!r}")
+
+    def test_finalize_requires_all_evidence_including_pi(self):
+        finalize_idx = self.source.index("--finalize)")
+        finalize_block = self.source[finalize_idx:]
+        for required_var in (
+            "SUPERVISOR_EVIDENCE", "WSL_COMMAND_EVIDENCE", "PID_MANIFEST",
+            "LAUNCHER_STATUS", "SOURCE_IDENTITY_MANIFEST", "RESIDUAL_CHECK",
+            "PI_COMMAND_AUDIT", "PI_VERIFIER_VERDICT", "PHYSICAL_MEASUREMENTS",
+        ):
+            self.assertIn(required_var, finalize_block)
+        self.assertIn("MISSING_OR_EMPTY_REQUIRED_FILE", finalize_block)
+        self.assertIn("STAGE4_FINALIZE=INVALID_EVIDENCE", finalize_block)
+
+    def test_finalize_builds_two_hash_stages(self):
+        finalize_idx = self.source.index("--finalize)")
+        finalize_block = self.source[finalize_idx:]
+        self.assertIn("SHA256SUMS.txt", finalize_block)
+        self.assertIn("FINAL_SHA256SUMS.txt", finalize_block)
+        self.assertIn("sha256sum -c", finalize_block)
+        self.assertEqual(finalize_block.count("sha256sum -c"), 2)
+
+    def test_finalize_final_hash_manifest_excludes_only_itself(self):
+        finalize_idx = self.source.index("--finalize)")
+        finalize_block = self.source[finalize_idx:]
+        stage2_idx = finalize_block.index("FINAL_SHA256SUMS.txt.new")
+        stage2_find = finalize_block[stage2_idx - 300:stage2_idx]
+        self.assertIn('! -name "FINAL_SHA256SUMS.txt"', stage2_find)
+        self.assertNotIn('! -name "SHA256SUMS.txt"', stage2_find)
+        self.assertNotIn('! -name "post_run_verification.json"', stage2_find)
+
+    def test_finalize_invokes_committed_verifier_in_physical_mode(self):
+        finalize_idx = self.source.index("--finalize)")
+        finalize_block = self.source[finalize_idx:]
+        self.assertIn("hil_stage4_post_run_verifier.py", finalize_block)
+        self.assertIn("--mode physical", finalize_block)
+
+    def test_pi_window_2_uses_audited_server_not_unaudited(self):
+        command_sheet = (SCRIPT_PATH.parent.parent / "STAGE4_COMMAND_SHEET_TEMPLATE.md").read_text(encoding="utf-8")
+        self.assertIn("pi_epuck_tcp_server_sensors_audited.py", command_sheet)
+        # The unaudited script name must never appear as a launch command
+        # (it may appear only as prose explicitly calling it out as
+        # forbidden).
+        launch_lines = [
+            l for l in command_sheet.splitlines()
+            if "python3 pi_epuck_tcp_server_sensors.py" in l
+        ]
+        self.assertEqual(launch_lines, [], f"unaudited server must never be the launch command: {launch_lines}")
+
     def test_physical_mode_rechecks_real_state_publisher_before_release(self):
         self.assertIn("REAL_STATE_COUNT_POST_START", self.code_text)
         self.assertIn('if [[ "${REAL_STATE_COUNT_POST_START}" != "1" ]]; then', self.code_text)
@@ -211,6 +333,85 @@ class ScriptContractStaticTest(unittest.TestCase):
         self.assertIn("pytest_stage4_live", rehearsal_source)
         self.assertNotIn('"/cmd_vel"', rehearsal_source)
         self.assertNotIn('"/epuck1/state"', rehearsal_source)
+
+
+class FinalizeModeFunctionalTest(unittest.TestCase):
+    """Actual execution of --finalize against synthetic fixtures (no
+    ROS, no Pi, no process) -- proves the two-stage hash-verified
+    physical evidence flow end-to-end, not just via string checks."""
+
+    def test_finalize_pass_with_complete_fixture(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            _build_finalize_fixture(root)
+            result = _run(["--finalize", str(root)])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("STAGE4_FINALIZE=PASS", result.stdout)
+            self.assertTrue((root / "SHA256SUMS.txt").is_file())
+            self.assertTrue((root / "FINAL_SHA256SUMS.txt").is_file())
+            self.assertTrue((root / "post_run_verification.json").is_file())
+            self.assertTrue((root / "adoption_evidence.jsonl").is_file())
+            report = json.loads((root / "post_run_verification.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["classification"], "PASS")
+
+    def test_finalize_invalid_evidence_when_pi_evidence_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            _build_finalize_fixture(root)
+            (root / "pi_command_audit.jsonl").unlink()
+            (root / "pi_verifier_verdict.json").unlink()
+            result = _run(["--finalize", str(root)])
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("STAGE4_FINALIZE=INVALID_EVIDENCE", result.stdout + result.stderr)
+            # No SHA256SUMS.txt should be produced when required evidence
+            # is missing -- the check happens before any hashing.
+            self.assertFalse((root / "SHA256SUMS.txt").is_file())
+
+    def test_finalize_invalid_evidence_when_measurements_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            _build_finalize_fixture(root)
+            (root / "physical_measurements.json").unlink()
+            result = _run(["--finalize", str(root)])
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("STAGE4_FINALIZE=INVALID_EVIDENCE", result.stdout + result.stderr)
+
+    def test_final_hash_manifest_detects_post_finalize_tampering(self):
+        """FINAL_SHA256SUMS.txt exists precisely so a reviewer can later
+        re-verify the frozen evidence package hasn't been altered since
+        --finalize completed. This proves that re-check actually works:
+        editing post_run_verification.json's classification AFTER
+        finalize completed must make a standalone
+        `sha256sum -c FINAL_SHA256SUMS.txt` fail."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            _build_finalize_fixture(root)
+            result = _run(["--finalize", str(root)])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            recheck_before = subprocess.run(
+                ["sha256sum", "-c", "FINAL_SHA256SUMS.txt"], cwd=str(root), capture_output=True, text=True,
+            )
+            self.assertEqual(recheck_before.returncode, 0, recheck_before.stdout + recheck_before.stderr)
+
+            report = json.loads((root / "post_run_verification.json").read_text(encoding="utf-8"))
+            report["classification"] = "PASS_TAMPERED"
+            (root / "post_run_verification.json").write_text(json.dumps(report), encoding="utf-8")
+
+            recheck_after = subprocess.run(
+                ["sha256sum", "-c", "FINAL_SHA256SUMS.txt"], cwd=str(root), capture_output=True, text=True,
+            )
+            self.assertNotEqual(recheck_after.returncode, 0, "tampering post_run_verification.json after finalize must be detectable")
+
+    def test_finalize_missing_evidence_root_is_invalid(self):
+        result = _run(["--finalize", "/nonexistent/evidence/root"])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("STAGE4_FINALIZE=INVALID_EVIDENCE", result.stdout + result.stderr)
+
+    def test_finalize_no_argument_is_invalid(self):
+        result = _run(["--finalize"])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("STAGE4_FINALIZE=INVALID_EVIDENCE", result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
