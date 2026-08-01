@@ -8,6 +8,7 @@ prove by actually running a physical trial in a unit test."""
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -194,7 +195,8 @@ class ScriptContractStaticTest(unittest.TestCase):
         literal."""
         self.assertIn('-p max_runtime_s:="${COOP_MAX_RUNTIME_S}"', self.source)
         self.assertIn(
-            "from hil_stage4_motion_supervisor import ADOPTION_TIMEOUT_S, RAW_COMMAND_TIMEOUT_S, HARD_MAX_NONZERO_DURATION_S",
+            "from hil_stage4_motion_supervisor import ADOPTION_TIMEOUT_S, CONTROLLER_STATE_FORWARD_TIMEOUT_S, "
+            "RAW_COMMAND_TIMEOUT_S, HARD_MAX_NONZERO_DURATION_S",
             self.source,
         )
 
@@ -204,6 +206,110 @@ class ScriptContractStaticTest(unittest.TestCase):
         )
         release_idx = self.source.index("releasing virtual scout exactly once")
         self.assertLess(check_idx, release_idx)
+
+    def test_cooperative_avoider_state_remap_targets_private_topic_not_canonical(self):
+        """Adoption-controlled private own-state gate (RUN_ID
+        stage4_20260731_190139 correction): cooperative_avoider's own
+        hardcoded "state" subscription must be remapped exclusively to
+        the supervisor-owned private topic, never to the canonical
+        PHYSICAL_STATE_TOPIC -- this is the structural guarantee that it
+        has no subscription path to real own-state before the
+        supervisor chooses to forward it."""
+        self.assertIn('-r state:="${CONTROLLER_PRIVATE_STATE_TOPIC}"', self.source)
+        self.assertNotIn('-r state:="${PHYSICAL_STATE_TOPIC}"', self.source)
+
+    def test_canonical_physical_state_topic_still_used_by_guard_and_supervisor_unshadowed(self):
+        """The private gate must be purely additive: the guard and the
+        supervisor's own liveness/adoption logic keep subscribing to the
+        real canonical topic exactly as before -- nothing shadows or
+        replaces PHYSICAL_STATE_TOPIC for those two consumers."""
+        self.assertIn('--physical-state-topic "${PHYSICAL_STATE_TOPIC}"', self.source)
+        physical_state_topic_uses = self.source.count('"${PHYSICAL_STATE_TOPIC}"')
+        self.assertGreaterEqual(physical_state_topic_uses, 2, "guard and supervisor must both still reference the canonical topic")
+
+    def test_controller_private_state_topic_checked_zero_before_start_and_one_after(self):
+        preflight_idx = self.source.index('"${CONTROLLER_PRIVATE_STATE_TOPIC}"; do')
+        poststart_idx = self.source.index(
+            'require_exactly_one_publisher_via_direct_discovery "${CONTROLLER_PRIVATE_STATE_TOPIC}" "controller_private_state_post_start"'
+        )
+        self.assertLess(preflight_idx, poststart_idx)
+
+    def test_canonical_state_rechecked_sole_publisher_after_private_gate_starts(self):
+        """The private publisher (created inside the supervisor process)
+        must not itself become a second publisher on the canonical
+        topic -- explicitly re-verified after the gate starts, not just
+        assumed from the earlier preflight/post-guard checks."""
+        self.assertIn(
+            'require_exactly_one_publisher_via_direct_discovery "${PHYSICAL_STATE_TOPIC}" "real_state_still_sole_canonical_post_start"',
+            self.source,
+        )
+
+    def test_supervisor_is_only_process_given_controller_state_topic_flag(self):
+        """The private topic's publisher must exist only inside the
+        supervisor process -- no other launched component's argv may
+        reference --controller-state-topic (cooperative_avoider takes
+        it only via the "-r state:=" remap, which is a subscription
+        remap, not a publisher)."""
+        flag_lines = [l for l in self.code_lines if "--controller-state-topic" in l]
+        self.assertEqual(len(flag_lines), 1, f"expected exactly one process launch to pass --controller-state-topic: {flag_lines}")
+        flag_idx = self.source.index('--controller-state-topic "${CONTROLLER_PRIVATE_STATE_TOPIC}"')
+        supervisor_launch_idx = self.source.index('"${SCRIPT_DIR}/hil_stage4_motion_supervisor.py" \\')
+        avoider_record_idx = self.source.index('record_process "cooperative_avoider"')
+        self.assertLess(supervisor_launch_idx, flag_idx)
+        self.assertLess(avoider_record_idx, supervisor_launch_idx, "cooperative_avoider must be launched before the supervisor invocation carrying this flag")
+
+    def test_readiness_check_count_matches_actual_direct_discovery_calls(self):
+        """Blocking issue 2: READINESS_CHECK_COUNT must equal the ACTUAL
+        number of require_exactly_one_publisher_via_direct_discovery
+        call sites between cooperative_avoider's launch and virtual-
+        scout release -- not a separately-maintained guess. Fails if a
+        future check is added or removed here without updating the
+        constant used in READINESS_OVERHEAD_MARGIN_S/PRE_RELEASE_TIMEOUT_S/
+        COOP_MAX_RUNTIME_S."""
+        coop_launch_idx = self.source.index('record_process "cooperative_avoider"')
+        release_idx = self.source.index("releasing virtual scout exactly once")
+        self.assertLess(coop_launch_idx, release_idx)
+        window = self.source[coop_launch_idx:release_idx]
+        actual_calls = window.count('require_exactly_one_publisher_via_direct_discovery "')
+
+        m = re.search(r'READINESS_CHECK_COUNT="(\d+)"', self.source)
+        self.assertIsNotNone(m, "READINESS_CHECK_COUNT assignment not found in source")
+        declared_count = int(m.group(1))
+
+        self.assertEqual(
+            actual_calls, declared_count,
+            f"actual direct-discovery calls between cooperative_avoider launch and release "
+            f"({actual_calls}) != declared READINESS_CHECK_COUNT ({declared_count})",
+        )
+        # Pin the currently-expected value explicitly so a silent drop
+        # to e.g. 0 (both counts wrong in the same way) cannot pass.
+        self.assertEqual(actual_calls, 5)
+
+    def test_pre_release_timeout_derived_from_readiness_overhead_margin(self):
+        """Blocking issue 1: PRE_RELEASE_TIMEOUT_S must be derived from
+        READINESS_OVERHEAD_MARGIN_S (never a separately-guessed
+        literal), and passed to the supervisor, overriding its
+        EVENT_TIMEOUT_S default."""
+        self.assertIn('PRE_RELEASE_TIMEOUT_S="$(python3 -c "', self.source)
+        pre_release_calc_idx = self.source.index('PRE_RELEASE_TIMEOUT_S="$(python3 -c "')
+        pre_release_calc_end = self.source.index('")"', pre_release_calc_idx)
+        pre_release_calc_body = self.source[pre_release_calc_idx:pre_release_calc_end]
+        self.assertIn("READINESS_OVERHEAD_MARGIN_S", pre_release_calc_body)
+        self.assertIn("PRE_RELEASE_TIMEOUT_MARGIN_S", pre_release_calc_body)
+        self.assertIn('--pre-release-timeout-s "${PRE_RELEASE_TIMEOUT_S}"', self.source)
+
+    def test_numeric_param_validation_called_for_every_derived_timing_value(self):
+        """Blocking issue 4: every command-substitution-derived timing
+        value must be passed through the fail-closed numeric
+        validator before use."""
+        for var in (
+            "SCOUT_ANNOUNCEMENT_TIMEOUT_S", "READINESS_OVERHEAD_MARGIN_S",
+            "PRE_RELEASE_TIMEOUT_S", "COOP_MAX_RUNTIME_S",
+        ):
+            self.assertIn(
+                f'_require_valid_positive_finite_number "{var}" "${{{var}}}"', self.source,
+                f"{var} is not passed through the numeric validator",
+            )
 
     def test_no_automatic_retry_or_second_trial(self):
         self.assertIn("does not arm anything itself and does not start a second trial", self.source)
@@ -474,6 +580,79 @@ class FinalizeModeFunctionalTest(unittest.TestCase):
         result = _run(["--finalize"])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("STAGE4_FINALIZE=INVALID_EVIDENCE", result.stdout + result.stderr)
+
+
+_NUMERIC_VALIDATION_BEGIN_MARKER = "# BEGIN_NUMERIC_PARAM_VALIDATION_FUNCTION"
+_NUMERIC_VALIDATION_END_MARKER = "# END_NUMERIC_PARAM_VALIDATION_FUNCTION"
+
+
+def _extract_numeric_validation_function_source() -> str:
+    source = SCRIPT_PATH.read_text(encoding="utf-8")
+    assert _NUMERIC_VALIDATION_BEGIN_MARKER in source
+    assert _NUMERIC_VALIDATION_END_MARKER in source
+    return source.split(_NUMERIC_VALIDATION_BEGIN_MARKER, 1)[1].split(_NUMERIC_VALIDATION_END_MARKER, 1)[0]
+
+
+def _run_numeric_validation(name: str, value: str, timeout=10):
+    function_source = _extract_numeric_validation_function_source()
+    harness = f"""
+{function_source}
+_require_valid_positive_finite_number "{name}" "{value}"
+exit $?
+"""
+    result = subprocess.run(["bash", "-c", harness], capture_output=True, text=True, timeout=timeout)
+    return result.returncode, result.stdout + result.stderr
+
+
+class NumericParamValidationTest(unittest.TestCase):
+    """Blocking issue 4: harmless, offline, shell-control tests for the
+    fail-closed numeric validator -- extracted verbatim from
+    run_hil_stage4_trial.sh (between the BEGIN/END markers), never
+    reimplemented, so these tests exercise the real, committed function.
+    Starts no ROS, no Pi, no Stage 4 component."""
+
+    def test_empty_value_blocked(self):
+        code, out = _run_numeric_validation("X", "")
+        self.assertNotEqual(code, 0)
+        self.assertIn("BLOCKED: X is empty", out)
+
+    def test_malformed_value_blocked(self):
+        code, out = _run_numeric_validation("X", "not_a_number")
+        self.assertNotEqual(code, 0)
+        self.assertIn("is not a valid finite decimal number", out)
+
+    def test_nan_value_blocked(self):
+        code, out = _run_numeric_validation("X", "nan")
+        self.assertNotEqual(code, 0)
+        self.assertIn("is NaN/Inf", out)
+
+    def test_infinity_value_blocked(self):
+        code, out = _run_numeric_validation("X", "inf")
+        self.assertNotEqual(code, 0)
+        self.assertIn("is NaN/Inf", out)
+
+    def test_negative_value_blocked(self):
+        code, out = _run_numeric_validation("X", "-1.0")
+        self.assertNotEqual(code, 0)
+        # A leading '-' fails the numeric-format regex before reaching
+        # the positivity check -- either rejection reason is
+        # acceptable, but it must be rejected.
+        self.assertIn("BLOCKED:", out)
+
+    def test_zero_value_blocked(self):
+        code, out = _run_numeric_validation("X", "0.0")
+        self.assertNotEqual(code, 0)
+        self.assertIn("is not strictly positive", out)
+
+    def test_valid_value_passes(self):
+        code, out = _run_numeric_validation("X", "152.337")
+        self.assertEqual(code, 0, out)
+        self.assertIn("validated_numeric_param(X)=152.337", out)
+
+    def test_valid_integer_value_passes(self):
+        code, out = _run_numeric_validation("X", "5")
+        self.assertEqual(code, 0, out)
+        self.assertIn("validated_numeric_param(X)=5", out)
 
 
 if __name__ == "__main__":

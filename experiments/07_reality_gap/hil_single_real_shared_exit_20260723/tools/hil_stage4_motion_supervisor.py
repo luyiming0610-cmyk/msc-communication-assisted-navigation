@@ -62,6 +62,17 @@ MAX_LINEAR_MPS = 0.015
 EVENT_TIMEOUT_S = 30.0
 ADOPTION_TIMEOUT_S = 5.0
 RAW_COMMAND_TIMEOUT_S = 5.0
+#: Review gap (post RUN_ID stage4_20260731_190139 gate correction):
+#: without this, a supervisor that reaches ADOPTION_CONFIRMED / opens
+#: the private controller-state gate but then never receives another
+#: canonical /epuck1/state message (publisher dies, bridge drops, etc.)
+#: would wait in VALIDATING_RAW_COMMAND forever -- RAW_COMMAND_TIMEOUT_S
+#: only ever starts counting once _first_fresh_forwarded_at_s is set,
+#: which never happens in that scenario. This is an independent,
+#: narrowly-scoped bound on the gate-opened-to-first-fresh-forward
+#: interval only; it never starts, stops, or replaces
+#: RAW_COMMAND_TIMEOUT_S.
+CONTROLLER_STATE_FORWARD_TIMEOUT_S = 5.0
 
 INTERNAL_ACTIVE_CUTOFF_S = 6.50
 HARD_MAX_NONZERO_DURATION_S = 6.67  # verifier bound only; not a software timer target
@@ -274,10 +285,23 @@ class Stage4MotionSupervisor:
         now_fn: Callable[[], float] = time.monotonic,
         ros_now_fn: Callable[[], Optional[float]] = lambda: None,
         goal_coordinate_tolerance_m: float = DEFAULT_GOAL_COORDINATE_TOLERANCE_M,
+        pre_release_timeout_s: float = EVENT_TIMEOUT_S,
     ):
         self.goal_id = goal_id
         self.expected_target_x_m = expected_target_x_m
         self.expected_target_y_m = expected_target_y_m
+        # Review gap (post RUN_ID stage4_20260731_190139 gate review):
+        # the fixed EVENT_TIMEOUT_S=30.0 covers approval -> release, but
+        # production's real readiness sequence (5 direct-discovery calls
+        # + 2 inter-component sleeps, up to 34s worst case -- see
+        # run_hil_stage4_trial.sh's READINESS_OVERHEAD_MARGIN_S) can
+        # legitimately exceed 30s between the supervisor's own approve()
+        # and the orchestrator actually releasing the virtual scout.
+        # Defaults to EVENT_TIMEOUT_S (unchanged behavior for every
+        # existing test/caller that doesn't override it); production
+        # explicitly passes a larger, derived value instead of relying
+        # on this fixed default.
+        self.pre_release_timeout_s = pre_release_timeout_s
         # No module-level default on purpose: this must be derived by
         # the caller from the virtual peer's own configured start/
         # target/speed/arrival-radius (see run_hil_stage4_trial.sh),
@@ -303,6 +327,31 @@ class Stage4MotionSupervisor:
         self._adopted_at_s: Optional[float] = None
         self._active_start_s: Optional[float] = None
 
+        # Adoption-controlled private own-state gate (RUN_ID
+        # stage4_20260731_190139 root cause: cooperative_avoider's own
+        # frozen, local-sensor-driven encounter/failsafe latch has no
+        # way to know about Stage 4's adoption timeline, so any nonzero
+        # pre-adoption dwell in CRUISE risks it opening and either
+        # expiring or being mid-turn exactly when a command is needed.
+        # Fix: cooperative_avoider's own-state input is silent (no
+        # messages at all) until this gate opens, which -- per
+        # cooperative_avoider's own EXISTING, unmodified freshness
+        # check -- keeps it fail-closed in SAFE_STOP_STALE the whole
+        # time, never reaching CRUISE, never consuming its
+        # encounter-duration budget, before adoption.
+        self._controller_state_gate_open = False
+        self._controller_state_gate_opened_at_ros_s: Optional[float] = None
+        # Separate from the ROS-time property above: this is always the
+        # engine's own injected monotonic clock (self._now()), used
+        # exclusively to bound CONTROLLER_STATE_FORWARD_TIMEOUT_S below
+        # -- never None (unlike the ROS-time property, which can be
+        # None when no ros_now_fn is supplied), so the timeout bound
+        # itself never silently depends on ROS time being available.
+        self._controller_state_gate_opened_at_s: Optional[float] = None
+        self._controller_state_first_forwarded = False
+        self._first_fresh_forwarded_at_s: Optional[float] = None
+        self._record("CONTROLLER_STATE_GATE_CLOSED")
+
     # -- internal bookkeeping -------------------------------------------------
     def _record(self, event: str, *, reason: str = "", raw: Optional[dict] = None) -> None:
         self.evidence.append(EvidenceRecord(
@@ -310,6 +359,52 @@ class Stage4MotionSupervisor:
             state=self.state.value, event=event, reason=reason, raw=raw,
             run_id=self.run_id, goal_id=self.goal_id,
         ))
+
+    @property
+    def controller_state_gate_open(self) -> bool:
+        return self._controller_state_gate_open
+
+    @property
+    def controller_state_gate_opened_at_ros_s(self) -> Optional[float]:
+        return self._controller_state_gate_opened_at_ros_s
+
+    @property
+    def controller_state_first_forwarded(self) -> bool:
+        return self._controller_state_first_forwarded
+
+    def _open_controller_state_gate(self) -> None:
+        """Monotonic for this one event: CLOSED -> OPEN exactly once,
+        triggered only by ADOPTION_CONFIRMED (never by
+        GOAL_ANNOUNCEMENT_OBSERVED alone). A duplicate/wrong-goal
+        adoption-evidence message can never reach this point twice --
+        on_adoption_evidence already rejects duplicates and mismatches
+        before ever calling this."""
+        if self._controller_state_gate_open:
+            return
+        self._controller_state_gate_open = True
+        ros_now = self._ros_now()
+        self._controller_state_gate_opened_at_ros_s = ros_now if ros_now is not None else self._now()
+        self._controller_state_gate_opened_at_s = self._now()
+        self._record("CONTROLLER_STATE_GATE_OPENED")
+
+    def on_controller_state_forwarded(self, is_first: bool, state_summary: dict) -> None:
+        """Called by the ROS wrapper each time it forwards a genuinely
+        live (non-stale) canonical EpuckState to the controller-private
+        topic. RAW_COMMAND_TIMEOUT_S is anchored from the FIRST such
+        forward (see tick_timeouts), never from ADOPTION_CONFIRMED
+        itself -- a command cannot be validated before the controller
+        has even received a state to act on."""
+        if is_first and not self._controller_state_first_forwarded:
+            self._controller_state_first_forwarded = True
+            self._first_fresh_forwarded_at_s = self._now()
+            self._record("FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED", raw=state_summary)
+
+    def on_controller_state_forwarding_rejected_stale(self, reason: str) -> None:
+        """A canonical message whose own stamp predates the gate
+        opening was correctly NOT forwarded (never replay a cached/
+        pre-adoption state) -- audit-only, does not affect the state
+        machine."""
+        self._record("CONTROLLER_STATE_FORWARDING_REJECTED_STALE", reason=reason)
 
     def _latch_failed(self, reason: str) -> None:
         if self.state in TERMINAL_STATES:
@@ -442,6 +537,7 @@ class Stage4MotionSupervisor:
             "target_x_m": evidence.target_x_m, "target_y_m": evidence.target_y_m,
             "schema_version": evidence.schema_version,
         })
+        self._open_controller_state_gate()
 
     def on_raw_twist(self, t: TwistSample) -> None:
         if self.state == State.VALIDATING_RAW_COMMAND:
@@ -475,6 +571,7 @@ class Stage4MotionSupervisor:
                     return
                 self._latch_failed(f"RAW_COMMAND_INVALID:{reason}")
                 return
+            self._record("VALID_RAW_COMMAND_ACCEPTED", raw=t.as_dict())
             self._active_start_s = self._now()
             self._record("ARM_PUBLISHED")
             self.state = State.ACTIVE
@@ -513,7 +610,7 @@ class Stage4MotionSupervisor:
         now = self._now()
 
         if self.state == State.WAITING_FOR_EVENT and self._released_at_s is None:
-            if now - self._event_wait_start_s > EVENT_TIMEOUT_S:
+            if now - self._event_wait_start_s > self.pre_release_timeout_s:
                 self._latch_failed("EVENT_TIMEOUT")
 
         elif (self.state == State.WAITING_FOR_EVENT and self._released_at_s is not None
@@ -527,7 +624,29 @@ class Stage4MotionSupervisor:
                 self._latch_failed("ADOPTION_TIMEOUT")
 
         elif self.state == State.VALIDATING_RAW_COMMAND:
-            if now - self._adopted_at_s > RAW_COMMAND_TIMEOUT_S:
+            # Anchored on the FIRST fresh forwarded controller state, not
+            # ADOPTION_CONFIRMED itself (RUN_ID stage4_20260731_190139):
+            # a command cannot be validated before the controller has
+            # even received a state to act on. Before the first forward,
+            # this does not tick at all -- bounded in practice by the
+            # canonical state's own continuous ~10Hz publish rate (the
+            # recorder/supervisor's own subscription to it is unchanged
+            # and has run continuously since before approval).
+            if self._first_fresh_forwarded_at_s is None:
+                # Review gap fix: without this branch, a supervisor
+                # that reaches ADOPTION_CONFIRMED / opens the gate but
+                # never receives another canonical /epuck1/state
+                # message would wait here indefinitely -- neither this
+                # engine's own RAW_COMMAND_TIMEOUT_S (which has not
+                # started yet) nor anything else would ever latch
+                # FAILED. Independently bounded, narrowly scoped: only
+                # covers gate-opened-to-first-fresh-forward: never
+                # arms the guard, never opens ACTIVE, never touches
+                # RAW_COMMAND_TIMEOUT_S's own value or its own anchor.
+                if (self._controller_state_gate_opened_at_s is not None
+                        and now - self._controller_state_gate_opened_at_s > CONTROLLER_STATE_FORWARD_TIMEOUT_S):
+                    self._latch_failed("CONTROLLER_STATE_FORWARD_TIMEOUT")
+            elif now - self._first_fresh_forwarded_at_s > RAW_COMMAND_TIMEOUT_S:
                 self._latch_failed("RAW_COMMAND_TIMEOUT")
 
         elif self.state == State.ACTIVE:
@@ -570,10 +689,31 @@ def _build_node():
                 run_id=args.run_id,
                 now_fn=time.monotonic,
                 ros_now_fn=lambda: self.get_clock().now().nanoseconds / 1.0e9,
+                pre_release_timeout_s=args.pre_release_timeout_s,
             )
+            # Centralized, idempotent ACTIVE-exit safety action (blocking
+            # issue 3, post RUN_ID stage4_20260731_190139 review): tracks
+            # this wrapper's OWN belief about arm state, synced by
+            # _sync_arm_disarm() immediately after every engine call that
+            # could change state -- never deferred to a later _tick()
+            # observing a stale snapshot. This is the ONLY place
+            # arm_pub/cmd_pub are ever published to for arm/zero purposes.
+            self._armed = False
 
             self.arm_pub = self.create_publisher(Bool, args.arm_topic, 10)
             self.cmd_pub = self.create_publisher(Twist, args.guarded_output_topic, 10)
+            # Adoption-controlled private own-state gate: the supervisor
+            # is the SOLE publisher on this topic (cooperative_avoider's
+            # own-state subscription is remapped to it, never to
+            # PHYSICAL_STATE_TOPIC directly -- see run_hil_stage4_trial.sh).
+            # Depth 20 matches cooperative_avoider.py's own subscription
+            # depth for its "state" topic exactly, preserving QoS
+            # compatibility. Created here, at startup, but nothing is
+            # ever published on it until ADOPTION_CONFIRMED -- silence
+            # is the intended fail-closed condition.
+            self.controller_state_pub = self.create_publisher(
+                EpuckState, args.controller_state_topic, 20,
+            )
 
             self.create_subscription(String, args.adoption_evidence_topic, self._adoption_evidence_cb, 10)
             # Read-only observation of the raw GoalAnnouncement itself
@@ -639,20 +779,37 @@ def _build_node():
                     Twist, self.args.raw_cmd_vel_topic, self._raw_twist_cb, 10,
                 )
 
+        def _sync_arm_disarm(self) -> None:
+            """Centralized, idempotent ACTIVE-exit safety action (the
+            ONLY place arm_pub/cmd_pub are published to for arm/zero
+            purposes). Called synchronously, in the SAME callback that
+            caused a state change, immediately after every engine call
+            that could transition state -- never deferred to a later
+            _tick() re-observing a snapshot that is already stale by
+            the time it runs. Fires exactly once per real transition in
+            either direction (arm=True on ACTIVE entry, or
+            zero+arm=False on ACTIVE exit for ANY reason: internal
+            cutoff, invalid raw command, physical-state stale/missing,
+            invalid validity flags), because self._armed only flips
+            when it actually disagrees with the engine's current state."""
+            is_active = self.engine.state == State.ACTIVE
+            if is_active and not self._armed:
+                self._armed = True
+                self._publish_arm(True)
+            elif not is_active and self._armed:
+                self._armed = False
+                self._publish_zero()
+                self._publish_arm(False)
+
         def _raw_twist_cb(self, msg) -> None:
-            was_validating = self.engine.state == State.VALIDATING_RAW_COMMAND
             self.engine.on_raw_twist(TwistSample(
                 linear_x=msg.linear.x, linear_y=msg.linear.y, linear_z=msg.linear.z,
                 angular_x=msg.angular.x, angular_y=msg.angular.y, angular_z=msg.angular.z,
             ))
             self._flush_new_evidence()
-            if was_validating and self.engine.state == State.ACTIVE:
-                self._publish_arm(True)
+            self._sync_arm_disarm()
+            if self.engine.state == State.ACTIVE:
                 self.cmd_pub.publish(msg)
-            elif self.engine.state == State.ACTIVE:
-                self.cmd_pub.publish(msg)
-            elif self.engine.state == State.DISARMED:
-                self._publish_zero()
 
         def _physical_state_cb(self, msg) -> None:
             self.last_physical_state_at_s = time.monotonic()
@@ -660,7 +817,49 @@ def _build_node():
             if (int(msg.validity_flags) & required) != required:
                 self.engine.on_liveness_dropout("PHYSICAL_STATE_INVALID_FLAGS")
                 self._flush_new_evidence()
-                self._publish_zero()
+                self._sync_arm_disarm()
+
+            # Adoption-controlled private own-state gate: forward the
+            # canonical message, field-for-field, unmodified, onto the
+            # controller-private topic -- but only once the gate is open
+            # (ADOPTION_CONFIRMED) and only for messages that are
+            # genuinely live (stamped at or after the instant the gate
+            # opened). Do not modify this message or invent values; if
+            # the gate is closed or the message predates gate-open,
+            # simply do not forward -- silence is the intended
+            # fail-closed condition on the private topic. Stopped
+            # entirely once the engine has latched a terminal state
+            # (COMPLETE/FAILED): the controller no longer needs any
+            # input at that point, and this reduces post-terminal
+            # activity -- proven not to affect safety/cleanup, since no
+            # code anywhere reads private-topic freshness to authorise
+            # motion once terminal (the state machine is one-shot).
+            if self.engine.is_terminal:
+                return
+            if self.engine.controller_state_gate_open:
+                msg_ros_s = msg.stamp.sec + (msg.stamp.nanosec / 1.0e9)
+                gate_opened_at = self.engine.controller_state_gate_opened_at_ros_s
+                if gate_opened_at is not None and msg_ros_s < gate_opened_at:
+                    self.engine.on_controller_state_forwarding_rejected_stale(
+                        f"msg_stamp_s={msg_ros_s} predates "
+                        f"gate_opened_at_ros_s={gate_opened_at}"
+                    )
+                    self._flush_new_evidence()
+                else:
+                    is_first = not self.engine.controller_state_first_forwarded
+                    self.controller_state_pub.publish(msg)
+                    self.engine.on_controller_state_forwarded(is_first, {
+                        "sequence": int(msg.sequence),
+                        "stamp_s": msg_ros_s,
+                        "validity_flags": int(msg.validity_flags),
+                        "front_distance_m": float(msg.front_distance_m),
+                        "left_distance_m": float(msg.left_distance_m),
+                        "right_distance_m": float(msg.right_distance_m),
+                        "x_m": float(msg.x_m),
+                        "y_m": float(msg.y_m),
+                        "yaw_rad": float(msg.yaw_rad),
+                    })
+                    self._flush_new_evidence()
 
         def _goal_announcement_cb(self, msg) -> None:
             self.engine.on_goal_announcement_observed()
@@ -671,13 +870,9 @@ def _build_node():
                     and (self.last_physical_state_at_s is None
                          or time.monotonic() - self.last_physical_state_at_s > self.args.physical_state_timeout_s)):
                 self.engine.on_liveness_dropout("PHYSICAL_STATE_STALE_OR_MISSING")
-                self._publish_zero()
 
-            was_active = self.engine.state == State.ACTIVE
             self.engine.tick_timeouts()
-            if was_active and self.engine.state != State.ACTIVE:
-                self._publish_zero()
-                self._publish_arm(False)
+            self._sync_arm_disarm()
             self._flush_new_evidence()
 
         def _publish_zero(self) -> None:
@@ -722,11 +917,13 @@ def _build_node():
         parser.add_argument("--adoption-evidence-topic", required=True)
         parser.add_argument("--goal-announcement-topic", required=True)
         parser.add_argument("--scout-announcement-timeout-s", type=float, required=True)
+        parser.add_argument("--pre-release-timeout-s", type=float, default=EVENT_TIMEOUT_S)
         parser.add_argument("--raw-cmd-vel-topic", required=True)
         parser.add_argument("--guarded-output-topic", required=True)
         parser.add_argument("--arm-topic", required=True)
         parser.add_argument("--virtual-scout-released-topic", required=True)
         parser.add_argument("--physical-state-topic", required=True)
+        parser.add_argument("--controller-state-topic", required=True)
         parser.add_argument("--physical-state-timeout-s", type=float, default=0.5)
         parser.add_argument("--required-validity-flags", type=int, default=7)
         parser.add_argument("--evidence-path", required=True)

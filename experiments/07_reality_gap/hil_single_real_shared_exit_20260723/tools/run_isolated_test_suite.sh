@@ -91,6 +91,7 @@ declare -a REQUIRED_HIL_TEST_MODULES=(
     "test_hil_stage4_post_run_verifier"
     "test_run_hil_stage4_trial_static"
     "test_hil_stage4_live_graph_rehearsal"
+    "test_stage4_controller_state_gate_live"
     "test_run_isolated_test_suite_env_contract"
 )
 declare -a REQUIRED_PI_AUDIT_TEST_MODULES=(

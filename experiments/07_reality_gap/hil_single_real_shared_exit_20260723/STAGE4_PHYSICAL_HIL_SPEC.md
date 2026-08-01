@@ -65,7 +65,7 @@ magnitude regardless of sign.
 ## 4. Command path
 
 ```
-cooperative_avoider (-r cmd_vel:=cmd_vel_stage4_raw, -r state:=..., -r nav_intent:=...)
+cooperative_avoider (-r cmd_vel:=cmd_vel_stage4_raw, -r state:=/epuck1/state_stage4_controller, -r nav_intent:=...)
   -> cmd_vel_stage4_raw
   -> hil_stage4_motion_supervisor.py
        - rejects the entire raw Twist (whole-message rejection, never a
@@ -95,7 +95,9 @@ names beyond `cmd_vel` -- `state` and `nav_intent` (no parameters exist
 for either). Both remaps were missing from the first orchestrator draft
 and were caught only by the live ROS-graph rehearsal (Section 5a);
 without them the node never sees real state or intent and stays at
-zero forever, silently, with no error.
+zero forever, silently, with no error. `state` is remapped to
+`/epuck1/state_stage4_controller`, never to the canonical
+`/epuck1/state` -- see Section 5b.
 
 ## 5. Online adoption gate (audit result)
 
@@ -145,6 +147,59 @@ strictly after the adoption-evidence record that unblocked it
 structurally by not even creating the raw-command subscription until
 adoption is confirmed, so no pre-adoption backlog can exist.
 
+### 5b. Adoption-controlled private own-state gate
+
+Root cause (RUN_ID stage4_20260731_190139): before this fix,
+`cooperative_avoider` was subscribed directly to canonical
+`/epuck1/state` for its own pose/sensor input from the moment it
+launched -- well before adoption, since bring-up/approval/placement can
+take real operator minutes. Its own, unmodified local-obstacle-avoidance
+state machine has no notion of Stage 4's adoption timeline, so any
+nonzero pre-adoption dwell in its `CRUISE` mode could open a real
+encounter that later exceeded its own 25s duration ceiling and latched a
+terminal `FAILSAFE`, purely from the real robot's own local IR/ToF
+sensors -- never from peer-state logic.
+
+**Fix**: canonical `/epuck1/state` is completely unchanged --
+`state_publisher.py`, the recorder, `hil_cmd_vel_guard.py`, and the
+supervisor's own liveness/adoption logic all keep subscribing to it
+exactly as before. `hil_stage4_motion_supervisor.py` additionally opens
+a second publisher, `/epuck1/state_stage4_controller`, and
+`cooperative_avoider`'s own `state` remap targets THIS topic exclusively
+(never canonical) -- see Section 4. The supervisor publishes nothing on
+this private topic until `ADOPTION_CONFIRMED`; silence is the intended
+fail-closed condition, and `cooperative_avoider`'s own existing
+own-state-freshness check already keeps it in `SAFE_STOP_STALE`
+(zero output) the entire time no message arrives -- no code in
+`cooperative_avoider.py` or `local_obstacle_logic.py` was changed to
+achieve this.
+
+Once `ADOPTION_CONFIRMED` fires, the gate opens exactly once
+(monotonic, never re-closes, a duplicate/wrong-goal adoption-evidence
+message cannot reopen it) and each subsequent genuinely-live canonical
+`/epuck1/state` message is forwarded field-for-field unchanged onto the
+private topic. A message whose own stamp predates the gate opening is
+never forwarded (no replay of a stale/cached state).
+
+`RAW_COMMAND_TIMEOUT_S=5.0` (unchanged) is anchored on
+`FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED`, not on
+`ADOPTION_CONFIRMED` itself -- a raw command cannot be validated before
+the controller has even received a state to act on. A separate,
+independently-bounded `CONTROLLER_STATE_FORWARD_TIMEOUT_S=5.0` covers
+the distinct gate-opened-to-first-forward interval, so a supervisor
+that reaches `ADOPTION_CONFIRMED` but never receives another canonical
+state message (publisher dies, bridge drops) still fails closed
+(`CONTROLLER_STATE_FORWARD_TIMEOUT`) rather than waiting indefinitely;
+neither new timeout arms the guard or opens `ACTIVE`.
+
+`GoalAnnouncement` observation and `NavigationIntent` publication are
+unaffected and remain fully automatic -- neither depends on or is gated
+by this private-state mechanism.
+
+No safety parameter (speed/angular limits, geometry, `startup_hold_s`,
+the 25s local-encounter ceiling, the 6.67s hard motion maximum, or any
+sensor-validity/freshness threshold) was relaxed to implement this.
+
 ## 6. Supervisor state machine
 
 `hil_stage4_motion_supervisor.py`, states:
@@ -158,7 +213,8 @@ PREPARED -> WAITING_FOR_EVENT -> VALIDATING_RAW_COMMAND -> ACTIVE
 One-shot: `COMPLETE`/`FAILED` permanently refuse any further approval,
 release, or raw-command input in the same process. Timeouts:
 `EVENT_TIMEOUT_S=30.0`, `ADOPTION_TIMEOUT_S=5.0`,
-`RAW_COMMAND_TIMEOUT_S=5.0` -- each latches `FAILED` directly (guard
+`RAW_COMMAND_TIMEOUT_S=5.0`, `CONTROLLER_STATE_FORWARD_TIMEOUT_S=5.0`
+(Section 5b) -- each latches `FAILED` directly (guard
 stays DISARMED throughout, since arming never happened). Internal
 cutoff `INTERNAL_ACTIVE_CUTOFF_S=6.50` (checked every 0.05 s, matching
 the node's own timer period) always fires before the verifier's hard
@@ -205,6 +261,7 @@ Stage 4.
 | Topic | Expected publishers |
 |---|---|
 | `/epuck1/state` | 1 (real `state_publisher.py`) |
+| `/epuck1/state_stage4_controller` | 1 (the supervisor; silent until `ADOPTION_CONFIRMED`, see Section 5b) |
 | `/epuck_virtual_peer/state` | 1 (`hil_virtual_peer.py`, post-release) |
 | `/hil/goal_announcement` | 1 message total |
 | `cmd_vel_stage4_raw` | 1 (`cooperative_avoider`) |

@@ -43,6 +43,7 @@ def _extract_function_source():
 def _run_harness(preamble, topic, label, extra_env=None, timeout=30):
     function_source = _extract_function_source()
     harness = f"""
+DIRECT_DISCOVERY_SPIN_TIME_S="5"
 {preamble}
 {function_source}
 require_exactly_one_publisher_via_direct_discovery "{topic}" "{label}"
@@ -63,7 +64,8 @@ class StaticContractTest(unittest.TestCase):
 
     def test_uses_no_daemon_and_spin_time(self):
         self.assertIn("--no-daemon", self.source)
-        self.assertIn("--spin-time 5", self.source)
+        self.assertIn('--spin-time "${DIRECT_DISCOVERY_SPIN_TIME_S}"', self.source)
+        self.assertIn('DIRECT_DISCOVERY_SPIN_TIME_S="5"', self.source)
 
     def test_does_not_use_or_echo_zero_fallback_in_new_function(self):
         body = _extract_function_source()

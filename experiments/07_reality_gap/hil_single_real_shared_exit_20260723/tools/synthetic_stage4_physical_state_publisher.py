@@ -38,6 +38,13 @@ def main(argv=None):
     parser.add_argument("--y-m", type=float, default=0.50)
     parser.add_argument("--yaw-rad", type=float, default=0.0)
     parser.add_argument("--rate-hz", type=float, default=20.0)
+    # Optional override for the front-distance field only, used by the
+    # controller-state-gate negative-safety integration test (Suite C)
+    # to fabricate a below-threshold obstacle reading. Defaults to None,
+    # which leaves apply_synthetic_clear_sensor_fixture's own +Inf value
+    # untouched -- every existing call site (Test D's rehearsal) is
+    # unaffected.
+    parser.add_argument("--front-distance-m", type=float, default=None)
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
     rclpy.init(args=[])
@@ -65,6 +72,8 @@ def main(argv=None):
         # implicit 0.0 which decide_local_obstacle() would read as an
         # obstacle at zero range) -- not a new fixture invented here.
         apply_synthetic_clear_sensor_fixture(msg)
+        if args.front_distance_m is not None:
+            msg.front_distance_m = args.front_distance_m
         pub.publish(msg)
 
     node.create_timer(1.0 / args.rate_hz, tick)

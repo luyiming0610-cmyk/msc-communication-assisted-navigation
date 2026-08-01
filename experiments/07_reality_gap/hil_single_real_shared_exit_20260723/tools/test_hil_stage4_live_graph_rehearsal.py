@@ -48,6 +48,13 @@ REHEARSAL_ROS_DOMAIN_ID = "93"  # fixed, reserved: distinct from Stage 3 (91) an
 NAMESPACE = "/pytest_stage4_live"
 
 PHYSICAL_STATE_TOPIC = f"{NAMESPACE}/epuck1_state"
+# Adoption-controlled private own-state gate (RUN_ID
+# stage4_20260731_190139 correction): the real, unmodified
+# cooperative_avoider's own-state subscription is remapped exclusively
+# to this supervisor-owned topic, never to PHYSICAL_STATE_TOPIC
+# directly -- the supervisor forwards canonical state onto it only
+# after ADOPTION_CONFIRMED.
+CONTROLLER_STATE_TOPIC = f"{NAMESPACE}/epuck1_state_controller"
 VIRTUAL_STATE_TOPIC = f"{NAMESPACE}/virtual_peer_state"
 GOAL_ANNOUNCEMENT_TOPIC = f"{NAMESPACE}/goal_announcement"
 # hil_goal_announcement_evidence.py hardcodes this topic name (it is not
@@ -263,7 +270,7 @@ class Stage4LiveGraphRehearsalTest(unittest.TestCase):
             # has ever been received, which was always true here since
             # the adapter published on a private namespaced topic that
             # cooperative_avoider was never actually subscribed to.
-            "-r", f"state:={PHYSICAL_STATE_TOPIC}",
+            "-r", f"state:={CONTROLLER_STATE_TOPIC}",
             "-r", f"nav_intent:={NAMESPACE}/nav_intent",
             "-p", "robot_id:=1", "-p", "armed:=true",
             "-p", "enable_peer_avoidance:=false", "-p", "enable_dynamic_heading:=true",
@@ -300,6 +307,7 @@ class Stage4LiveGraphRehearsalTest(unittest.TestCase):
             "--arm-topic", ARM_TOPIC,
             "--virtual-scout-released-topic", RELEASE_TOPIC,
             "--physical-state-topic", PHYSICAL_STATE_TOPIC,
+            "--controller-state-topic", CONTROLLER_STATE_TOPIC,
             "--physical-state-timeout-s", "0.5",
             "--evidence-path", str(evidence_path),
             "--operator-approval-token", approval_token,
@@ -392,6 +400,20 @@ class Stage4LiveGraphRehearsalTest(unittest.TestCase):
         self.assertIn("DISARM_PUBLISHED", events)
         self.assertIn("LATCHED_COMPLETE", events)
         self.assertEqual(len([e for e in events if e == "ARM_PUBLISHED"]), 1)
+
+        # Adoption-controlled private own-state gate (Test D, full
+        # isolated graph): the real cooperative_avoider only reaches
+        # ACTIVE at all here because the supervisor forwarded canonical
+        # state onto CONTROLLER_STATE_TOPIC after ADOPTION_CONFIRMED --
+        # proves the whole gate/forward/consume chain end-to-end with
+        # the real, unmodified controller (no rogue/synthetic stand-in).
+        self.assertIn("CONTROLLER_STATE_GATE_OPENED", events)
+        self.assertIn("FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED", events)
+        gate_opened_idx = events.index("CONTROLLER_STATE_GATE_OPENED")
+        adoption_confirmed_idx = events.index("ADOPTION_CONFIRMED")
+        first_forward_idx = events.index("FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED")
+        self.assertLessEqual(adoption_confirmed_idx, gate_opened_idx)
+        self.assertLess(gate_opened_idx, first_forward_idx)
 
     def test_2_supervisor_killed_during_active_guard_reaches_zero(self):
         evidence_path = self.evidence_dir / "supervisor_evidence.jsonl"

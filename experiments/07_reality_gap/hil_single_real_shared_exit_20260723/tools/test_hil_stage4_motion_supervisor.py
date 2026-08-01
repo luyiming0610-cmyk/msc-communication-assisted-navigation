@@ -27,6 +27,7 @@ from hil_stage4_motion_supervisor import (  # noqa: E402
     ADOPTION_EVIDENCE_MAX_AGE_S,
     ADOPTION_EVIDENCE_SCHEMA_VERSION,
     ADOPTION_TIMEOUT_S,
+    CONTROLLER_STATE_FORWARD_TIMEOUT_S,
     EVENT_TIMEOUT_S,
     HARD_MAX_NONZERO_DURATION_S,
     INTERNAL_ACTIVE_CUTOFF_S,
@@ -131,6 +132,7 @@ class ParameterFreezeTest(unittest.TestCase):
         self.assertEqual(EVENT_TIMEOUT_S, 30.0)
         self.assertEqual(ADOPTION_TIMEOUT_S, 5.0)
         self.assertEqual(RAW_COMMAND_TIMEOUT_S, 5.0)
+        self.assertEqual(CONTROLLER_STATE_FORWARD_TIMEOUT_S, 5.0)
         self.assertEqual(INTERNAL_ACTIVE_CUTOFF_S, 6.50)
         self.assertEqual(HARD_MAX_NONZERO_DURATION_S, 6.67)
         self.assertLess(INTERNAL_ACTIVE_CUTOFF_S, HARD_MAX_NONZERO_DURATION_S)
@@ -243,6 +245,59 @@ class Stage4RehearsalMatrixTest(unittest.TestCase):
         self.assertEqual(sup.state, State.FAILED)
         self.assertEqual(sup.terminal_reason, "EVENT_TIMEOUT")
 
+    def test_02b_derived_pre_release_timeout_survives_34s_readiness_window(self):
+        """Direct proof for blocking issue 1: the real production
+        readiness sequence (5 direct-discovery calls + 2 inter-component
+        sleeps -- see run_hil_stage4_trial.sh's
+        READINESS_OVERHEAD_MARGIN_S=34.0) can legitimately take up to
+        34s between approval and release, exceeding the fixed
+        EVENT_TIMEOUT_S=30.0 default. A supervisor constructed with the
+        production-derived pre_release_timeout_s (44.0 =
+        READINESS_OVERHEAD_MARGIN_S + a 10.0s margin) must NOT latch
+        FAILED at any point during that 34s+ window, and release must
+        still succeed normally once it arrives."""
+        clock = FakeClock()
+        derived_pre_release_timeout_s = 34.0 + 10.0  # matches run_hil_stage4_trial.sh's own derivation
+        sup = make_supervisor(clock, pre_release_timeout_s=derived_pre_release_timeout_s)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+
+        # Advance in ticks (as the real 0.05s timer would) across the
+        # full 34s+ readiness window, asserting non-terminal throughout.
+        for _ in range(35):
+            clock.advance(1.0)
+            sup.tick_timeouts()
+            self.assertNotEqual(sup.state, State.FAILED, f"must not time out during the readiness window at t={clock()}")
+
+        sup.on_virtual_scout_released()
+        self.assertEqual(sup.state, State.WAITING_FOR_EVENT)
+        self.assertNotEqual(sup.state, State.FAILED)
+        events = [e.event for e in sup.evidence]
+        self.assertIn("VIRTUAL_SCOUT_RELEASED", events)
+        self.assertNotIn("LATCHED_FAILED", events)
+
+    def test_02c_derived_pre_release_timeout_still_fails_closed_if_release_never_occurs(self):
+        """The other half of blocking issue 1's requirement: widening
+        the bound must not turn it into an unbounded wait -- if release
+        never happens at all, the supervisor must still latch FAILED
+        once the (larger, but still finite) derived bound elapses."""
+        clock = FakeClock()
+        derived_pre_release_timeout_s = 34.0 + 10.0
+        sup = make_supervisor(clock, pre_release_timeout_s=derived_pre_release_timeout_s)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+        clock.advance(derived_pre_release_timeout_s + 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "EVENT_TIMEOUT")
+
+    def test_02d_pre_release_timeout_defaults_to_event_timeout_s_unchanged(self):
+        """Every existing caller that does not explicitly override
+        pre_release_timeout_s (i.e. every test/usage predating this
+        fix) must see EXACTLY the old behavior -- the default value
+        must equal EVENT_TIMEOUT_S itself, not a different literal."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        self.assertEqual(sup.pre_release_timeout_s, EVENT_TIMEOUT_S)
+
     def test_03_adoption_timeout(self):
         # Updated for the two-phase timeout split: ADOPTION_TIMEOUT_S
         # now starts from the announcement being observed, not from
@@ -319,6 +374,13 @@ class Stage4RehearsalMatrixTest(unittest.TestCase):
         self.assertNotIn("ACTIVE_OPENED", events)
 
     def test_04_raw_command_timeout(self):
+        # Updated for the first-fresh-forward anchor (RUN_ID
+        # stage4_20260731_190139): RAW_COMMAND_TIMEOUT_S is now measured
+        # from FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED, not
+        # from ADOPTION_CONFIRMED itself, so this scenario forwards a
+        # controller state right after adoption (as the real rclpy
+        # wrapper would, once the gate opens) before letting the clock
+        # run out the existing 5.0s budget.
         clock = FakeClock()
         sup = make_supervisor(clock)
         sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
@@ -327,10 +389,39 @@ class Stage4RehearsalMatrixTest(unittest.TestCase):
             make_adoption_payload(adapter_receive_time_s=sup._now(), adapter_receive_monotonic_s=sup._now()),
             now_ros_s=sup._now(),
         )
+        sup.on_controller_state_forwarded(True, {
+            "sequence": 1, "stamp_s": sup._now(), "validity_flags": 7,
+            "front_distance_m": 1.0, "left_distance_m": 1.0, "right_distance_m": 1.0,
+            "x_m": 0.30, "y_m": 0.50, "yaw_rad": 0.0,
+        })
         clock.advance(RAW_COMMAND_TIMEOUT_S + 0.01)
         sup.tick_timeouts()
         self.assertEqual(sup.state, State.FAILED)
         self.assertEqual(sup.terminal_reason, "RAW_COMMAND_TIMEOUT")
+
+    def test_04b_raw_command_timeout_never_fires_before_any_state_forwarded(self):
+        """Direct proof of the RUN_ID stage4_20260731_190139 fix: without
+        a fresh forwarded controller state, RAW_COMMAND_TIMEOUT
+        specifically (as opposed to CONTROLLER_STATE_FORWARD_TIMEOUT,
+        the review-gap fix covering exactly this no-forward case) must
+        never be the reported reason -- the controller cannot be
+        blamed for not producing a command from a state it never
+        received. The supervisor is still bounded overall by
+        CONTROLLER_STATE_FORWARD_TIMEOUT_S (see
+        ControllerStateGateTest.test_a9), which is the correct,
+        distinct terminal reason for this exact scenario."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+        sup.on_virtual_scout_released()
+        sup.on_adoption_evidence(
+            make_adoption_payload(adapter_receive_time_s=sup._now(), adapter_receive_monotonic_s=sup._now()),
+            now_ros_s=sup._now(),
+        )
+        clock.advance(RAW_COMMAND_TIMEOUT_S * 10)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "CONTROLLER_STATE_FORWARD_TIMEOUT")
 
     def test_05_zero_raw_command_does_not_arm(self):
         # A zero (or below-min) linear command is not a safety violation
@@ -339,10 +430,17 @@ class Stage4RehearsalMatrixTest(unittest.TestCase):
         # ticks right after adoption (observed live in the ROS-graph
         # rehearsal). It must never arm, but it does not by itself latch
         # FAILED -- the supervisor keeps waiting, bounded by
-        # RAW_COMMAND_TIMEOUT_S.
+        # RAW_COMMAND_TIMEOUT_S (now anchored on first-fresh-forward, see
+        # test_04 above -- this scenario forwards a controller state
+        # right after adoption to exercise that budget explicitly).
         clock = FakeClock()
         sup = make_supervisor(clock)
         drive_to_adoption(sup)
+        sup.on_controller_state_forwarded(True, {
+            "sequence": 1, "stamp_s": sup._now(), "validity_flags": 7,
+            "front_distance_m": 1.0, "left_distance_m": 1.0, "right_distance_m": 1.0,
+            "x_m": 0.30, "y_m": 0.50, "yaw_rad": 0.0,
+        })
         sup.on_raw_twist(TwistSample(0.0, 0, 0, 0, 0, 0))
         self.assertEqual(sup.state, State.VALIDATING_RAW_COMMAND)
         self.assertNotIn("ARM_PUBLISHED", [e.event for e in sup.evidence])
@@ -805,6 +903,316 @@ class AdoptionEvidenceSchemaValidationTest(unittest.TestCase):
         sup.on_raw_twist(forward_twist())
         self.assertEqual(sup.state, State.FAILED)
         self.assertEqual(sup.terminal_reason, "RAW_COMMAND_NOT_STRICTLY_AFTER_ADOPTION")
+
+
+class ControllerStateGateTest(unittest.TestCase):
+    """Test Suite A (pure engine/unit) for the adoption-controlled
+    private own-state gate, added to correct RUN_ID
+    stage4_20260731_190139: cooperative_avoider's own local-sensor
+    encounter-avoidance state machine latched a real FAILSAFE before
+    adoption because it had live own-state input the entire time it
+    ran. The fix keeps cooperative_avoider subscribed only to a private,
+    supervisor-owned topic that stays silent (nothing published, ever)
+    until ADOPTION_CONFIRMED opens the gate -- these tests exercise the
+    engine-side gate/forwarding state machine directly, with no ROS."""
+
+    def _summary(self, **overrides) -> dict:
+        base = dict(
+            sequence=42, stamp_s=1000.0, validity_flags=7,
+            front_distance_m=0.5, left_distance_m=0.4, right_distance_m=0.45,
+            x_m=0.31, y_m=0.50, yaw_rad=0.01,
+        )
+        base.update(overrides)
+        return base
+
+    def test_a1_gate_closed_and_no_activity_for_80s_before_adoption(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock, scout_announcement_timeout_s=200.0)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+        sup.on_virtual_scout_released()
+        for _ in range(80):
+            clock.advance(1.0)
+            sup.tick_timeouts()
+        self.assertEqual(sup.state, State.WAITING_FOR_EVENT)
+        self.assertFalse(sup.controller_state_gate_open)
+        self.assertFalse(sup.controller_state_first_forwarded)
+        events = [e.event for e in sup.evidence]
+        self.assertIn("CONTROLLER_STATE_GATE_CLOSED", events)
+        self.assertNotIn("CONTROLLER_STATE_GATE_OPENED", events)
+        self.assertNotIn("FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED", events)
+        self.assertNotIn("ARM_PUBLISHED", events)
+        self.assertNotIn("ACTIVE_OPENED", events)
+        self.assertNotIn("VALID_RAW_COMMAND_ACCEPTED", events)
+
+    def test_a2_announcement_observed_alone_does_not_open_gate(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock, scout_announcement_timeout_s=200.0)
+        sup.approve("APPROVED_FOR_SINGLE_HIL_EVENT=YES")
+        sup.on_virtual_scout_released()
+        sup.on_goal_announcement_observed()
+        self.assertFalse(sup.controller_state_gate_open)
+        clock.advance(ADOPTION_TIMEOUT_S - 0.01)
+        sup.tick_timeouts()
+        self.assertFalse(sup.controller_state_gate_open)
+        self.assertEqual(sup.state, State.WAITING_FOR_EVENT)
+
+    def test_a3_adoption_opens_gate_exactly_once(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        self.assertTrue(sup.controller_state_gate_open)
+        opened_at = sup.controller_state_gate_opened_at_ros_s
+        self.assertIsNotNone(opened_at)
+        events = [e.event for e in sup.evidence]
+        self.assertEqual(events.count("CONTROLLER_STATE_GATE_OPENED"), 1)
+
+        # A second (duplicate/malformed) adoption-evidence message must
+        # not reopen, reset, or move the gate's opened-at timestamp.
+        sup.on_adoption_evidence(
+            make_adoption_payload(
+                source_sequence=999999, accepted=False, duplicate=True,
+                adapter_receive_time_s=sup._now(), adapter_receive_monotonic_s=sup._now(),
+            ),
+            now_ros_s=sup._now(),
+        )
+        self.assertEqual([e.event for e in sup.evidence].count("CONTROLLER_STATE_GATE_OPENED"), 1)
+        self.assertEqual(sup.controller_state_gate_opened_at_ros_s, opened_at)
+
+    def test_a4_stale_cached_state_is_not_forwarded(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        opened_at = sup.controller_state_gate_opened_at_ros_s
+        sup.on_controller_state_forwarding_rejected_stale(
+            f"msg_stamp_s={opened_at - 5.0} predates gate_opened_at_ros_s={opened_at}"
+        )
+        self.assertFalse(sup.controller_state_first_forwarded)
+        events = [e.event for e in sup.evidence]
+        self.assertIn("CONTROLLER_STATE_FORWARDING_REJECTED_STALE", events)
+        self.assertNotIn("FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED", events)
+
+    def test_a5_first_fresh_state_forwarded_field_for_field_unchanged(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        summary = self._summary(stamp_s=sup._now())
+        sup.on_controller_state_forwarded(True, summary)
+        self.assertTrue(sup.controller_state_first_forwarded)
+        forwarded = [e for e in sup.evidence if e.event == "FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED"]
+        self.assertEqual(len(forwarded), 1)
+        self.assertEqual(forwarded[0].raw, summary, "must preserve every real field unchanged, no invented values")
+
+    def test_a6_duplicate_adoption_or_announcement_does_not_reopen_or_replay(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        summary = self._summary(stamp_s=sup._now())
+        sup.on_controller_state_forwarded(True, summary)
+        first_forward_count = [e.event for e in sup.evidence].count(
+            "FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED"
+        )
+        self.assertEqual(first_forward_count, 1)
+
+        # Duplicate announcement observation must not reset/replay anything.
+        sup.on_goal_announcement_observed()
+        # A second is_first=True call (should not happen in real wiring,
+        # but the engine's own idempotency must hold regardless) must not
+        # produce a second FIRST_FRESH_* record.
+        sup.on_controller_state_forwarded(True, self._summary(sequence=43, stamp_s=sup._now()))
+        self.assertEqual(
+            [e.event for e in sup.evidence].count("FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED"),
+            1,
+        )
+
+    def test_a7_raw_command_timeout_anchored_on_first_fresh_forward_not_adoption(self):
+        """Direct proof of the RUN_ID stage4_20260731_190139 fix: the
+        supervisor must NOT time out (via RAW_COMMAND_TIMEOUT
+        specifically) relative to ADOPTION_CONFIRMED while no
+        controller state has been forwarded yet, and must start
+        counting only from the first fresh forward. (The no-forward
+        case is itself bounded by the separate
+        CONTROLLER_STATE_FORWARD_TIMEOUT_S, so this waits just inside
+        that budget, not past it -- see test_a9 for the no-forward-ever
+        case.)"""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        # Still inside CONTROLLER_STATE_FORWARD_TIMEOUT_S's own budget,
+        # but already past what the OLD (adoption-anchored)
+        # RAW_COMMAND_TIMEOUT_S would have allowed -- proves the anchor
+        # moved, without also tripping the separate forward-timeout.
+        clock.advance(CONTROLLER_STATE_FORWARD_TIMEOUT_S - 0.05)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.VALIDATING_RAW_COMMAND, "must not time out before any state is forwarded")
+
+        sup.on_controller_state_forwarded(True, self._summary(stamp_s=sup._now()))
+        clock.advance(RAW_COMMAND_TIMEOUT_S - 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.VALIDATING_RAW_COMMAND, "must still be within budget measured from first forward")
+
+        clock.advance(0.02)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "RAW_COMMAND_TIMEOUT")
+
+    def test_a8_loss_or_staleness_after_opening_still_fails_closed(self):
+        """Once the gate is open, a message that predates gate-open (a
+        stale/cached read reaching the callback late) must still be
+        rejected rather than forwarded -- the gate being OPEN is not by
+        itself sufficient to forward; freshness is checked every time."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        opened_at = sup.controller_state_gate_opened_at_ros_s
+        sup.on_controller_state_forwarded(True, self._summary(stamp_s=sup._now()))
+        self.assertTrue(sup.controller_state_first_forwarded)
+
+        # A late-arriving, older-than-gate-open message must still be
+        # classified as rejected-stale by the caller (the rclpy wrapper
+        # performs this comparison; here we exercise the engine's own
+        # hook directly) and must not be treated as a fresh forward.
+        sup.on_controller_state_forwarding_rejected_stale(
+            f"msg_stamp_s={opened_at - 1.0} predates gate_opened_at_ros_s={opened_at}"
+        )
+        events = [e.event for e in sup.evidence]
+        self.assertGreaterEqual(events.count("CONTROLLER_STATE_FORWARDING_REJECTED_STALE"), 1)
+
+    # -- CONTROLLER_STATE_FORWARD_TIMEOUT_S (review-gap fix) -------------
+
+    def test_a9_no_state_ever_arrives_fails_controller_state_forward_timeout(self):
+        """Direct proof of the review-gap fix: if adoption succeeds and
+        the gate opens but no fresh canonical state is EVER forwarded,
+        the supervisor must not wait forever -- it must latch
+        CONTROLLER_STATE_FORWARD_TIMEOUT, never ACTIVE, never
+        RAW_COMMAND_TIMEOUT (which never starts without a first
+        forward)."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        self.assertTrue(sup.controller_state_gate_open)
+        self.assertFalse(sup.controller_state_first_forwarded)
+
+        clock.advance(CONTROLLER_STATE_FORWARD_TIMEOUT_S + 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "CONTROLLER_STATE_FORWARD_TIMEOUT")
+        events = [e.event for e in sup.evidence]
+        self.assertNotIn("ARM_PUBLISHED", events)
+        self.assertNotIn("ACTIVE_OPENED", events)
+
+    def test_a10_only_stale_pre_gate_state_arrives_still_fails_forward_timeout(self):
+        """A late/cached pre-gate message being correctly rejected as
+        stale must not be mistaken for a fresh forward -- the
+        CONTROLLER_STATE_FORWARD_TIMEOUT_S budget must still expire."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        opened_at = sup.controller_state_gate_opened_at_ros_s
+        sup.on_controller_state_forwarding_rejected_stale(
+            f"msg_stamp_s={opened_at - 5.0} predates gate_opened_at_ros_s={opened_at}"
+        )
+        self.assertFalse(sup.controller_state_first_forwarded)
+
+        clock.advance(CONTROLLER_STATE_FORWARD_TIMEOUT_S + 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "CONTROLLER_STATE_FORWARD_TIMEOUT")
+
+    def test_a11_fresh_state_just_inside_bound_does_not_time_out(self):
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        clock.advance(CONTROLLER_STATE_FORWARD_TIMEOUT_S - 0.05)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.VALIDATING_RAW_COMMAND, "must not time out before the bound")
+        sup.on_controller_state_forwarded(True, self._summary(stamp_s=sup._now()))
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.VALIDATING_RAW_COMMAND)
+        self.assertTrue(sup.controller_state_first_forwarded)
+        # RAW_COMMAND_TIMEOUT_S now starts fresh from this forward, not
+        # from CONTROLLER_STATE_FORWARD_TIMEOUT_S's own near-expired budget.
+        clock.advance(RAW_COMMAND_TIMEOUT_S - 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.VALIDATING_RAW_COMMAND)
+
+    def test_a12_fresh_state_arrives_after_bound_already_latched_failed(self):
+        """Once CONTROLLER_STATE_FORWARD_TIMEOUT has already latched
+        FAILED, a subsequently-arriving fresh state must not be able to
+        revive the state machine -- FAILED is terminal."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        clock.advance(CONTROLLER_STATE_FORWARD_TIMEOUT_S + 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+
+        sup.on_controller_state_forwarded(True, self._summary(stamp_s=sup._now()))
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "CONTROLLER_STATE_FORWARD_TIMEOUT")
+
+    def test_a13_canonical_state_stale_after_initial_forwarding_still_bounded(self):
+        """Once one fresh state has been forwarded (RAW_COMMAND_TIMEOUT_S
+        now anchored), canonical state going stale/absent immediately
+        afterward (no further forwards) must still be bounded -- by the
+        EXISTING RAW_COMMAND_TIMEOUT_S, not by a second
+        CONTROLLER_STATE_FORWARD_TIMEOUT_S (which only ever applies
+        before the first forward)."""
+        clock = FakeClock()
+        sup = make_supervisor(clock)
+        drive_to_adoption(sup)
+        sup.on_controller_state_forwarded(True, self._summary(stamp_s=sup._now()))
+        # No further forwards arrive (canonical state assumed stale/gone).
+        clock.advance(RAW_COMMAND_TIMEOUT_S + 0.01)
+        sup.tick_timeouts()
+        self.assertEqual(sup.state, State.FAILED)
+        self.assertEqual(sup.terminal_reason, "RAW_COMMAND_TIMEOUT")
+
+
+class ControllerStateGateSourceStaticTest(unittest.TestCase):
+    """Source-level contract checks for the gate that are cheaper and
+    more direct to prove by inspection than by driving the engine."""
+
+    def setUp(self):
+        self.source = Path(__file__).resolve().parent.joinpath(
+            "hil_stage4_motion_supervisor.py"
+        ).read_text(encoding="utf-8")
+
+    def test_gate_opens_only_from_within_adoption_confirmed_success_path(self):
+        adoption_confirmed_idx = self.source.index('self._record("ADOPTION_CONFIRMED"')
+        open_gate_call_idxs = [
+            i for i in range(len(self.source))
+            if self.source.startswith("self._open_controller_state_gate()", i)
+        ]
+        self.assertEqual(len(open_gate_call_idxs), 1, "the gate must be opened from exactly one call site")
+        self.assertGreater(
+            open_gate_call_idxs[0], adoption_confirmed_idx,
+            "the gate-open call must come after ADOPTION_CONFIRMED is recorded, not before or elsewhere",
+        )
+
+    def test_open_controller_state_gate_is_idempotent_monotonic(self):
+        body_start = self.source.index("def _open_controller_state_gate")
+        body_end = self.source.index("def on_controller_state_forwarded")
+        body = self.source[body_start:body_end]
+        self.assertIn("if self._controller_state_gate_open:", body)
+        self.assertIn("return", body)
+
+    def test_raw_command_timeout_anchored_on_first_fresh_forward_not_adopted_at(self):
+        tick_start = self.source.index("def tick_timeouts")
+        tick_body = self.source[tick_start:]
+        raw_timeout_branch_idx = tick_body.index('State.VALIDATING_RAW_COMMAND:')
+        # Slice just this elif branch (up to the next "elif" at the same
+        # method level) so the assertion cannot accidentally match the
+        # ACTIVE branch or some other unrelated part of the method.
+        next_elif_idx = tick_body.index("elif self.state == State.ACTIVE:", raw_timeout_branch_idx)
+        branch_text = tick_body[raw_timeout_branch_idx:next_elif_idx]
+        self.assertIn("_first_fresh_forwarded_at_s", branch_text)
+        self.assertNotIn("_adopted_at_s", branch_text)
+
+    def test_no_forwarding_or_gate_open_call_anywhere_before_adoption_confirmed_record(self):
+        adoption_confirmed_idx = self.source.index('self._record("ADOPTION_CONFIRMED"')
+        prefix = self.source[:adoption_confirmed_idx]
+        self.assertNotIn("_open_controller_state_gate()", prefix)
 
 
 class GuardZeroesAfterSupervisorDeathTest(unittest.TestCase):

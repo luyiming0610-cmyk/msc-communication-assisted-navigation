@@ -74,6 +74,17 @@ HEARTBEAT_TIMEOUT_S="0.5"
 PHYSICAL_STATE_TIMEOUT_S="0.5"
 REQUIRED_VALIDITY_FLAGS="7"
 
+# Named so require_exactly_one_publisher_via_direct_discovery (below)
+# and the max_runtime_s derivation (below) never duplicate/drift this
+# value independently.
+DIRECT_DISCOVERY_SPIN_TIME_S="5"
+# Empirically observed overhead of a --no-daemon --spin-time N call
+# beyond N itself (process startup/exit): spin-time 2 -> 3.01s elapsed,
+# spin-time 5 -> 5.99s elapsed, consistently ~1.0s -- read-only
+# diagnostic performed offline before the direct-discovery fix (commit
+# fbdf571), not re-measured here.
+DIRECT_DISCOVERY_OVERHEAD_S="1.0"
+
 # Derived (not arbitrary) bound on how long the supervisor waits, after
 # virtual-scout release, for the GoalAnnouncement itself to be
 # transmitted -- computed from the same frozen start/target/speed/
@@ -113,15 +124,119 @@ print(nominal_s + ${SCOUT_ANNOUNCEMENT_MARGIN_S})
 # code/algorithm change) to comfortably exceed every timeout it must
 # survive: scout-announcement + adoption + raw-command + the hard
 # physical-motion maximum, plus a documented margin.
+#
+# Demonstrated arithmetic correction (RUN_ID stage4_20260731_190139
+# review): max_runtime_s counts from cooperative_avoider's OWN launch,
+# which happens right after approval -- BEFORE virtual-scout release,
+# separated by the step-7 readiness checks (3 direct-discovery calls,
+# each up to DIRECT_DISCOVERY_SPIN_TIME_S+DIRECT_DISCOVERY_OVERHEAD_S,
+# plus 2 inter-component "sleep 2" gaps). SCOUT_ANNOUNCEMENT_TIMEOUT_S
+# is itself measured from RELEASE, not from cooperative_avoider's own
+# launch -- the prior formula omitted this approval-to-release gap
+# entirely, leaving materially less margin than it appeared to have.
+# Review gap (post-gate-review, blocking issue 2): this was left at 3
+# when the private-state-gate work added 2 MORE post-start
+# direct-discovery calls (controller_private_state_post_start,
+# real_state_still_sole_canonical_post_start) at step 7 without
+# updating this count -- silently understating
+# READINESS_OVERHEAD_MARGIN_S by 12.0s. Now 5, matching the actual
+# number of require_exactly_one_publisher_via_direct_discovery call
+# sites between cooperative_avoider's launch and virtual-scout release
+# exactly (verified by test_readiness_check_count_matches_actual_calls
+# in test_run_hil_stage4_trial_static.py, which fails if a future call
+# is added/removed here without updating this constant).
+READINESS_CHECK_COUNT="5"
+INTER_COMPONENT_SLEEP_S="2.0"
+INTER_COMPONENT_SLEEP_COUNT="2"
+READINESS_OVERHEAD_MARGIN_S="$(python3 -c "
+print(${READINESS_CHECK_COUNT} * (${DIRECT_DISCOVERY_SPIN_TIME_S} + ${DIRECT_DISCOVERY_OVERHEAD_S}) + ${INTER_COMPONENT_SLEEP_COUNT} * ${INTER_COMPONENT_SLEEP_S})
+")"
+
+# BEGIN_NUMERIC_PARAM_VALIDATION_FUNCTION
+# Review gap (blocking issue 4): these safety-relevant numeric ROS
+# parameters are computed via command substitution while `set -e` is
+# NOT enabled (see the top of this script) -- a silently-failing
+# `python3 -c` would otherwise leave an empty or malformed value
+# flowing straight into a `-p param:=...` / `--flag ...` argument.
+# One small, reusable, fail-closed check: nonempty, finite (no
+# nan/inf), numeric, and strictly positive, or abort before starting
+# any Stage 4 component.
+_require_valid_positive_finite_number() {
+    local name="$1" value="$2"
+    if [[ -z "${value}" ]]; then
+        echo "BLOCKED: ${name} is empty (command substitution may have failed) -- refusing to start any Stage 4 component." >&2
+        exit 1
+    fi
+    case "${value}" in
+        *[Nn][Aa][Nn]*|*[Ii][Nn][Ff]*)
+            echo "BLOCKED: ${name}=${value} is NaN/Inf -- refusing to start any Stage 4 component." >&2
+            exit 1
+            ;;
+    esac
+    if ! [[ "${value}" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+        echo "BLOCKED: ${name}=${value} is not a valid finite decimal number -- refusing to start any Stage 4 component." >&2
+        exit 1
+    fi
+    if ! awk -v v="${value}" 'BEGIN { exit !(v > 0) }'; then
+        echo "BLOCKED: ${name}=${value} is not strictly positive -- refusing to start any Stage 4 component." >&2
+        exit 1
+    fi
+    echo "validated_numeric_param(${name})=${value}"
+}
+# END_NUMERIC_PARAM_VALIDATION_FUNCTION
+
+_require_valid_positive_finite_number "SCOUT_ANNOUNCEMENT_TIMEOUT_S" "${SCOUT_ANNOUNCEMENT_TIMEOUT_S}"
+_require_valid_positive_finite_number "READINESS_OVERHEAD_MARGIN_S" "${READINESS_OVERHEAD_MARGIN_S}"
+
+# Review gap (blocking issue 1): before this fix, the ONLY bound on
+# "approval accepted but virtual-scout release never happens" was the
+# fixed EVENT_TIMEOUT_S=30.0 (hil_stage4_motion_supervisor.py) -- but
+# the real readiness sequence between the supervisor's own approve()
+# and the orchestrator's actual release (sleep 2 + 5 direct-discovery
+# calls, see step 7 below) can take up to
+# READINESS_OVERHEAD_MARGIN_S=34.0s, exceeding the fixed 30.0s bound.
+# Derived (never an arbitrary larger literal) from the SAME
+# READINESS_OVERHEAD_MARGIN_S term used for COOP_MAX_RUNTIME_S below,
+# plus a fixed documented margin -- passed explicitly to the supervisor
+# via --pre-release-timeout-s, overriding its own EVENT_TIMEOUT_S
+# default. scout-announcement/adoption/controller-state-forward/
+# raw-command timeouts are untouched; this only bounds the
+# approval-to-release window.
+PRE_RELEASE_TIMEOUT_MARGIN_S="10.0"
+PRE_RELEASE_TIMEOUT_S="$(python3 -c "
+print(${READINESS_OVERHEAD_MARGIN_S} + ${PRE_RELEASE_TIMEOUT_MARGIN_S})
+")"
+_require_valid_positive_finite_number "PRE_RELEASE_TIMEOUT_S" "${PRE_RELEASE_TIMEOUT_S}"
+# Review-gap fix (adoption-controlled private own-state gate,
+# post-RUN_ID stage4_20260731_190139 review): CONTROLLER_STATE_FORWARD_TIMEOUT_S
+# bounds a NEW sequential wait phase this outer runtime budget did not
+# previously need to cover -- ADOPTION_CONFIRMED opening the gate does
+# not itself guarantee an immediate forward; up to
+# CONTROLLER_STATE_FORWARD_TIMEOUT_S may elapse before the first fresh
+# forward (or before failing closed) -- included additively, not as a
+# replacement for RAW_COMMAND_TIMEOUT_S, since the two phases are
+# sequential and non-overlapping (forward-timeout only applies before
+# the first forward; raw-command-timeout only starts after it).
 COOP_MAX_RUNTIME_MARGIN_S="20.0"
 COOP_MAX_RUNTIME_S="$(python3 -c "
 import sys
 sys.path.insert(0, '${SCRIPT_DIR}')
-from hil_stage4_motion_supervisor import ADOPTION_TIMEOUT_S, RAW_COMMAND_TIMEOUT_S, HARD_MAX_NONZERO_DURATION_S
-print(${SCOUT_ANNOUNCEMENT_TIMEOUT_S} + ADOPTION_TIMEOUT_S + RAW_COMMAND_TIMEOUT_S + HARD_MAX_NONZERO_DURATION_S + ${COOP_MAX_RUNTIME_MARGIN_S})
+from hil_stage4_motion_supervisor import ADOPTION_TIMEOUT_S, CONTROLLER_STATE_FORWARD_TIMEOUT_S, RAW_COMMAND_TIMEOUT_S, HARD_MAX_NONZERO_DURATION_S
+print(${READINESS_OVERHEAD_MARGIN_S} + ${SCOUT_ANNOUNCEMENT_TIMEOUT_S} + ADOPTION_TIMEOUT_S + CONTROLLER_STATE_FORWARD_TIMEOUT_S + RAW_COMMAND_TIMEOUT_S + HARD_MAX_NONZERO_DURATION_S + ${COOP_MAX_RUNTIME_MARGIN_S})
 ")"
+_require_valid_positive_finite_number "COOP_MAX_RUNTIME_S" "${COOP_MAX_RUNTIME_S}"
 
 PHYSICAL_STATE_TOPIC="/epuck1/state"
+# Adoption-controlled private own-state gate (RUN_ID
+# stage4_20260731_190139 correction): cooperative_avoider's own-state
+# subscription is remapped to THIS topic, never to PHYSICAL_STATE_TOPIC
+# directly. The supervisor is the sole publisher here, and publishes
+# nothing on it until ADOPTION_CONFIRMED -- silence is the intended
+# fail-closed condition (cooperative_avoider's own, unmodified
+# staleness check already keeps it in SAFE_STOP_STALE with no
+# messages). The recorder and the supervisor's own readiness checks
+# continue reading PHYSICAL_STATE_TOPIC directly, unchanged.
+CONTROLLER_PRIVATE_STATE_TOPIC="/epuck1/state_stage4_controller"
 VIRTUAL_STATE_TOPIC="/epuck_virtual_peer/state"
 GOAL_ANNOUNCEMENT_TOPIC="/hil/goal_announcement"
 ADOPTION_EVIDENCE_TOPIC="/hil/adoption_evidence"
@@ -365,7 +480,7 @@ EOF
                 abs_topic="/${abs_topic}"
             fi
             local output
-            if ! output="$(LC_ALL=C ros2 topic info --no-daemon --spin-time 5 "${abs_topic}" 2>&1)"; then
+            if ! output="$(LC_ALL=C ros2 topic info --no-daemon --spin-time "${DIRECT_DISCOVERY_SPIN_TIME_S}" "${abs_topic}" 2>&1)"; then
                 echo "readiness_check(${label}) topic=${abs_topic} decision=FAIL reason=QUERY_ERROR output=${output}"
                 return 1
             fi
@@ -390,7 +505,8 @@ EOF
         # END_DIRECT_DISCOVERY_FUNCTION
 
         for topic in "${RAW_CMD_VEL_TOPIC}" "${UPSTREAM_CMD_VEL_TOPIC}" "${GUARDED_CMD_VEL_TOPIC}" \
-                     "${GOAL_ANNOUNCEMENT_TOPIC}" "${ADOPTION_EVIDENCE_TOPIC}" "${VIRTUAL_STATE_TOPIC}"; do
+                     "${GOAL_ANNOUNCEMENT_TOPIC}" "${ADOPTION_EVIDENCE_TOPIC}" "${VIRTUAL_STATE_TOPIC}" \
+                     "${CONTROLLER_PRIVATE_STATE_TOPIC}"; do
             count="$(publisher_count "${topic}")"
             echo "preflight_publisher_count(${topic})=${count}"
             if [[ "${count}" != "0" ]]; then
@@ -646,15 +762,19 @@ PYEOF
         # minutes (placement, safety confirmations) -- launching this
         # early silently consumed most of that budget before the real
         # motion window could ever occur (RUN_ID stage4_20260731_182129).
-        echo "[$(date -Iseconds)] step 4b: starting cooperative_avoider.py (real robot's frozen controller, UNMODIFIED, output remapped to ${RAW_CMD_VEL_TOPIC}, max_runtime_s=${COOP_MAX_RUNTIME_S})"
+        echo "[$(date -Iseconds)] step 4b: starting cooperative_avoider.py (real robot's frozen controller, UNMODIFIED, output remapped to ${RAW_CMD_VEL_TOPIC}, own-state remapped to the private gate topic ${CONTROLLER_PRIVATE_STATE_TOPIC}, max_runtime_s=${COOP_MAX_RUNTIME_S})"
         # cooperative_avoider.py subscribes to two HARDCODED relative
         # topic names -- "state" and "nav_intent" (no parameters exist
         # for either) -- caught by the Stage 4 live ROS-graph rehearsal:
         # without these remaps the node never sees the real robot's pose
         # or NavigationIntent, and stays at zero forever, silently.
+        # "state" is remapped to the SUPERVISOR'S private gate topic,
+        # never to the canonical PHYSICAL_STATE_TOPIC directly -- this
+        # is the exclusive path: cooperative_avoider structurally has no
+        # subscription to canonical own-state at all.
         ros2 run epuck2_comm cooperative_avoider --ros-args \
             -r cmd_vel:="${RAW_CMD_VEL_TOPIC}" \
-            -r state:="${PHYSICAL_STATE_TOPIC}" \
+            -r state:="${CONTROLLER_PRIVATE_STATE_TOPIC}" \
             -r nav_intent:=/epuck1/nav_intent \
             -p robot_id:=1 -p armed:=true \
             -p enable_peer_avoidance:=true -p enable_dynamic_heading:=true \
@@ -675,6 +795,7 @@ PYEOF
             --adoption-evidence-topic "${ADOPTION_EVIDENCE_TOPIC}" \
             --goal-announcement-topic "${GOAL_ANNOUNCEMENT_TOPIC}" \
             --scout-announcement-timeout-s "${SCOUT_ANNOUNCEMENT_TIMEOUT_S}" \
+            --pre-release-timeout-s "${PRE_RELEASE_TIMEOUT_S}" \
             --raw-cmd-vel-topic "${RAW_CMD_VEL_TOPIC}" \
             --guarded-output-topic "${UPSTREAM_CMD_VEL_TOPIC}" \
             --arm-topic "${ARM_TOPIC}" \
@@ -682,6 +803,7 @@ PYEOF
             --physical-state-topic "${PHYSICAL_STATE_TOPIC}" \
             --physical-state-timeout-s "${PHYSICAL_STATE_TIMEOUT_S}" \
             --required-validity-flags "${REQUIRED_VALIDITY_FLAGS}" \
+            --controller-state-topic "${CONTROLLER_PRIVATE_STATE_TOPIC}" \
             --evidence-path "${OUT_DIR}/stage4_supervisor_evidence.jsonl" \
             --operator-approval-token "APPROVED_FOR_SINGLE_HIL_EVENT=YES" \
             > "${OUT_DIR}/hil_stage4_motion_supervisor.log" 2>&1 &
@@ -701,6 +823,14 @@ PYEOF
         fi
         if ! require_exactly_one_publisher_via_direct_discovery "${RAW_CMD_VEL_TOPIC}" "cooperative_avoider_post_start"; then
             echo "ABORT: expected exactly 1 publisher on ${RAW_CMD_VEL_TOPIC} (cooperative_avoider) after start (bounded direct-discovery query failed)." >&2
+            exit 1
+        fi
+        if ! require_exactly_one_publisher_via_direct_discovery "${CONTROLLER_PRIVATE_STATE_TOPIC}" "controller_private_state_post_start"; then
+            echo "ABORT: expected exactly 1 publisher on ${CONTROLLER_PRIVATE_STATE_TOPIC} (the supervisor's own private gate) after start (bounded direct-discovery query failed)." >&2
+            exit 1
+        fi
+        if ! require_exactly_one_publisher_via_direct_discovery "${PHYSICAL_STATE_TOPIC}" "real_state_still_sole_canonical_post_start"; then
+            echo "ABORT: expected exactly 1 publisher on ${PHYSICAL_STATE_TOPIC} (the real state_publisher) still the sole canonical source after the private gate started (bounded direct-discovery query failed)." >&2
             exit 1
         fi
 
