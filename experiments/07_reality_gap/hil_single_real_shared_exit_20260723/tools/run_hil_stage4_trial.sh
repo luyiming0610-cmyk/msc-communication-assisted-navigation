@@ -887,7 +887,6 @@ PYEOF
         SOURCE_IDENTITY_MANIFEST="${EVIDENCE_ROOT}/source_identity_manifest.json"
         RESIDUAL_CHECK="${EVIDENCE_ROOT}/residual_check.json"
         PI_COMMAND_AUDIT="${EVIDENCE_ROOT}/pi_command_audit.jsonl"
-        PI_VERIFIER_VERDICT="${EVIDENCE_ROOT}/pi_verifier_verdict.json"
         PHYSICAL_MEASUREMENTS="${EVIDENCE_ROOT}/physical_measurements.json"
         ADOPTION_EVIDENCE="${EVIDENCE_ROOT}/adoption_evidence.jsonl"
         HASH_MANIFEST="${EVIDENCE_ROOT}/SHA256SUMS.txt"
@@ -897,7 +896,7 @@ PYEOF
         REQUIRED_FILES=(
             "${SUPERVISOR_EVIDENCE}" "${WSL_COMMAND_EVIDENCE}" "${PID_MANIFEST}"
             "${LAUNCHER_STATUS}" "${SOURCE_IDENTITY_MANIFEST}" "${RESIDUAL_CHECK}"
-            "${PI_COMMAND_AUDIT}" "${PI_VERIFIER_VERDICT}" "${PHYSICAL_MEASUREMENTS}"
+            "${PI_COMMAND_AUDIT}" "${PHYSICAL_MEASUREMENTS}"
         )
         MISSING=0
         for f in "${REQUIRED_FILES[@]}"; do
@@ -967,10 +966,8 @@ with open('${SUPERVISOR_EVIDENCE}', encoding='utf-8') as f_in, open('${ADOPTION_
             --adoption-evidence-path "${ADOPTION_EVIDENCE}" \
             --wsl-command-evidence-path "${WSL_COMMAND_EVIDENCE}" \
             --pi-command-audit-path "${PI_COMMAND_AUDIT}" \
-            --pi-verifier-verdict-path "${PI_VERIFIER_VERDICT}" \
             --source-identity-manifest-path "${SOURCE_IDENTITY_MANIFEST}" \
             --launcher-status-path "${LAUNCHER_STATUS}" \
-            --bridge-status-path "${WSL_COMMAND_EVIDENCE}" \
             --report-path "${POST_RUN_VERIFICATION}"
         VERIFIER_EXIT=$?
 

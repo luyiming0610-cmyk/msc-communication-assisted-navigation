@@ -14,6 +14,7 @@ import os
 import re
 import signal
 import subprocess
+import tempfile
 import threading
 import time
 import unittest
@@ -78,6 +79,7 @@ class DummyProcessCleanupTest(unittest.TestCase):
     """Harmless dummy processes only -- no ROS, no hardware, no pkill."""
 
     def setUp(self):
+        self.tmp_dir = tempfile.TemporaryDirectory()
         self.tmp_manifest = None
         self.spawned_pids = []
 
@@ -90,8 +92,7 @@ class DummyProcessCleanupTest(unittest.TestCase):
                     os.kill(pid, signal.SIGKILL)
                 except OSError:
                     pass
-        if self.tmp_manifest and self.tmp_manifest.exists():
-            self.tmp_manifest.unlink()
+        self.tmp_dir.cleanup()
 
     def _run_shutdown(self, manifest_path, reap_proc=None):
         """A real orchestrator shell reaps its own backgrounded children
@@ -136,7 +137,7 @@ class DummyProcessCleanupTest(unittest.TestCase):
             "time.sleep(1000)",
         ])
         self.spawned_pids.append(proc.pid)
-        self.tmp_manifest = Path(f"/tmp/test_shutdown_manifest_{os.getpid()}_plain.json")
+        self.tmp_manifest = Path(self.tmp_dir.name) / "pid_manifest.json"
         self.tmp_manifest.write_text(json.dumps({
             "processes": {"hil_cmd_vel_guard": {"pid": proc.pid, "sha256": ""}}
         }))
@@ -145,6 +146,9 @@ class DummyProcessCleanupTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("PROCESSES_CLEAN", result.stdout)
+        residual = json.loads((Path(self.tmp_dir.name) / "residual_check.json").read_text())
+        self.assertEqual(residual["residual_process_check"], "CLEAN")
+        self.assertEqual(residual["shutdown_results"]["hil_cmd_vel_guard"]["status"], "STOPPED")
         self.assertTrue(_wait_reaped(proc, timeout_s=1.0), "plain dummy process was not cleaned up")
 
     def test_wrapper_ignoring_sigint_with_responsive_child_is_fully_cleaned_up(self):
@@ -188,7 +192,7 @@ class DummyProcessCleanupTest(unittest.TestCase):
         self.assertIsNotNone(child_pid, "dummy wrapper never spawned its child in time")
         self.spawned_pids.append(child_pid)
 
-        self.tmp_manifest = Path(f"/tmp/test_shutdown_manifest_{os.getpid()}_wrapper.json")
+        self.tmp_manifest = Path(self.tmp_dir.name) / "pid_manifest.json"
         self.tmp_manifest.write_text(json.dumps({
             "processes": {"cooperative_avoider": {"pid": proc.pid, "sha256": ""}}
         }))

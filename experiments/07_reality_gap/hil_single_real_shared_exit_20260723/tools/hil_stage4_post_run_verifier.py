@@ -26,8 +26,10 @@ conflated with it.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
+import math
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -40,6 +42,8 @@ from typing import Optional
 INTERNAL_ACTIVE_CUTOFF_S = 6.50
 HARD_MAX_NONZERO_DURATION_S = 6.67
 ZERO_TOLERANCE = 1e-6
+MAX_LINEAR_COMMAND_MPS = 0.015
+COMMAND_LIMIT_TOLERANCE = 1e-6
 
 # Physical-mode-only frozen thresholds (design review revision 2/3).
 NOMINAL_FORWARD_DISPLACEMENT_M = 0.10
@@ -204,9 +208,28 @@ def verify_disarm_and_terminal_state(records: list) -> tuple[bool, list, str]:
             reasons.append("COMPLETE_RUN_MUST_HAVE_EXACTLY_ONE_DISARM_PUBLISHED")
         if _count(records, "ZERO_PUBLISHED") < 1:
             reasons.append("COMPLETE_RUN_MUST_HAVE_AT_LEAST_ONE_ZERO_PUBLISHED")
-        tail = _events(records)[-4:]
-        if tail != ["ZERO_BURST_OPENED", "ZERO_PUBLISHED", "DISARM_PUBLISHED", "LATCHED_COMPLETE"]:
-            reasons.append(f"UNEXPECTED_TERMINAL_TAIL_SEQUENCE:{tail}")
+        complete_indices = [i for i, r in enumerate(records) if r.get("event") == "LATCHED_COMPLETE"]
+        if len(complete_indices) != 1:
+            reasons.append(f"EXPECTED_EXACTLY_ONE_LATCHED_COMPLETE_GOT_{len(complete_indices)}")
+        else:
+            complete_idx = complete_indices[0]
+            terminal_sequence = _events(records[max(0, complete_idx - 3):complete_idx + 1])
+            expected = ["ZERO_BURST_OPENED", "ZERO_PUBLISHED", "DISARM_PUBLISHED", "LATCHED_COMPLETE"]
+            if terminal_sequence != expected:
+                reasons.append(f"UNEXPECTED_TERMINAL_SEQUENCE:{terminal_sequence}")
+
+            # The supervisor intentionally remains alive until explicit cleanup.
+            # Controller traffic received after it has latched COMPLETE is recorded
+            # as a safe ignored tail.  It is not part of the terminal transition,
+            # but no other post-terminal record is allowed.
+            for i, record in enumerate(records[complete_idx + 1:], start=complete_idx + 1):
+                if not (
+                    record.get("state") == "COMPLETE"
+                    and record.get("event") == "RAW_TWIST_IGNORED"
+                    and record.get("reason") == "state=COMPLETE"
+                    and record.get("raw") is None
+                ):
+                    reasons.append(f"UNSAFE_OR_UNEXPECTED_POST_TERMINAL_RECORD:{i}:{record.get('event')}")
 
     return (len(reasons) == 0, reasons, terminal_state or "")
 
@@ -308,6 +331,245 @@ def _require_parseable_jsonl(path: Optional[Path], label: str) -> tuple[bool, li
     return True, []
 
 
+def _finite_float(value, *, label: str, row_number: int, reasons: list) -> Optional[float]:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        reasons.append(f"{label}_ROW_{row_number}_NON_NUMERIC:{value!r}")
+        return None
+    if not math.isfinite(parsed):
+        reasons.append(f"{label}_ROW_{row_number}_NON_FINITE:{value!r}")
+        return None
+    return parsed
+
+
+def verify_wsl_command_evidence(path: Path) -> tuple[bool, list, list, dict]:
+    """Validate the recorder CSV directly.
+
+    Returns (structurally_valid, invalid_reasons, behavioural_reasons,
+    metrics).  Structural failures make evidence unusable; bounded-command,
+    connectivity, or safe-tail failures are real behavioural failures.
+    """
+    ok, invalid_reasons = _require_nonempty_file(path, "WSL_COMMAND_EVIDENCE")
+    if not ok:
+        return False, invalid_reasons, [], {}
+
+    required_columns = {
+        "local_time_ns", "local_monotonic_ns", "topic", "linear_x", "angular_z",
+        "arm_state", "bridge_connected", "bridge_rx_count",
+    }
+    try:
+        with path.open(encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            fieldnames = set(reader.fieldnames or [])
+            missing = sorted(required_columns - fieldnames)
+            if missing:
+                return False, [f"WSL_COMMAND_EVIDENCE_MISSING_COLUMNS:{missing}"], [], {}
+            rows = list(reader)
+    except (OSError, csv.Error, UnicodeError) as exc:
+        return False, [f"WSL_COMMAND_EVIDENCE_UNPARSEABLE:{type(exc).__name__}"], [], {}
+    if not rows:
+        return False, ["WSL_COMMAND_EVIDENCE_NO_DATA_ROWS"], [], {}
+
+    monotonic_values = []
+    command_rows = {"cmd_vel": [], "cmd_vel_unguarded": []}
+    arm_states = []
+    bridge_rows = []
+    for row_number, row in enumerate(rows, start=2):
+        monotonic = _finite_float(
+            row.get("local_monotonic_ns"), label="WSL_LOCAL_MONOTONIC_NS",
+            row_number=row_number, reasons=invalid_reasons,
+        )
+        if monotonic is not None:
+            monotonic_values.append(monotonic)
+        topic = row.get("topic")
+        if topic in command_rows:
+            linear = _finite_float(
+                row.get("linear_x"), label=f"WSL_{topic}_LINEAR_X",
+                row_number=row_number, reasons=invalid_reasons,
+            )
+            angular = _finite_float(
+                row.get("angular_z"), label=f"WSL_{topic}_ANGULAR_Z",
+                row_number=row_number, reasons=invalid_reasons,
+            )
+            if linear is not None and angular is not None:
+                command_rows[topic].append((linear, angular))
+        elif topic == "/hil_guard/arm":
+            arm_states.append(row.get("arm_state"))
+        elif topic == "/epuck_bridge/status":
+            rx_count = _finite_float(
+                row.get("bridge_rx_count"), label="WSL_BRIDGE_RX_COUNT",
+                row_number=row_number, reasons=invalid_reasons,
+            )
+            if rx_count is not None:
+                bridge_rows.append((row.get("bridge_connected"), rx_count))
+
+    if monotonic_values != sorted(monotonic_values):
+        invalid_reasons.append("WSL_COMMAND_EVIDENCE_NOT_MONOTONICALLY_ORDERED")
+    if invalid_reasons:
+        return False, invalid_reasons, [], {}
+
+    behavioural_reasons = []
+    metrics = {}
+    for topic, values in command_rows.items():
+        metric_prefix = "guarded" if topic == "cmd_vel" else "unguarded"
+        if not values:
+            behavioural_reasons.append(f"WSL_MISSING_{topic.upper()}_ROWS")
+            continue
+        nonzero_count = sum(abs(linear) > ZERO_TOLERANCE or abs(angular) > ZERO_TOLERANCE for linear, angular in values)
+        max_linear = max(abs(linear) for linear, _ in values)
+        max_angular = max(abs(angular) for _, angular in values)
+        metrics[f"wsl_{metric_prefix}_nonzero_count"] = nonzero_count
+        metrics[f"wsl_{metric_prefix}_max_abs_linear_mps"] = max_linear
+        metrics[f"wsl_{metric_prefix}_max_abs_angular_rps"] = max_angular
+        if nonzero_count == 0:
+            behavioural_reasons.append(f"WSL_{topic.upper()}_HAS_NO_NONZERO_MOTION")
+        if max_linear > MAX_LINEAR_COMMAND_MPS + COMMAND_LIMIT_TOLERANCE:
+            behavioural_reasons.append(f"WSL_{topic.upper()}_LINEAR_LIMIT_EXCEEDED:{max_linear}")
+        if max_angular > ZERO_TOLERANCE:
+            behavioural_reasons.append(f"WSL_{topic.upper()}_NONZERO_ANGULAR:{max_angular}")
+        if abs(values[-1][0]) > ZERO_TOLERANCE or abs(values[-1][1]) > ZERO_TOLERANCE:
+            behavioural_reasons.append(f"WSL_{topic.upper()}_FINAL_COMMAND_NOT_ZERO:{values[-1]}")
+
+    metrics["wsl_arm_states"] = arm_states
+    if arm_states != ["True", "False"]:
+        behavioural_reasons.append(f"WSL_UNEXPECTED_ARM_SEQUENCE:{arm_states}")
+    if not bridge_rows:
+        behavioural_reasons.append("WSL_BRIDGE_STATUS_ROWS_MISSING")
+    else:
+        metrics["wsl_bridge_status_count"] = len(bridge_rows)
+        metrics["wsl_bridge_rx_first"] = bridge_rows[0][1]
+        metrics["wsl_bridge_rx_last"] = bridge_rows[-1][1]
+        if any(connected != "True" for connected, _ in bridge_rows):
+            behavioural_reasons.append("WSL_BRIDGE_REPORTED_DISCONNECTED")
+        rx_counts = [count for _, count in bridge_rows]
+        if rx_counts != sorted(rx_counts):
+            behavioural_reasons.append("WSL_BRIDGE_RX_COUNT_DECREASED")
+
+    return True, [], behavioural_reasons, metrics
+
+
+def verify_pi_command_audit(path: Path) -> tuple[bool, list, list, dict]:
+    """Validate Pi command-audit JSONL without a legacy zero-only verdict."""
+    ok, invalid_reasons = _require_nonempty_file(path, "PI_COMMAND_AUDIT")
+    if not ok:
+        return False, invalid_reasons, [], {}
+
+    received = []
+    applied = []
+    events = []
+    try:
+        with path.open(encoding="utf-8") as handle:
+            for row_number, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                if not isinstance(record, dict) or not isinstance(record.get("event"), str):
+                    invalid_reasons.append(f"PI_COMMAND_AUDIT_ROW_{row_number}_MISSING_EVENT")
+                    continue
+                event = record["event"]
+                events.append(event)
+                if event == "command_received":
+                    linear = _finite_float(
+                        record.get("linear_applied_clamped"), label="PI_RECEIVED_LINEAR",
+                        row_number=row_number, reasons=invalid_reasons,
+                    )
+                    angular = _finite_float(
+                        record.get("angular_applied_clamped"), label="PI_RECEIVED_ANGULAR",
+                        row_number=row_number, reasons=invalid_reasons,
+                    )
+                    seq = record.get("seq")
+                    if not isinstance(seq, int):
+                        invalid_reasons.append(f"PI_COMMAND_AUDIT_ROW_{row_number}_INVALID_SEQUENCE:{seq!r}")
+                    if linear is not None and angular is not None and isinstance(seq, int):
+                        received.append((linear, angular, seq, bool(record.get("clamped"))))
+                elif event == "tick_applied":
+                    linear = _finite_float(
+                        record.get("linear"), label="PI_APPLIED_LINEAR",
+                        row_number=row_number, reasons=invalid_reasons,
+                    )
+                    angular = _finite_float(
+                        record.get("angular"), label="PI_APPLIED_ANGULAR",
+                        row_number=row_number, reasons=invalid_reasons,
+                    )
+                    if linear is not None and angular is not None:
+                        applied.append((linear, angular, record.get("zero_reason")))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        invalid_reasons.append(f"PI_COMMAND_AUDIT_UNPARSEABLE:{type(exc).__name__}")
+    if invalid_reasons:
+        return False, invalid_reasons, [], {}
+
+    behavioural_reasons = []
+    metrics = {
+        "pi_audit_record_count": len(events),
+        "pi_command_received_count": len(received),
+        "pi_tick_applied_count": len(applied),
+    }
+    if not received:
+        behavioural_reasons.append("PI_COMMAND_RECEIVED_ROWS_MISSING")
+    if not applied:
+        behavioural_reasons.append("PI_TICK_APPLIED_ROWS_MISSING")
+
+    for label, values in (("RECEIVED", received), ("APPLIED", applied)):
+        if not values:
+            continue
+        nonzero_count = sum(abs(row[0]) > ZERO_TOLERANCE or abs(row[1]) > ZERO_TOLERANCE for row in values)
+        max_linear = max(abs(row[0]) for row in values)
+        max_angular = max(abs(row[1]) for row in values)
+        metrics[f"pi_{label.lower()}_nonzero_count"] = nonzero_count
+        metrics[f"pi_{label.lower()}_max_abs_linear_mps"] = max_linear
+        metrics[f"pi_{label.lower()}_max_abs_angular_rps"] = max_angular
+        if nonzero_count == 0:
+            behavioural_reasons.append(f"PI_{label}_HAS_NO_NONZERO_MOTION")
+        if max_linear > MAX_LINEAR_COMMAND_MPS + COMMAND_LIMIT_TOLERANCE:
+            behavioural_reasons.append(f"PI_{label}_LINEAR_LIMIT_EXCEEDED:{max_linear}")
+        if max_angular > ZERO_TOLERANCE:
+            behavioural_reasons.append(f"PI_{label}_NONZERO_ANGULAR:{max_angular}")
+        if abs(values[-1][0]) > ZERO_TOLERANCE or abs(values[-1][1]) > ZERO_TOLERANCE:
+            behavioural_reasons.append(f"PI_{label}_FINAL_COMMAND_NOT_ZERO:{values[-1][:2]}")
+
+    if received:
+        sequences = [row[2] for row in received]
+        if any(current <= previous for previous, current in zip(sequences, sequences[1:])):
+            behavioural_reasons.append("PI_COMMAND_SEQUENCE_NOT_STRICTLY_INCREASING")
+        if any(row[3] for row in received):
+            behavioural_reasons.append("PI_COMMAND_WAS_CLAMPED")
+    if events.count("socket_connected") < 1:
+        behavioural_reasons.append("PI_SOCKET_CONNECTED_EVENT_MISSING")
+    if events.count("socket_disconnected") < 1:
+        behavioural_reasons.append("PI_SOCKET_DISCONNECTED_EVENT_MISSING")
+    if applied and applied[-1][2] != "DISCONNECTED":
+        behavioural_reasons.append(f"PI_FINAL_ZERO_REASON_NOT_DISCONNECTED:{applied[-1][2]!r}")
+
+    return True, [], behavioural_reasons, metrics
+
+
+PHYSICAL_MEASUREMENT_FIELDS = (
+    "manual_forward_displacement_m", "corridor_crossed", "stop_line_crossed",
+    "min_boundary_clearance_m", "unexpected_rotation", "unexpected_direction",
+    "unexpected_sound", "unexpected_acceleration", "run_interrupted",
+)
+
+
+def verify_physical_measurement_schema(measurements) -> tuple[bool, list]:
+    if not isinstance(measurements, dict):
+        return False, ["PHYSICAL_MEASUREMENTS_ROOT_MUST_BE_OBJECT"]
+    missing = [key for key in PHYSICAL_MEASUREMENT_FIELDS if key not in measurements]
+    if missing:
+        return False, [f"MISSING_PHYSICAL_MEASUREMENT_FIELDS:{missing}"]
+    reasons = []
+    for key in ("manual_forward_displacement_m", "min_boundary_clearance_m"):
+        value = measurements[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            reasons.append(f"PHYSICAL_MEASUREMENT_MUST_BE_FINITE_NUMBER:{key}:{value!r}")
+    for key in PHYSICAL_MEASUREMENT_FIELDS:
+        if key in ("manual_forward_displacement_m", "min_boundary_clearance_m"):
+            continue
+        if not isinstance(measurements[key], bool):
+            reasons.append(f"PHYSICAL_MEASUREMENT_MUST_BE_BOOLEAN:{key}:{measurements[key]!r}")
+    return len(reasons) == 0, reasons
+
+
 def verify_physical_measurements(measurements: dict) -> tuple[bool, list]:
     """measurements: explicit operator-supplied dict (never inferred).
     Required keys: manual_forward_displacement_m, corridor_crossed,
@@ -315,16 +577,7 @@ def verify_physical_measurements(measurements: dict) -> tuple[bool, list]:
     unexpected_direction, unexpected_sound, unexpected_acceleration,
     run_interrupted. Missing key => INVALID_EVIDENCE-worthy failure,
     never defaulted to a passing value."""
-    required_keys = (
-        "manual_forward_displacement_m", "corridor_crossed", "stop_line_crossed",
-        "min_boundary_clearance_m", "unexpected_rotation", "unexpected_direction",
-        "unexpected_sound", "unexpected_acceleration", "run_interrupted",
-    )
     reasons = []
-    missing = [k for k in required_keys if k not in measurements]
-    if missing:
-        return False, [f"MISSING_PHYSICAL_MEASUREMENT_FIELDS:{missing}"]
-
     displacement = measurements["manual_forward_displacement_m"]
     if not (MIN_MANUAL_FORWARD_DISPLACEMENT_M <= displacement <= HARD_MAX_FORWARD_DISPLACEMENT_M):
         reasons.append(
@@ -354,10 +607,8 @@ PHYSICAL_MODE_REQUIRED_PATH_ARGS = (
     "adoption_evidence_path",
     "wsl_command_evidence_path",
     "pi_command_audit_path",
-    "pi_verifier_verdict_path",
     "source_identity_manifest_path",
     "launcher_status_path",
-    "bridge_status_path",
 )
 
 
@@ -373,10 +624,8 @@ def run_verifier(
     adoption_evidence_path: Optional[Path] = None,
     wsl_command_evidence_path: Optional[Path] = None,
     pi_command_audit_path: Optional[Path] = None,
-    pi_verifier_verdict_path: Optional[Path] = None,
     source_identity_manifest_path: Optional[Path] = None,
     launcher_status_path: Optional[Path] = None,
-    bridge_status_path: Optional[Path] = None,
 ) -> VerifierResult:
     if mode not in ("rehearsal", "physical"):
         return VerifierResult("INVALID_EVIDENCE", [f"UNKNOWN_MODE:{mode}"])
@@ -441,10 +690,8 @@ def run_verifier(
             "adoption_evidence_path": adoption_evidence_path,
             "wsl_command_evidence_path": wsl_command_evidence_path,
             "pi_command_audit_path": pi_command_audit_path,
-            "pi_verifier_verdict_path": pi_verifier_verdict_path,
             "source_identity_manifest_path": source_identity_manifest_path,
             "launcher_status_path": launcher_status_path,
-            "bridge_status_path": bridge_status_path,
         }
         invalid_reasons = []
 
@@ -466,19 +713,21 @@ def run_verifier(
         checks["adoption_evidence_present"] = ok
         invalid_reasons += reasons
 
-        ok, reasons = _require_nonempty_file(wsl_command_evidence_path, "WSL_COMMAND_EVIDENCE")
-        checks["wsl_command_evidence_present"] = ok
+        ok, reasons, command_reasons, command_metrics = verify_wsl_command_evidence(wsl_command_evidence_path)
+        checks["wsl_command_evidence_valid"] = ok
+        checks.update(command_metrics)
         invalid_reasons += reasons
+        all_reasons += command_reasons
 
-        ok, reasons = _require_parseable_jsonl(pi_command_audit_path, "PI_COMMAND_AUDIT")
-        checks["pi_command_audit_present"] = ok
+        ok, reasons, pi_reasons, pi_metrics = verify_pi_command_audit(pi_command_audit_path)
+        checks["pi_command_audit_valid"] = ok
+        checks.update(pi_metrics)
         invalid_reasons += reasons
+        all_reasons += pi_reasons
 
-        ok, reasons, pi_verdict = _require_parseable_json(pi_verifier_verdict_path, "PI_VERIFIER_VERDICT", required_keys=("verdict",))
-        checks["pi_verifier_verdict_present"] = ok
-        invalid_reasons += reasons
-
-        ok, reasons = _require_nonempty_file(source_identity_manifest_path, "SOURCE_IDENTITY_MANIFEST")
+        ok, reasons, source_identity = _require_parseable_json(
+            source_identity_manifest_path, "SOURCE_IDENTITY_MANIFEST", required_keys=("overall_result",),
+        )
         checks["source_identity_manifest_present"] = ok
         invalid_reasons += reasons
 
@@ -486,15 +735,15 @@ def run_verifier(
         checks["launcher_status_present"] = ok
         invalid_reasons += reasons
 
-        ok, reasons = _require_nonempty_file(bridge_status_path, "BRIDGE_STATUS")
-        checks["bridge_status_present"] = ok
-        invalid_reasons += reasons
-
         if invalid_reasons:
             return VerifierResult("INVALID_EVIDENCE", invalid_reasons, checks)
 
-        if pi_verdict is not None and pi_verdict.get("verdict") != "PASS":
-            all_reasons.append(f"PI_VERIFIER_VERDICT_NOT_PASS:{pi_verdict.get('verdict')!r}")
+        if source_identity is not None and source_identity.get("overall_result") != "PASS":
+            return VerifierResult(
+                "INVALID_EVIDENCE",
+                [f"SOURCE_IDENTITY_NOT_PASS:{source_identity.get('overall_result')!r}"],
+                checks,
+            )
 
         if not physical_measurements_path.is_file():
             return VerifierResult("INVALID_EVIDENCE", [f"PHYSICAL_MEASUREMENTS_FILE_MISSING:{physical_measurements_path}"], checks)
@@ -502,6 +751,10 @@ def run_verifier(
             measurements = json.loads(physical_measurements_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return VerifierResult("INVALID_EVIDENCE", ["PHYSICAL_MEASUREMENTS_FILE_UNPARSEABLE"], checks)
+        ok, reasons = verify_physical_measurement_schema(measurements)
+        checks["physical_measurements_schema"] = ok
+        if not ok:
+            return VerifierResult("INVALID_EVIDENCE", reasons, checks)
         ok, reasons = verify_physical_measurements(measurements)
         checks["physical_measurements"] = ok
         all_reasons += reasons
@@ -523,10 +776,8 @@ def main(argv=None):
     parser.add_argument("--adoption-evidence-path", type=Path, default=None)
     parser.add_argument("--wsl-command-evidence-path", type=Path, default=None)
     parser.add_argument("--pi-command-audit-path", type=Path, default=None)
-    parser.add_argument("--pi-verifier-verdict-path", type=Path, default=None)
     parser.add_argument("--source-identity-manifest-path", type=Path, default=None)
     parser.add_argument("--launcher-status-path", type=Path, default=None)
-    parser.add_argument("--bridge-status-path", type=Path, default=None)
     parser.add_argument("--report-path", type=Path, default=None)
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
@@ -541,10 +792,8 @@ def main(argv=None):
         adoption_evidence_path=args.adoption_evidence_path,
         wsl_command_evidence_path=args.wsl_command_evidence_path,
         pi_command_audit_path=args.pi_command_audit_path,
-        pi_verifier_verdict_path=args.pi_verifier_verdict_path,
         source_identity_manifest_path=args.source_identity_manifest_path,
         launcher_status_path=args.launcher_status_path,
-        bridge_status_path=args.bridge_status_path,
     )
 
     report = result.as_dict()

@@ -93,10 +93,9 @@ stopped last).
 13. WSL Window 3: confirm orchestrator's own cleanup ran (recorder
     stopped last, `residual_check.json` says `CLEAN`); if not, run
     `run_hil_shutdown.sh <pid_manifest.json>` manually.
-14. PowerShell Window 1: transfer the Pi command-audit JSONL and Pi
-    verifier-verdict JSON into the evidence root as
-    `pi_command_audit.jsonl` and `pi_verifier_verdict.json` (fixed
-    names `--finalize` expects). Author `physical_measurements.json`
+14. PowerShell Window 1: transfer the complete Pi command-audit JSONL
+    into the evidence root as `pi_command_audit.jsonl` (the fixed name
+    `--finalize` expects). Author `physical_measurements.json`
     (manual displacement, corridor/stop-line crossing, boundary
     clearance, unexpected-behaviour flags) in the same directory.
 15. WSL Window 3: run
@@ -111,7 +110,11 @@ stopped last).
     including `SHA256SUMS.txt` and `post_run_verification.json`,
     excluding only itself). Missing Pi evidence, measurements,
     `launcher_status.json`, `source_identity_manifest.json`, or any hash
-    mismatch is `INVALID_EVIDENCE`, never silently defaulted. Do not cite
+    mismatch is `INVALID_EVIDENCE`, never silently defaulted. The
+    physical verifier directly checks the WSL CSV and Pi JSONL for a
+    bounded nonzero straight command, zero angular command, final zero,
+    and continuous bridge evidence; no legacy zero-only Pi verdict is
+    used. Do not cite
     a PASS/FAIL result from anything other than this step's own
     `STAGE4_FINALIZE=<classification>` output.
 16. Manual physical bring-up teardown (reverse of steps 1-4), Pi

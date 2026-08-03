@@ -83,7 +83,19 @@ def _full_physical_fixture(d: Path, measurements: dict = None) -> dict:
     pid_manifest.write_text(json.dumps({"processes": {"recorder": {"pid": 1}, "guard": {"pid": 2}}}), encoding="utf-8")
 
     wsl_evidence = d / "command_evidence.csv"
-    wsl_evidence.write_text("topic,linear_x,angular_z\ncmd_vel,0.015,0.0\n", encoding="utf-8")
+    wsl_evidence.write_text(
+        "local_time_ns,local_monotonic_ns,topic,linear_x,angular_z,arm_state,bridge_connected,bridge_rx_count\n"
+        "1,1,/epuck_bridge/status,,,,True,10\n"
+        "2,2,cmd_vel,0.0,0.0,,,\n"
+        "3,3,cmd_vel_unguarded,0.015,0.0,,,\n"
+        "4,4,/hil_guard/arm,,,True,,\n"
+        "5,5,cmd_vel,0.015,0.0,,,\n"
+        "6,6,/epuck_bridge/status,,,,True,11\n"
+        "7,7,cmd_vel_unguarded,0.0,0.0,,,\n"
+        "8,8,cmd_vel,0.0,0.0,,,\n"
+        "9,9,/hil_guard/arm,,,False,,\n",
+        encoding="utf-8",
+    )
 
     hash_manifest = d / "SHA256SUMS.txt"
     wsl_hash = hashlib.sha256(wsl_evidence.read_bytes()).hexdigest()
@@ -93,19 +105,23 @@ def _full_physical_fixture(d: Path, measurements: dict = None) -> dict:
     adoption_evidence.write_text(json.dumps({"goal_id": GOAL_ID, "accepted": True}) + "\n", encoding="utf-8")
 
     pi_command_audit = d / "pi_command_audit.jsonl"
-    pi_command_audit.write_text(json.dumps({"linear_x": 0.015, "angular_z": 0.0}) + "\n", encoding="utf-8")
-
-    pi_verifier_verdict = d / "pi_verifier_verdict.json"
-    pi_verifier_verdict.write_text(json.dumps({"verdict": "PASS"}), encoding="utf-8")
+    _write_jsonl(pi_command_audit, [
+        {"event": "socket_connected"},
+        {"event": "tick_applied", "linear": 0.0, "angular": 0.0, "zero_reason": "WATCHDOG"},
+        {"event": "command_received", "linear_applied_clamped": 0.015,
+         "angular_applied_clamped": 0.0, "seq": 1, "clamped": False},
+        {"event": "tick_applied", "linear": 0.015, "angular": 0.0, "zero_reason": ""},
+        {"event": "command_received", "linear_applied_clamped": 0.0,
+         "angular_applied_clamped": 0.0, "seq": 2, "clamped": False},
+        {"event": "socket_disconnected"},
+        {"event": "tick_applied", "linear": 0.0, "angular": 0.0, "zero_reason": "DISCONNECTED"},
+    ])
 
     source_identity_manifest = d / "source_identity_manifest.json"
     source_identity_manifest.write_text(json.dumps({"overall_result": "PASS"}), encoding="utf-8")
 
     launcher_status = d / "launcher_status.json"
     launcher_status.write_text(json.dumps({"status": "COMPLETE"}), encoding="utf-8")
-
-    bridge_status = d / "bridge_status.jsonl"
-    bridge_status.write_text(json.dumps({"connected": True}) + "\n", encoding="utf-8")
 
     measurements_path = d / "measurements.json"
     measurements_path.write_text(json.dumps(measurements or _default_physical_measurements()), encoding="utf-8")
@@ -117,10 +133,8 @@ def _full_physical_fixture(d: Path, measurements: dict = None) -> dict:
         adoption_evidence_path=adoption_evidence,
         wsl_command_evidence_path=wsl_evidence,
         pi_command_audit_path=pi_command_audit,
-        pi_verifier_verdict_path=pi_verifier_verdict,
         source_identity_manifest_path=source_identity_manifest,
         launcher_status_path=launcher_status,
-        bridge_status_path=bridge_status,
         physical_measurements_path=measurements_path,
     )
 
@@ -135,8 +149,32 @@ class SuccessfulRehearsalPassTest(unittest.TestCase):
             self.assertEqual(result.reasons, [])
             self.assertEqual(result.checks["terminal_state"], "COMPLETE")
 
+    def test_safe_ignored_raw_tail_after_latched_complete_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            evidence_path = Path(d) / "evidence.jsonl"
+            records = _successful_records()
+            records.extend([
+                _record(records[-1]["monotonic_time_s"] + 0.1, "COMPLETE", "RAW_TWIST_IGNORED",
+                        reason="state=COMPLETE", raw=None),
+                _record(records[-1]["monotonic_time_s"] + 0.2, "COMPLETE", "RAW_TWIST_IGNORED",
+                        reason="state=COMPLETE", raw=None),
+            ])
+            _write_jsonl(evidence_path, records)
+            result = run_verifier(supervisor_evidence_path=evidence_path, mode="rehearsal")
+            self.assertEqual(result.classification, "PASS", result.reasons)
+
 
 class ValidBehaviouralFailureTest(unittest.TestCase):
+    def test_non_ignored_event_after_latched_complete_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            evidence_path = Path(d) / "evidence.jsonl"
+            records = _successful_records()
+            records.append(_record(records[-1]["monotonic_time_s"] + 0.1, "COMPLETE", "ARM_PUBLISHED"))
+            _write_jsonl(evidence_path, records)
+            result = run_verifier(supervisor_evidence_path=evidence_path, mode="rehearsal")
+            self.assertEqual(result.classification, "FAIL_VALID_EVIDENCE")
+            self.assertTrue(any("UNSAFE_OR_UNEXPECTED_POST_TERMINAL_RECORD" in r for r in result.reasons))
+
     def test_terminal_state_failed_is_fail_valid_evidence(self):
         with tempfile.TemporaryDirectory() as d:
             evidence_path = Path(d) / "evidence.jsonl"
@@ -278,11 +316,9 @@ class InvalidEvidenceTest(unittest.TestCase):
             _write_jsonl(evidence_path, _successful_records())
             kwargs = _full_physical_fixture(d)
             del kwargs["pi_command_audit_path"]
-            del kwargs["pi_verifier_verdict_path"]
             result = run_verifier(supervisor_evidence_path=evidence_path, mode="physical", **kwargs)
             self.assertEqual(result.classification, "INVALID_EVIDENCE")
             self.assertTrue(any("PI_COMMAND_AUDIT_PATH" in r for r in result.reasons))
-            self.assertTrue(any("PI_VERIFIER_VERDICT_PATH" in r for r in result.reasons))
 
     def test_physical_measurements_missing_field_is_invalid(self):
         with tempfile.TemporaryDirectory() as d:
@@ -294,8 +330,20 @@ class InvalidEvidenceTest(unittest.TestCase):
                 json.dumps({"manual_forward_displacement_m": 0.09}), encoding="utf-8",
             )
             result = run_verifier(supervisor_evidence_path=evidence_path, mode="physical", **kwargs)
-            self.assertEqual(result.classification, "FAIL_VALID_EVIDENCE")
+            self.assertEqual(result.classification, "INVALID_EVIDENCE")
             self.assertTrue(any("MISSING_PHYSICAL_MEASUREMENT_FIELDS" in r for r in result.reasons))
+
+    def test_physical_measurement_wrong_type_is_invalid(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            evidence_path = d / "evidence.jsonl"
+            _write_jsonl(evidence_path, _successful_records())
+            kwargs = _full_physical_fixture(d)
+            measurements = _default_physical_measurements() | {"manual_forward_displacement_m": "0.09"}
+            kwargs["physical_measurements_path"].write_text(json.dumps(measurements), encoding="utf-8")
+            result = run_verifier(supervisor_evidence_path=evidence_path, mode="physical", **kwargs)
+            self.assertEqual(result.classification, "INVALID_EVIDENCE")
+            self.assertTrue(any("MUST_BE_FINITE_NUMBER" in r for r in result.reasons))
 
 
 class PhysicalModePassTest(unittest.TestCase):
@@ -328,16 +376,32 @@ class PhysicalModePassTest(unittest.TestCase):
             self.assertEqual(result.classification, "FAIL_VALID_EVIDENCE")
             self.assertIn("CORRIDOR_CROSSED_MUST_BE_FALSE", result.reasons)
 
-    def test_physical_pi_verdict_not_pass_fails(self):
+    def test_physical_pi_nonzero_angular_command_fails(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             evidence_path = d / "evidence.jsonl"
             _write_jsonl(evidence_path, _successful_records())
             kwargs = _full_physical_fixture(d)
-            kwargs["pi_verifier_verdict_path"].write_text(json.dumps({"verdict": "FAIL"}), encoding="utf-8")
+            records = [json.loads(line) for line in kwargs["pi_command_audit_path"].read_text(encoding="utf-8").splitlines()]
+            records[2]["angular_applied_clamped"] = 0.1
+            _write_jsonl(kwargs["pi_command_audit_path"], records)
             result = run_verifier(supervisor_evidence_path=evidence_path, mode="physical", **kwargs)
             self.assertEqual(result.classification, "FAIL_VALID_EVIDENCE")
-            self.assertTrue(any("PI_VERIFIER_VERDICT_NOT_PASS" in r for r in result.reasons))
+            self.assertTrue(any("PI_RECEIVED_NONZERO_ANGULAR" in r for r in result.reasons))
+
+    def test_physical_wsl_command_limit_exceeded_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            evidence_path = d / "evidence.jsonl"
+            _write_jsonl(evidence_path, _successful_records())
+            kwargs = _full_physical_fixture(d)
+            text = kwargs["wsl_command_evidence_path"].read_text(encoding="utf-8")
+            kwargs["wsl_command_evidence_path"].write_text(text.replace("cmd_vel,0.015,0.0", "cmd_vel,0.030,0.0"), encoding="utf-8")
+            new_hash = hashlib.sha256(kwargs["wsl_command_evidence_path"].read_bytes()).hexdigest()
+            kwargs["hash_manifest_path"].write_text(f"{new_hash}  command_evidence.csv\n", encoding="utf-8")
+            result = run_verifier(supervisor_evidence_path=evidence_path, mode="physical", **kwargs)
+            self.assertEqual(result.classification, "FAIL_VALID_EVIDENCE")
+            self.assertTrue(any("LINEAR_LIMIT_EXCEEDED" in r for r in result.reasons))
 
     def test_physical_hash_mismatch_is_invalid(self):
         with tempfile.TemporaryDirectory() as d:

@@ -34,6 +34,7 @@ import os
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 
 manifest_path, order_json = sys.argv[1], sys.argv[2]
@@ -101,9 +102,33 @@ for name in order:
 for name, result in results.items():
     print(f"{name}: pid={result['pid']} status={result['status']}")
 
-any_still_alive = any(r["status"].startswith("STILL_ALIVE_AFTER_10S") for r in results.values())
-print("PROCESSES_CLEAN" if not any_still_alive else "PROCESSES_NOT_CLEAN")
-sys.exit(0 if not any_still_alive else 1)
+clean_statuses = {"STOPPED", "ALREADY_STOPPED"}
+all_clean = all(r["status"] in clean_statuses for r in results.values())
+residual_path = os.path.join(os.path.dirname(os.path.abspath(manifest_path)), "residual_check.json")
+payload = {
+    "residual_process_check": "CLEAN" if all_clean else "NOT_CLEAN",
+    "shutdown_results": results,
+}
+fd, temporary_path = tempfile.mkstemp(
+    prefix="residual_check.json.tmp.", dir=os.path.dirname(residual_path), text=True,
+)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary_path, residual_path)
+except BaseException:
+    try:
+        os.unlink(temporary_path)
+    except OSError:
+        pass
+    raise
+
+print(f"residual_check_written={residual_path}")
+print("PROCESSES_CLEAN" if all_clean else "PROCESSES_NOT_CLEAN")
+sys.exit(0 if all_clean else 1)
 PYEOF
 STATUS=$?
 

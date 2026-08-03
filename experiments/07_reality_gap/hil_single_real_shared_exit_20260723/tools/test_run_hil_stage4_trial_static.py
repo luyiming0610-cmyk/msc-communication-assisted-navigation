@@ -35,7 +35,19 @@ def _build_finalize_fixture(root: Path) -> None:
     (root / "stage4_supervisor_evidence.jsonl").write_text(
         "\n".join(json.dumps(r) for r in _SUPERVISOR_EVIDENCE_RECORDS) + "\n", encoding="utf-8",
     )
-    (root / "command_evidence.csv").write_text("topic,linear_x,angular_z\ncmd_vel,0.015,0.0\n", encoding="utf-8")
+    (root / "command_evidence.csv").write_text(
+        "local_time_ns,local_monotonic_ns,topic,linear_x,angular_z,arm_state,bridge_connected,bridge_rx_count\n"
+        "1,1,/epuck_bridge/status,,,,True,10\n"
+        "2,2,cmd_vel,0.0,0.0,,,\n"
+        "3,3,cmd_vel_unguarded,0.015,0.0,,,\n"
+        "4,4,/hil_guard/arm,,,True,,\n"
+        "5,5,cmd_vel,0.015,0.0,,,\n"
+        "6,6,/epuck_bridge/status,,,,True,11\n"
+        "7,7,cmd_vel_unguarded,0.0,0.0,,,\n"
+        "8,8,cmd_vel,0.0,0.0,,,\n"
+        "9,9,/hil_guard/arm,,,False,,\n",
+        encoding="utf-8",
+    )
     (root / "pid_manifest.json").write_text(
         json.dumps({"run_id": "fixture", "processes": {"recorder": {"pid": 111, "sha256": ""}}}), encoding="utf-8",
     )
@@ -54,8 +66,17 @@ def _build_finalize_fixture(root: Path) -> None:
         }), encoding="utf-8",
     )
     (root / "residual_check.json").write_text(json.dumps({"residual_process_check": "CLEAN"}), encoding="utf-8")
-    (root / "pi_command_audit.jsonl").write_text(json.dumps({"linear_x": 0.015, "angular_z": 0.0}) + "\n", encoding="utf-8")
-    (root / "pi_verifier_verdict.json").write_text(json.dumps({"verdict": "PASS"}), encoding="utf-8")
+    (root / "pi_command_audit.jsonl").write_text("\n".join(json.dumps(record) for record in [
+        {"event": "socket_connected"},
+        {"event": "tick_applied", "linear": 0.0, "angular": 0.0, "zero_reason": "WATCHDOG"},
+        {"event": "command_received", "linear_applied_clamped": 0.015,
+         "angular_applied_clamped": 0.0, "seq": 1, "clamped": False},
+        {"event": "tick_applied", "linear": 0.015, "angular": 0.0, "zero_reason": ""},
+        {"event": "command_received", "linear_applied_clamped": 0.0,
+         "angular_applied_clamped": 0.0, "seq": 2, "clamped": False},
+        {"event": "socket_disconnected"},
+        {"event": "tick_applied", "linear": 0.0, "angular": 0.0, "zero_reason": "DISCONNECTED"},
+    ]) + "\n", encoding="utf-8")
     (root / "physical_measurements.json").write_text(json.dumps({
         "manual_forward_displacement_m": 0.09, "corridor_crossed": False, "stop_line_crossed": False,
         "min_boundary_clearance_m": 0.20, "unexpected_rotation": False, "unexpected_direction": False,
@@ -447,7 +468,7 @@ class ScriptContractStaticTest(unittest.TestCase):
         for required_var in (
             "SUPERVISOR_EVIDENCE", "WSL_COMMAND_EVIDENCE", "PID_MANIFEST",
             "LAUNCHER_STATUS", "SOURCE_IDENTITY_MANIFEST", "RESIDUAL_CHECK",
-            "PI_COMMAND_AUDIT", "PI_VERIFIER_VERDICT", "PHYSICAL_MEASUREMENTS",
+            "PI_COMMAND_AUDIT", "PHYSICAL_MEASUREMENTS",
         ):
             self.assertIn(required_var, finalize_block)
         self.assertIn("MISSING_OR_EMPTY_REQUIRED_FILE", finalize_block)
@@ -535,7 +556,6 @@ class FinalizeModeFunctionalTest(unittest.TestCase):
             root = Path(d)
             _build_finalize_fixture(root)
             (root / "pi_command_audit.jsonl").unlink()
-            (root / "pi_verifier_verdict.json").unlink()
             result = _run(["--finalize", str(root)])
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("STAGE4_FINALIZE=INVALID_EVIDENCE", result.stdout + result.stderr)
