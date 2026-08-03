@@ -86,7 +86,7 @@ def _install_fake_modules():
     # fake as legitimate -- a fake with no __file__, or the wrong one,
     # is exactly what the dedicated identity tests below cover instead.
     fake_goal_navigator.__file__ = _REAL_GOAL_NAVIGATOR_FILE
-    fake_goal_navigator.parse_args = mock.Mock(return_value=mock.sentinel.parsed_args)
+    fake_goal_navigator.parse_args = mock.Mock(return_value=types.SimpleNamespace())
 
     class _FakeGoalNavigator:
         pass
@@ -147,7 +147,17 @@ class MainRealTimeInitializationTest(unittest.TestCase):
 
     def test_evidence_navigator_constructed_with_parsed_args(self):
         self.hil_topic_adapter.main(["--fake"])
-        self.assertIs(self.constructed_nodes[0].args, mock.sentinel.parsed_args)
+        self.assertIs(self.constructed_nodes[0].args, self.fake_goal_navigator.parse_args.return_value)
+
+    def test_field_origin_args_are_adapter_only_and_attached_to_node_args(self):
+        self.hil_topic_adapter.main([
+            "--fake", "--field-origin-x-m", "0.30",
+            "--field-origin-y-m", "0.50", "--field-origin-yaw-rad", "0.0",
+        ])
+        self.fake_goal_navigator.parse_args.assert_called_once_with(["--fake"])
+        args = self.constructed_nodes[0].args
+        self.assertEqual((args.field_origin_x_m, args.field_origin_y_m, args.field_origin_yaw_rad),
+                         (0.30, 0.50, 0.0))
 
     def test_node_destroyed_and_rclpy_shutdown_on_clean_spin_return(self):
         self.hil_topic_adapter.main(["--fake"])

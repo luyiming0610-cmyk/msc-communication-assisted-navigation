@@ -17,7 +17,9 @@ and adoption-state at THIS receiving node only.
 """
 from __future__ import annotations
 
+import copy
 import importlib
+import math
 import sys
 from pathlib import Path
 
@@ -151,6 +153,24 @@ def build_evidence_navigator_class():
         """
 
         _stage4_adoption_evidence_pub = None
+
+        def _state_cb(self, msg) -> None:
+            """Present odometry-relative state to GoalNavigator in the
+            frozen physical-field frame used by the announced goal."""
+            origin_x = float(getattr(self.args, "field_origin_x_m", 0.0))
+            origin_y = float(getattr(self.args, "field_origin_y_m", 0.0))
+            origin_yaw = float(getattr(self.args, "field_origin_yaw_rad", 0.0))
+            cos_yaw = math.cos(origin_yaw)
+            sin_yaw = math.sin(origin_yaw)
+
+            transformed = copy.deepcopy(msg)
+            transformed.x_m = origin_x + cos_yaw * float(msg.x_m) - sin_yaw * float(msg.y_m)
+            transformed.y_m = origin_y + sin_yaw * float(msg.x_m) + cos_yaw * float(msg.y_m)
+            transformed.yaw_rad = math.atan2(
+                math.sin(origin_yaw + float(msg.yaw_rad)),
+                math.cos(origin_yaw + float(msg.yaw_rad)),
+            )
+            super()._state_cb(transformed)
 
         def _announcement_cb(self, msg) -> None:
             adapter_receive_time_s = self.get_clock().now().nanoseconds / 1.0e9

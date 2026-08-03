@@ -664,12 +664,15 @@ class Suite_D2_ProductionDurationTest(unittest.TestCase):
         self._spawn("synthetic_physical_state", [
             sys.executable, str(TOOLS_DIR / "synthetic_stage4_physical_state_publisher.py"),
             "--state-topic", self.PHYSICAL_STATE_TOPIC, "--robot-id", "1",
-            "--x-m", str(self.START_X_M), "--y-m", str(self.START_Y_M), "--rate-hz", "20",
+            "--x-m", "0.0", "--y-m", "0.0", "--rate-hz", "20",
         ])
         self._spawn("hil_topic_adapter", [
             sys.executable, str(TOOLS_DIR / "hil_topic_adapter.py"),
             "--robot-id=1", f"--state-topic={self.PHYSICAL_STATE_TOPIC}",
             f"--nav-intent-topic={self.NAMESPACE}/nav_intent",
+            f"--field-origin-x-m={self.START_X_M}",
+            f"--field-origin-y-m={self.START_Y_M}",
+            "--field-origin-yaw-rad=0.0",
             "--mode=search", f"--waypoints={self.START_X_M + 0.2}:{self.START_Y_M}",
             "--waypoint-arrival-radius=0.10", "--rate-hz=2.0",
             f"--nominal-speed-mps={self.MAX_LINEAR_MPS}",
@@ -740,6 +743,9 @@ class Suite_D2_ProductionDurationTest(unittest.TestCase):
             "--virtual-scout-released-topic", self.RELEASE_TOPIC,
             "--physical-state-topic", self.PHYSICAL_STATE_TOPIC,
             "--controller-state-topic", self.CONTROLLER_STATE_TOPIC,
+            "--controller-field-origin-x-m", str(self.START_X_M),
+            "--controller-field-origin-y-m", str(self.START_Y_M),
+            "--controller-field-origin-yaw-rad", "0.0",
             "--physical-state-timeout-s", "0.5",
             "--evidence-path", str(evidence_path),
             "--operator-approval-token", "APPROVED_FOR_SINGLE_HIL_EVENT=YES",
@@ -792,6 +798,13 @@ class Suite_D2_ProductionDurationTest(unittest.TestCase):
             "ARM_PUBLISHED", "ACTIVE_OPENED", "ZERO_BURST_OPENED", "DISARM_PUBLISHED", "LATCHED_COMPLETE",
         ):
             self.assertIn(ev, milestones, f"missing required milestone: {ev}")
+
+        first_state = milestones["FIRST_FRESH_POST_ADOPTION_CONTROLLER_STATE_FORWARDED"]["raw"]
+        self.assertAlmostEqual(first_state["x_m"], self.START_X_M, places=6)
+        self.assertAlmostEqual(first_state["y_m"], self.START_Y_M, places=6)
+        self.assertAlmostEqual(first_state["yaw_rad"], 0.0, places=6)
+        first_command = milestones["VALID_RAW_COMMAND_ACCEPTED"]["raw"]
+        self.assertAlmostEqual(first_command["angular_z"], 0.0, places=6)
 
         announce_t = milestones["GOAL_ANNOUNCEMENT_OBSERVED"]["monotonic_time_s"]
         released_evidence_t = next(r for r in records if r["event"] == "VIRTUAL_SCOUT_RELEASED")["monotonic_time_s"]

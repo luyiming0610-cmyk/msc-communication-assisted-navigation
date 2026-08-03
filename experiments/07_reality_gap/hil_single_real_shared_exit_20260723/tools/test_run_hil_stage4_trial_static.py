@@ -314,6 +314,14 @@ class ScriptContractStaticTest(unittest.TestCase):
     def test_no_automatic_retry_or_second_trial(self):
         self.assertIn("does not arm anything itself and does not start a second trial", self.source)
 
+    def test_controller_private_state_uses_frozen_field_origin(self):
+        self.assertIn('--controller-field-origin-x-m "${START_POSE_X_M}"', self.source)
+        self.assertIn('--controller-field-origin-y-m "${START_POSE_Y_M}"', self.source)
+        self.assertIn('--controller-field-origin-yaw-rad 0.0', self.source)
+        self.assertIn('--field-origin-x-m="${START_POSE_X_M}"', self.source)
+        self.assertIn('--field-origin-y-m="${START_POSE_Y_M}"', self.source)
+        self.assertIn('--field-origin-yaw-rad=0.0', self.source)
+
     def test_no_pkill_or_name_based_kill_anywhere(self):
         pkill_lines = [l for l in self.code_lines if "pkill" in l or "killall" in l]
         self.assertEqual(pkill_lines, [], f"no executable line should use pkill/killall: {pkill_lines}")

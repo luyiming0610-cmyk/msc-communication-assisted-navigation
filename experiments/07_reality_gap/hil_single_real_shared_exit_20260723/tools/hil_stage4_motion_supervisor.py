@@ -42,6 +42,7 @@ pure engine and turns the engine's outputs into publishes.
 """
 from __future__ import annotations
 
+import copy
 import json
 import math
 import time
@@ -819,12 +820,14 @@ def _build_node():
                 self._flush_new_evidence()
                 self._sync_arm_disarm()
 
-            # Adoption-controlled private own-state gate: forward the
-            # canonical message, field-for-field, unmodified, onto the
-            # controller-private topic -- but only once the gate is open
+            # Adoption-controlled private own-state gate: transform the
+            # canonical odometry-relative pose into the frozen field frame,
+            # then forward it onto the controller-private topic -- but only
+            # once the gate is open
             # (ADOPTION_CONFIRMED) and only for messages that are
             # genuinely live (stamped at or after the instant the gate
-            # opened). Do not modify this message or invent values; if
+            # opened). All non-pose fields remain byte-for-byte equivalent;
+            # only x/y/yaw receive the configured rigid SE(2) transform. If
             # the gate is closed or the message predates gate-open,
             # simply do not forward -- silence is the intended
             # fail-closed condition on the private topic. Stopped
@@ -847,7 +850,25 @@ def _build_node():
                     self._flush_new_evidence()
                 else:
                     is_first = not self.engine.controller_state_first_forwarded
-                    self.controller_state_pub.publish(msg)
+                    controller_msg = copy.deepcopy(msg)
+                    origin_yaw = self.args.controller_field_origin_yaw_rad
+                    cos_yaw = math.cos(origin_yaw)
+                    sin_yaw = math.sin(origin_yaw)
+                    controller_msg.x_m = (
+                        self.args.controller_field_origin_x_m
+                        + cos_yaw * float(msg.x_m)
+                        - sin_yaw * float(msg.y_m)
+                    )
+                    controller_msg.y_m = (
+                        self.args.controller_field_origin_y_m
+                        + sin_yaw * float(msg.x_m)
+                        + cos_yaw * float(msg.y_m)
+                    )
+                    controller_msg.yaw_rad = math.atan2(
+                        math.sin(origin_yaw + float(msg.yaw_rad)),
+                        math.cos(origin_yaw + float(msg.yaw_rad)),
+                    )
+                    self.controller_state_pub.publish(controller_msg)
                     self.engine.on_controller_state_forwarded(is_first, {
                         "sequence": int(msg.sequence),
                         "stamp_s": msg_ros_s,
@@ -855,9 +876,9 @@ def _build_node():
                         "front_distance_m": float(msg.front_distance_m),
                         "left_distance_m": float(msg.left_distance_m),
                         "right_distance_m": float(msg.right_distance_m),
-                        "x_m": float(msg.x_m),
-                        "y_m": float(msg.y_m),
-                        "yaw_rad": float(msg.yaw_rad),
+                        "x_m": float(controller_msg.x_m),
+                        "y_m": float(controller_msg.y_m),
+                        "yaw_rad": float(controller_msg.yaw_rad),
                     })
                     self._flush_new_evidence()
 
@@ -924,6 +945,9 @@ def _build_node():
         parser.add_argument("--virtual-scout-released-topic", required=True)
         parser.add_argument("--physical-state-topic", required=True)
         parser.add_argument("--controller-state-topic", required=True)
+        parser.add_argument("--controller-field-origin-x-m", type=float, default=0.0)
+        parser.add_argument("--controller-field-origin-y-m", type=float, default=0.0)
+        parser.add_argument("--controller-field-origin-yaw-rad", type=float, default=0.0)
         parser.add_argument("--physical-state-timeout-s", type=float, default=0.5)
         parser.add_argument("--required-validity-flags", type=int, default=7)
         parser.add_argument("--evidence-path", required=True)

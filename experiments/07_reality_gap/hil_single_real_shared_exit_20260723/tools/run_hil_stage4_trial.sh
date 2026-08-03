@@ -709,6 +709,7 @@ PYEOF
         echo "[$(date -Iseconds)] step 3: starting hil_topic_adapter.py (goal_id=${GOAL_ID}, target=(${EXIT_CENTER_X_M},${EXIT_CENTER_Y_M}))"
         python3 "${SCRIPT_DIR}/hil_topic_adapter.py" \
             --robot-id=1 --state-topic="${PHYSICAL_STATE_TOPIC}" --nav-intent-topic=/epuck1/nav_intent \
+            --field-origin-x-m="${START_POSE_X_M}" --field-origin-y-m="${START_POSE_Y_M}" --field-origin-yaw-rad=0.0 \
             --mode=search --waypoints="${START_POSE_X_M}:${START_POSE_Y_M}" \
             --waypoint-arrival-radius=0.10 --rate-hz=2.0 \
             --nominal-speed-mps="${MAX_LINEAR_SPEED_MPS}" \
@@ -804,6 +805,9 @@ PYEOF
             --physical-state-timeout-s "${PHYSICAL_STATE_TIMEOUT_S}" \
             --required-validity-flags "${REQUIRED_VALIDITY_FLAGS}" \
             --controller-state-topic "${CONTROLLER_PRIVATE_STATE_TOPIC}" \
+            --controller-field-origin-x-m "${START_POSE_X_M}" \
+            --controller-field-origin-y-m "${START_POSE_Y_M}" \
+            --controller-field-origin-yaw-rad 0.0 \
             --evidence-path "${OUT_DIR}/stage4_supervisor_evidence.jsonl" \
             --operator-approval-token "APPROVED_FOR_SINGLE_HIL_EVENT=YES" \
             > "${OUT_DIR}/hil_stage4_motion_supervisor.log" 2>&1 &

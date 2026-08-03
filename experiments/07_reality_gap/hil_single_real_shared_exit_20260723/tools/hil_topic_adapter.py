@@ -30,7 +30,9 @@ navigation logic, wrapped, not replaced.
 """
 from __future__ import annotations
 
+import argparse
 import importlib
+import math
 import sys
 from pathlib import Path
 
@@ -133,7 +135,24 @@ def main(argv=None):
     from hil_goal_announcement_evidence import build_evidence_navigator_class
 
     goal_navigator = _import_goal_navigator()
-    args = goal_navigator.parse_args(argv if argv is not None else sys.argv[1:])
+    raw_argv = argv if argv is not None else sys.argv[1:]
+    adapter_parser = argparse.ArgumentParser(add_help=False)
+    adapter_parser.add_argument("--field-origin-x-m", type=float, default=0.0)
+    adapter_parser.add_argument("--field-origin-y-m", type=float, default=0.0)
+    adapter_parser.add_argument("--field-origin-yaw-rad", type=float, default=0.0)
+    adapter_args, navigator_argv = adapter_parser.parse_known_args(raw_argv)
+    origin_values = (
+        adapter_args.field_origin_x_m,
+        adapter_args.field_origin_y_m,
+        adapter_args.field_origin_yaw_rad,
+    )
+    if not all(math.isfinite(value) for value in origin_values):
+        raise SystemExit("field-origin values must all be finite")
+
+    args = goal_navigator.parse_args(navigator_argv)
+    args.field_origin_x_m = adapter_args.field_origin_x_m
+    args.field_origin_y_m = adapter_args.field_origin_y_m
+    args.field_origin_yaw_rad = adapter_args.field_origin_yaw_rad
     EvidenceNavigator = build_evidence_navigator_class()
 
     # Deliberately NOT use_sim_time -- see module docstring. This is the
