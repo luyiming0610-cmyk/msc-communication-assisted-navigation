@@ -57,18 +57,15 @@ remains diagnostic-only.
 - `src/epuck2_comm/epuck2_comm/{analyze_comm_performance,network_impairment,network_impairment_relay,sequence_counter,state_publisher}.py` — the tooling itself, 144/144 unit tests passing (10 sequence_counter reliability tests + this pass's stamp-semantics tests: state_publisher WAITING_FOR_CLOCK, sequence_counter live latency, relay CSV source_stamp/actual_release_time, analyze_comm_performance clock-domain-mismatch guard)
 - **peer_timeout_s audit** (read-only, frozen controller untouched): freshness is judged by callback receipt time, not `msg.stamp`; a constant delay alone does not trigger `peer_timeout` (only jitter/loss can) — an earlier draft's "0.6s delay triggers timeout" claim is retracted.
 - **network_impairment_relay audit**: scheduling uses ROS/sim time (not wall time), so delay semantics don't drift with realtime factor; jitter can cause reordering (release-time min-heap); drop/jitter fully reproducible via seeded `random.Random`.
-- **Not yet done**: the delay/loss impairment matrix (A-G conditions) — design only, submitted for user confirmation, not run
+- **Completed**: the delay/loss impairment matrix Conditions A-G and its cross-condition aggregation. Condition G retains one genuine `UNSAFE_FAILURE`; completion does not mean uniform task success.
 - Registry rows: `comm_baseline_v1_trial{1,2,3}`, `comm_baseline_native_diag_trial0{1,2}`, `objective5_comm_baseline_zero_impairment_formal_trial01`, `objective5_timestamp_latency_validation_pilot01`, `objective5_comm_baseline_zero_impairment_formal_trial02_stamp`
 
 ### 05_objective5_impairment_matrix
-Delay, loss, combined-impairment experiments (Conditions A-G). **Design
-frozen, orchestrator built and exclusionary-pilot-verified. Condition
-A's formal n=5 batch is COMPLETE: 5/5 PASS**
-(`objective5_impairment_matrix_v1_condition_A_trial01..05_attempt01`,
-see `objective5_impairment_matrix_v1_condition_A_formal_batch_summary.md`).
-**Conditions B-G have not started and will not auto-start; each
-remaining condition's Trial 01 awaits explicit user confirmation before
-it runs.**
+Delay, loss, combined-impairment experiments (Conditions A-G). **All seven
+formal condition batches and the A-G aggregation are complete.** Conditions
+A, B, D, E, and F have five included successful trials; C and G each retain
+one genuine safety-radius violation and therefore have 4/5 `SUCCESS`. The
+valid failures remain part of the evidence and must not be retried or hidden.
 - Design: `objective5_impairment_matrix_design_v1.md` (revision 2+),
   `objective5_impairment_matrix_conditions.csv`,
   `objective5_impairment_matrix_analysis_plan.md` (revision 2+).
@@ -260,6 +257,19 @@ it runs.**
   `objective5_condition_F_formal_batch_summary.{json,md}`; per-trial evidence:
   `objective5_impairment_matrix_v1_condition_F_trial0{1..5}_attempt01_analysis/`.
   Execution commit: `4fc4c516ec4dedd52e62ee570b7660328aa6bf2e`.
+- **Condition G combined-impairment formal batch: `FINAL_BATCH_PASS` for data validity (5/5 valid), mixed task outcome (4/5 SUCCESS).**
+  Five Webots trials used `delay_s=0.20`, `jitter_s=0.20` and independent
+  `drop_probability=0.10`, with no periodic outage. Trial 02 is a genuine,
+  retained `UNSAFE_FAILURE`: minimum distance 0.139669m, 0.331mm below the
+  frozen 0.14m safety radius. No attempt was excluded or retried. Realised
+  mean loss was 0.0994 (epuck1→epuck2) and 0.1044 (epuck2→epuck1); mean
+  message age was 0.2100s and 0.2092s. Reordering occurred in every trial;
+  duplicate count was zero. All evidence chains were complete and all
+  controller pairs reached completion, which is explicitly not treated as a
+  substitute for safety. Summary:
+  `objective5_condition_G_formal_batch_summary.{json,md}`; A-G aggregation:
+  `aggregation/A_to_G_aggregation_report.md`. Native-to-Windows raw evidence
+  matched 70/70 files by SHA-256.
 - Registry rows:
   `objective5_matrix_v1_conditionA_exclusionary_pilot01`,
   `objective5_matrix_v1_conditionF_exclusionary_pilot01`,
@@ -287,9 +297,10 @@ it runs.**
    `objective5_condition_E_formal_batch_20260721`.
 
 ### 06_physical_pipuck
-Two physical e-puck2/Pi-puck units, Wi-Fi validation, disconnect/recovery,
-physical avoidance demo. **First formal physical result now exists**
-(see below); the rest of this category remains diagnostic/not-started.
+Physical e-puck2/Pi-puck bringup, Wi-Fi validation, disconnect/recovery,
+and the stationary baseline. **The first formal physical result exists**
+(see below). Do not read this category heading as evidence that two physical
+robots were used in the later Stage 4 HIL run.
 - `experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/` — **`physical_single_device_zero_impairment_baseline_v1`, FINAL_BATCH_PASS (5/5 FINAL_PASS)**. This is the first *formal* physical-hardware result of the whole project (everything physical before this — bridge/driver bringup, `physical_single_device_transport_diagnostic_pilot01_attempt01`, `physical_expanded_bridge_epuckstate_integration_pilot01_attempt01` — is `DIAGNOSTIC_PHYSICAL`, not formal). Stationary (no ground motion, no controller), single e-puck2 (#5809), expanded Pi-TCP-WSL bridge + `EpuckState.msg` protocol. Five trials (`trial01_attempt02`, `trial02_attempt02`, `trial03_attempt01`, `trial04_attempt01`, `trial05_attempt01`), each its own `physical_single_device_zero_impairment_baseline_v1_trial0N_attemptNN_analysis/` directory (`final_verdict.json`, `final_summary.md`, `runtime_manifest.json`, `pi_system_metrics_window.csv`) — all 5 are one continuous driver/Pi-expanded-server/WSL-bridge session (NOT 5 independent cold starts); only `state_publisher` was FRESH-restarted per trial, everything else REUSED. Each trial's real, measured, 4-source-overlap (rosbag + WSL bridge-status CSV + WSL system-metrics CSV + batch-level Pi system-metrics CSV) window spans 309.9-311.1s, yielding a centered 240.000s main window with >=34.9s buffer on both sides.
   - **Scope note (read before citing)**: Tier A (`APPLICATION_STATE_SEQUENCE_DELIVERY_RATIO`, 1.0 in all 5 trials, 0 missing/out_of_order) is a trial-start-vs-trial-end snapshot delta of the WSL bridge's own cumulative counters — Pi-application-level state-sequence receipt completeness, NOT IP/TCP packet loss. `duplicate_count` is `NOT_MEASURABLE` in every trial (the bridge's own code doesn't separately track duplicates from generic out-of-order arrivals) and is never reported as 0. Tier B (EpuckState bag capture) ratio is 1.0 in all 5 trials at an actual measured rate of ~8.88-8.94 Hz (not any configured/nominal rate). Tier C (raw sensor topics `/odom /scan /tof /ps0-7`) run ~9.2 Hz each, 0 stall; no PDR is claimed there (no source-side sequence exists). RTT (1Hz `/epuck_bridge/status` snapshot, explicitly not a full transaction census) shows a recurring tail — roughly 20-25% of samples >50ms, the same ~20-25% >100ms, 0% >200ms — consistently across all 5 separate measurement windows; this is reported as an observed repeatable pattern only, with **no root-cause attribution**. One-way Pi-to-WSL latency is **NOT reported/NOT measured** anywhere in this batch — no NTP/chrony clock-sync procedure has been verified between the Pi and WSL. `trial01_attempt01_short_window` and `trial02_attempt01_short_window` are **excluded** diagnostic evidence (a window-timing defect in an earlier orchestrator version, `run_baseline_v1_trial.sh`, since fixed by `run_baseline_v1_trial_v2.sh`) — not part of this n=5, and their raw data lives only outside the git tree (native WSL path `/home/eamon/epuck_comm_bags/`), not under a committed analysis directory.
   - Code: orchestrator `experiments/06_physical_pipuck/single_device_bringup/tools/run_baseline_v1_trial_v2.sh`, Tier-A delta computation `tools/compute_tier_a_delta.py`, final 4-source analysis `tools/run_final_trial_analysis.py`, Pi-metrics window slicing `tools/slice_pi_metrics.py`. Relevant recent work (see git log for exact hashes): the Tier-A snapshot-delta fix, a JSON-parsing fix for `ros2 topic echo`'s trailing `---` YAML marker, and the final 4-source analysis addition.
@@ -297,8 +308,41 @@ physical avoidance demo. **First formal physical result now exists**
 - Registry rows: `physical_single_device_zero_impairment_baseline_v1`, `physical_single_device_zero_impairment_baseline_v1_short_window_excluded`
 
 ### 07_reality_gap
-Simulation-vs-physical PDR/latency/coordination-efficiency/failure-mode
-comparison. **Not started** (depends on 06).
+Hardware-in-the-loop/reality-gap preparation and bounded physical validation.
+
+- **Stage 3 offline automatic graph rehearsal: PASS.** Final successful
+  `RUN_ID=20260730_112847`; it verified the real ROS topic graph, automatic
+  announcement/adoption/gate sequence, cleanup, verifier, and evidence
+  integrity without contacting physical hardware. This is implementation
+  evidence, not a physical result.
+- **Stage 4 bounded physical HIL: PASS.** Final physical
+  `RUN_ID=stage4_20260803_144220`, with
+  `PREPARATION_ID/PI_AUDIT_ID=stage4_20260803_132544`; execution source HEAD
+  `e72e06dfc3b0d62a750fe6c88f221dec266e6c5f`. The topology was exactly
+  **one physical e-puck2 plus one software-only virtual peer**. The virtual
+  peer simulated its own travel and published a `GoalAnnouncement`; it was
+  not a second physical robot. After the real controller adopted the
+  announcement, the physical robot executed one bounded forward command
+  window (6.517s at no more than 0.015m/s, angular command 0), producing an
+  operator-estimated displacement of approximately 0.08m. Reported minimum
+  field/boundary clearance was greater than 0.50m; no corridor/stop line was
+  crossed; no emergency stop, unexpected rotation, sound, acceleration, or
+  unsafe direction occurred. Mild rightward drift was observed and retained
+  as a physical/mechanical limitation; final yaw was visually unclear.
+- The committed offline physical verifier returned `PASS` with no reasons:
+  causal ordering, timing, terminal disarm, residual-process cleanup, WSL
+  guarded/unguarded command evidence, Pi command audit, source identity, and
+  physical-measurement checks all passed. Pi evidence contained 35,563 audit
+  records; 57 received and 122 applied rows were nonzero; maximum absolute
+  linear command was 0.015m/s and maximum absolute angular command was 0.
+- Native evidence root:
+  `/home/eamon/epuck_comm_bags/hil_stage4_20260803_144220/`. Its
+  `FINAL_SHA256SUMS.txt` verifies every final evidence file and has SHA-256
+  `6867206b89336f982e40f9ecb975d527941751a463e3ad38d46f34a5b255f270`.
+- **Binding scope:** this is an `n=1` bounded virtual-to-physical event-path
+  validation. It is **not dual-physical-robot cooperation**, not evidence of
+  two real e-pucks communicating, and not yet a repeated-trial statistical
+  simulation-vs-physical PDR/latency/coordination-efficiency comparison.
 
 ### 08_paper_ready_outputs
 Currently empty — nothing has cleared the bar for "directly citable in the

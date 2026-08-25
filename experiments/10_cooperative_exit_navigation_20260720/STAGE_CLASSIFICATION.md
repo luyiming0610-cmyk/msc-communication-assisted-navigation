@@ -1,9 +1,9 @@
 # Cooperative exit-navigation study -- stage classification (2026-07-20)
 
 This document is the evidence-chain index for `10_cooperative_exit_navigation_20260720/`.
-It exists so that any future AI or human reviewer can immediately tell
-which data is preparatory system-validation evidence and which is the
-actual research result, without re-reading the full session history.
+It allows maintainers and reviewers to distinguish preparatory
+system-validation evidence from the formal research results without
+reconstructing the complete development history.
 
 ## Why this document exists
 

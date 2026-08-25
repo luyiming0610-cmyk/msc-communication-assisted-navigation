@@ -1,7 +1,6 @@
-# PROJECT_HANDOFF.md — start here
+# Project Guide
 
-Single entry point for any AI (Claude, Codex, or otherwise) or human
-picking up this project. Last updated: 2026-07-19. This document was
+Single entry point for maintainers and reviewers working with this project. Last updated: 2026-07-19. This document was
 current as of index-files commit `026223b` (source state at scan time:
 `2558216`) — **do not trust a hardcoded commit hash in any document,
 including this one, as "the current commit."** Always run
@@ -31,12 +30,12 @@ Pi-puck, reality gap).
 
 ## Current overall status
 
-- **Objective 1** (Environment Setup): simulation side done (ROS2 Humble + Webots, not Gazebo — see the deviation note below). Physical Pi-puck bringup and the current `EpuckState.msg` adapter path are verified; the stationary single-device zero-impairment physical baseline is complete at 5/5 FINAL_PASS. Ground-motion/controller-driven physical validation has not started. Pre-existing 2026-07-15 JSON-format physical data remain legacy-only and are never pooled with the current protocol.
+- **Objective 1** (Environment Setup): simulation side done (ROS2 Humble + Webots, not Gazebo — see the deviation note below). Physical Pi-puck bringup and the current `EpuckState.msg` adapter path are verified; the stationary single-device zero-impairment physical baseline is complete at 5/5 FINAL_PASS. One bounded controller-driven Stage 4 physical HIL event is also complete (`stage4_20260803_144220`, final verifier `PASS`): one physical e-puck2 received an exit-goal announcement from one software-only virtual peer and moved approximately 0.08m. Pre-existing 2026-07-15 JSON-format physical data remain legacy-only and are never pooled with the current protocol.
 - **Objective 2** (Protocol Design): `EpuckState.msg` implemented and **frozen as PROTOCOL_VERSION=1** (commit `b5a0351`).
 - **Objective 3** (Library Implementation): `epuck2_comm` library implemented — `state_publisher`, `cooperative_avoider`, `network_impairment_relay`, analyzers. 165/165 package tests passing at the Condition D closeout.
 - **Objective 4** (Task-Specific Validation): controller v1→v4 defect chain resolved; **Phase 4 formal batch SEALED, 5/5 PASS** (commit `e32560e`). Avoidance-scenario scope is now intentionally frozen.
-- **Objective 5** (Performance Analysis): impairment matrix Conditions A-E are complete. A and B are 5/5 successful; C is a valid completed condition with 4/5 SUCCESS plus one retained unsafe failure; D is complete with 5/5 included trials and one transparently retained rosbag-only excluded attempt; E is FINAL_BATCH_PASS (5/5) under independent p=0.15 loss. Conditions F-G remain. See the Condition A-D batch summaries and `experiments/05_objective5_impairment_matrix/objective5_condition_E_formal_batch_summary.md`.
-- **Objective 6/7** (physical validation, reality gap): bridge/driver bringup verified (see Objective 1 above). **First formal physical result now exists**: `physical_single_device_zero_impairment_baseline_v1` (stationary, no ground motion, no controller, single e-puck2 #5809, expanded Pi-TCP-WSL bridge + `EpuckState.msg`) is **FINAL_BATCH_PASS (5/5 FINAL_PASS)** — see `experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/batch_summary.md` and the per-trial `physical_single_device_zero_impairment_baseline_v1_trial0N_attemptNN_analysis/` directories. All 5 trials are one continuous driver/Pi-expanded-server/WSL-bridge session (not 5 independent cold starts). Tier A delivery ratio 1.0/5 trials (application-level, not IP/TCP loss; `duplicate_count` NOT_MEASURABLE, never 0); Tier B bag-capture ratio 1.0 at ~8.88-8.94 Hz actual; Tier C raw sensors ~9.2 Hz, no PDR claimed; RTT tail ~20-25% >50/100ms, 0% >200ms recurring across all 5 windows with **no root-cause attribution**; one-way Pi-to-WSL latency **NOT reported/measured** (no clock-sync verified); `trial01/02_attempt01_short_window` are excluded diagnostic evidence (window-timing defect, since fixed), not part of this n=5. This is a stationary, comm-layer-only result — no ground-motion or controller-driven physical trial has run yet, and reality-gap comparison (Objective 7) has not started.
+- **Objective 5** (Performance Analysis): impairment matrix Conditions A-G are complete. A and B are 5/5 successful; C is a valid completed condition with 4/5 SUCCESS plus one retained unsafe failure; D is complete with 5/5 included trials and one transparently retained rosbag-only excluded attempt; E and F are FINAL_BATCH_PASS (5/5); G is complete with 4/5 SUCCESS plus one retained safety-radius violation. Use the per-condition summaries and the A-G aggregation evidence; do not rerun a valid failure to improve the result.
+- **Objective 6/7** (physical validation, reality gap): bridge/driver bringup and the stationary `physical_single_device_zero_impairment_baseline_v1` batch are verified (5/5 FINAL_PASS; single e-puck2 #5809, expanded Pi-TCP-WSL bridge + `EpuckState.msg`). In addition, **Stage 4 physical HIL is closed with `PASS`** for `RUN_ID=stage4_20260803_144220` (preparation/audit ID `stage4_20260803_132544`, execution HEAD `e72e06dfc3b0d62a750fe6c88f221dec266e6c5f`). The topology was **one physical e-puck2 plus one software-only virtual peer**, not two physical robots: the virtual peer simulated travel, published one `GoalAnnouncement`, the physical controller adopted it, and the physical robot executed one automatically bounded forward command window. Manual displacement was approximately 0.08m, minimum field/boundary clearance was reported greater than 0.50m, no stop/corridor line was crossed, and no emergency stop, unexpected rotation, sound, acceleration, or unsafe direction was reported. A mild rightward drift was observed and retained as a physical/mechanical observation. The committed physical verifier returned `PASS` with an active duration of 6.517s, maximum command 0.015m/s, zero angular command, clean disarm/terminal state, and complete WSL/Pi command evidence. This is an `n=1` bounded HIL proof of the virtual-to-physical event path, **not** a dual-physical-robot cooperation experiment and not a full statistical simulation-vs-physical comparison.
 
 ## Key paths
 
@@ -47,6 +46,7 @@ Pi-puck, reality gap).
 | ROS2 workspace (built package lives here, synced from repo `src/`) | `~/epuck_ws` (i.e. `/home/eamon/epuck_ws`) |
 | Webots world/launch working directory (**outside** the git repo) | `/mnt/c/Users/路一鸣/Desktop/硬件实验毕设/2-1.仿真通信实验/working` |
 | Native WSL scratch path for rosbag recording (see Objective 5 finding below) | `/home/eamon/epuck_comm_bags/` |
+| Finalized Stage 4 physical HIL evidence (`RUN_ID=stage4_20260803_144220`) | `/home/eamon/epuck_comm_bags/hil_stage4_20260803_144220/` (`FINAL_SHA256SUMS.txt` SHA-256 `6867206b89336f982e40f9ecb975d527941751a463e3ad38d46f34a5b255f270`) |
 
 Human-facing experiment folders follow `experiments/NAMING_CONVENTION.md`.
 New folders use `实验编号-次数.实验名称`; internal protocol/controller versions
@@ -93,10 +93,10 @@ python3 -m pytest test/ -q
 
 ## Experiment categories (full detail: `experiments/EXPERIMENT_INDEX.md`)
 
-01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-E complete; F-G pending) · 06 physical Pi-puck (stationary formal baseline complete; ground motion pending) · 07 reality gap (not started) · 08 paper-ready outputs (currently empty) · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (NEW 2026-07-20, supervisor-requested N2 shared-edge-exit comm-vs-no-comm study; Stage 0 preparatory validation retained, Stage 1 formal paired batch complete, see STAGE_CLASSIFICATION.md).
+01 protocol/unit tests · 02 controller regression (v1-v4 dev evidence, NOT formal comm stats) · 03 Phase 4 task validation (Phases 1-4, formal vs. pilot/diagnostic clearly separated) · 04 Objective 5 comm baseline · 05 Objective 5 impairment matrix (A-G complete) · 06 physical Pi-puck (stationary formal baseline complete) · 07 reality gap/HIL (Stage 3 offline graph PASS; Stage 4 one-physical-plus-one-virtual-peer bounded physical HIL PASS; broader statistical comparison still open) · 08 paper-ready outputs · 09 legacy/excluded (old protocol-format bags, failed pilots — never deleted, always indexed with an exclusion reason) · 10 cooperative exit navigation (N2 and N3 formal paired simulation batches complete; see STAGE_CLASSIFICATION.md).
 
 **New 2026-07-20**: `10_cooperative_exit_navigation_20260720/` studies a
-DIFFERENT question from Objective 5's A-F impairment evidence (which stays frozen and unmodified,
+DIFFERENT question from Objective 5's A-G impairment evidence (which stays frozen and unmodified,
 still the pairwise-CPA-under-communication-impairment evidence): does
 communication help two robots find and reach a shared exit faster/more
 safely. The supervisor's explicit direction (2026-07-20, second round)
@@ -127,9 +127,19 @@ The project now has a 4-stage evidence chain, indexed in
 - **Stage 2 (complete)**: the N3 formal paired extension, 10/10 successful.
   Its efficiency result is mixed: mean makespan saving 1.684s (1.561%),
   3/5 pairs improved and 2/5 were slightly slower.
-- **Stage 3 (planned)**: hardware-in-the-loop reality-gap work using the one
-  available physical e-puck and simulated peer(s). A second physical unit is
-  unavailable, so this limitation must be stated and justified.
+- **Stage 3 (complete, offline implementation/rehearsal)**: the hardware-free
+  automatic ROS-graph rehearsal passed (`RUN_ID=20260730_112847`). It proved
+  announcement/adoption/gate/cleanup/evidence sequencing, but is not itself a
+  physical result.
+- **Stage 4 (complete, bounded physical HIL)**: `RUN_ID=stage4_20260803_144220`
+  passed the committed physical post-run verifier. The test used **one real
+  e-puck2 and one software-only virtual peer**. The peer was not a second
+  physical robot and was not a Webots-rendered physical participant in this
+  run. It published the exit-goal signal after its simulated travel; the real
+  robot adopted that signal and completed one approximately 0.08m bounded
+  forward event. This must never be described as a two-physical-robot
+  cooperative experiment. It is a single bounded HIL proof-of-path (`n=1`),
+  not a full reality-gap population study.
 
 The external Webots working directory was renamed to
 `2-1.仿真通信实验/working` and has now been located and verified (see
@@ -213,6 +223,7 @@ row per experiment/batch — `status`, `evidence_level`,
 6. Webots R2025a is used, not Gazebo as the Spec names — this is a disclosed, deliberate deviation (protocol/library are simulator-agnostic; see `HANDOFF_20260717.md` for the full risk note and the recommendation to confirm with the supervisor). Do not silently redo the platform in Gazebo.
 7. No CPU/memory overhead measurement exists yet (would need a live psutil-style sampling companion).
 8. No physical-hardware clock-sync procedure exists yet (`verify_clock_sync()` intentionally raises `NotImplementedError` until Objective 6 begins).
+9. The completed Stage 4 HIL result is one bounded `n=1` event with one physical robot and one software-only virtual peer. It supports the end-to-end virtual-announcement-to-physical-motion chain and its safety gates only; it does not establish two-physical-robot cooperation, a physical PDR/latency distribution, or a statistically powered reality-gap comparison. Manual displacement is approximate (0.08m), final yaw was visually unclear, and mild rightward drift was observed.
 
 ## Shared-exit N2 formal paired batch (complete)
 
@@ -236,9 +247,10 @@ the 175/175 SHA-256-verified raw copy is gitignored under
 `/home/eamon/epuck_comm_bags/`. Excluded development attempts are documented
 separately in `N3_ATTEMPT_HISTORY.md` and are not pooled.
 
-These completed shared-exit batches are not the next task. Objective 5
-Condition G and physical ground-motion or hardware-in-the-loop reality-gap
-validation remain unfinished.
+The shared-exit N2/N3 simulation batches, Objective 5 Condition G, and the
+bounded Stage 4 physical HIL event are now complete. Do not rerun them merely
+to improve a valid result. A broader repeated-trial simulation-vs-physical
+reality-gap comparison remains outside the evidence established so far.
 
 
 ### Objective 5 Condition E formal batch (2026-07-21)
@@ -261,12 +273,14 @@ during already-active CPA avoidance, not impairment of the initial CPA trigger.
 
 ## Current single next step
 
-Conditions A-F are complete; do not rerun Condition F. The next formal
-simulation task is a manually observed Condition G Trial 01 after a read-only
-preflight. Because Condition G contains jitter/reordering, its authoritative
-delivery analysis must use the reorder-safe set-based analyzer, not the live
-adjacent-delta sequence-gap count. Physical ground-motion and dual-robot or
-hardware-in-the-loop reality-gap validation also remain unfinished.
+Conditions A-G and the bounded Stage 4 physical HIL proof-of-path are complete;
+do not rerun any valid condition or the physical event merely to improve its
+result. The next project task is documentation/dissertation closeout: update
+paper-ready tables/figures from the final A-G summaries, report Stage 4 as one
+physical e-puck2 plus one virtual peer with approximately 0.08m bounded motion,
+and keep the `n=1`/manual-measurement/rightward-drift limitations explicit. Any
+future broader reality-gap study would require a separately designed repeated
+trial protocol; it is not a continuation of this sealed run.
 
 The earlier Condition D sequence-accounting finding remains binding for
 Condition G. Condition E total loss remains relay-authoritative because its

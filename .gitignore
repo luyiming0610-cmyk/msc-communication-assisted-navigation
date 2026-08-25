@@ -15,9 +15,6 @@ __pycache__/
 /install/
 /log/
 
-# Claude Code runtime lock/session state — not project source.
-.claude/*.lock
-
 # OS/editor noise.
 .DS_Store
 Thumbs.db

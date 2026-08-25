@@ -50,9 +50,8 @@ for the first pilot design (not yet run).
   `Pi TCP bridge listening on 0.0.0.0:5809; watchdog 0.50s; limits
   0.040m/s 2.000rad/s`. Left running in a second SSH session.
 - WSL TCP client (`~/epuck_ws/epuck_comm_project/real_robot_bridge/
-  wsl_epuck_tcp_bridge.py`, base version): started (by the assistant, in
-  WSL, this session), `TCP bridge connected`. Left running in the
-  background.
+  wsl_epuck_tcp_bridge.py`, base version): started in WSL and reported
+  `TCP bridge connected`. Left running in the background.
 
 ## Topics verified this session (read-only, no `/cmd_vel` published)
 

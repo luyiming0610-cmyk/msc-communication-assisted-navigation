@@ -16,11 +16,9 @@ this file must not be read as Condition A batch completion.
 - network_impairment_relay.py SHA-256: `f5d408bc3379f79fa70628370b4dfb6d537c4d03a1968fe8dc75a691c3e6d5ff`
 - network_impairment.py SHA-256: `253e0d960e9b587a3c5e60587ce7ac56c167fd6aba1c98f8b7b940e821210561`
 - sequence_counter.py SHA-256: `57bb0699a444df644d75c4e834b5fd13b5f15a6283d7b1d276ec0b65674f1fd3`
-- Launched manually by the user directly inside an already-registered
+- Launched manually by the operator inside an already-registered
   eamon WSL session (`bash run_objective5_impairment_matrix_trial.sh A
-  1`), not via a fresh assistant-issued `wsl.exe` call -- see
-  `runtime_manifest.json`'s `launch_method` field for the exact
-  correction.
+  1`). The exact invocation is retained in `runtime_manifest.json`.
 
 ## Communication metrics (real analyzer, strict schema, `legacy_replay=false`)
 

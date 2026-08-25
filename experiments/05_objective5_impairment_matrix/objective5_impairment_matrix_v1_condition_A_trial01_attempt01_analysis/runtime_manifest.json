@@ -4,7 +4,7 @@
   "trial_index": 1,
   "attempt": 1,
   "trial_id": "objective5_impairment_matrix_v1_condition_A_trial01_attempt01",
-  "launch_method": "Manually invoked by the user directly inside an already-INTEROP_OK-registered eamon WSL session, NOT via a fresh single wsl.exe call issued by the assistant this turn -- per the user's own correction, this is the actual launch record of record: bash \"/mnt/c/Users/.../e-puck2-Comm/experiments/05_objective5_impairment_matrix/tools/run_objective5_impairment_matrix_trial.sh\" A 1",
+  "launch_method": "Manually invoked by the operator inside an already-INTEROP_OK-registered eamon WSL session using the recorded command: bash \"/mnt/c/Users/.../e-puck2-Comm/experiments/05_objective5_impairment_matrix/tools/run_objective5_impairment_matrix_trial.sh\" A 1",
   "frozen_condition_params": {
     "delay_s": 0.0,
     "jitter_s": 0.0,

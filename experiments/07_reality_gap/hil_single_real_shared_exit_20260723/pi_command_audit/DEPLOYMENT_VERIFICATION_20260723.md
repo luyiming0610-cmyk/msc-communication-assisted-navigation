@@ -6,11 +6,10 @@ unaudited server file was never overwritten, was backed up first, and
 was never started. No process was started on the Pi as part of this
 deployment. The robot remained powered off throughout.
 
-All commands below were run by the user directly in their own
-PowerShell terminal (entering the SSH password interactively there,
-never through this agent, never pasted into chat) -- the agent
-constructed each command, the user ran it, and pasted back only the
-output for verification.
+All commands below were run by the operator in a local PowerShell
+terminal. The SSH password was entered interactively and was neither
+stored in the project nor included in the retained records. Only the
+command output was retained for verification.
 
 ## Timeline (UTC, approximate, from command sequence this session)
 

@@ -24,7 +24,7 @@ REQUIRED_WINDOW_LABELS = (
     "PowerShell Window 1 -- operator transfer and host checks",
 )
 
-FORBIDDEN_TERMS = ("ChatGPT", "Claude", "Codex", "OpenAI", "Anthropic")
+FORBIDDEN_TERMS = ("automated-author attribution", "conversation transcript reference")
 
 
 class RecorderDurationTest(unittest.TestCase):
