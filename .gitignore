@@ -37,6 +37,11 @@ Thumbs.db
 /experiments/10_cooperative_exit_navigation_20260720/bags/
 /experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_formal_20260721/
 
+# Synthetic/exclusionary assessor-demo analyses exercise exclusion and
+# source-identity checks. They are not formal Condition B trials and are not
+# part of the dissertation evidence set.
+/experiments/05_objective5_impairment_matrix/objective5_matrix_v1_conditionB_exclusionary_assessor_demo_*_analysis/
+
 # First ground diagnostic: per-session runtime confirmations (operator
 # present, Wi-Fi checked), timestamped and re-confirmed every session --
 # must never be committed as a permanent fact. Managed by
