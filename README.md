@@ -60,11 +60,12 @@ to their evidence sources.
 
 ## Raw evidence
 
-ROS 2 bag databases are binary experimental records and are not stored as
-ordinary Git objects. The complete dissertation evidence package must include
-the corresponding `.db3` files, `metadata.yaml` files and integrity manifests
-through a controlled archive or Git LFS. Derived summaries are not a substitute
-for the raw recordings.
+ROS 2 bag databases are binary experimental records and are stored through
+Git LFS rather than as ordinary Git objects. Each available `.db3` file is
+retained with its corresponding `metadata.yaml`. The complete path, byte size
+and SHA-256 digest of every retained bag file are recorded in
+`docs/RAW_ROSBAG_INVENTORY.csv`. Derived summaries are not a substitute for
+the raw recordings.
 
 Some physical and diagnostic records contain environment-specific network
 information. They must not be placed in a public archive without a deliberate

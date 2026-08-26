@@ -1,0 +1,32 @@
+rosbag2_bagfile_information:
+  version: 5
+  storage_identifier: sqlite3
+  duration:
+    nanoseconds: 3218148591
+  starting_time:
+    nanoseconds_since_epoch: 1784557790581465264
+  message_count: 47
+  topics_with_message_count:
+    - topic_metadata:
+        name: /epuck1/state_raw
+        type: epuck2_comm_interfaces/msg/EpuckState
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 20
+    - topic_metadata:
+        name: /epuck2/state_raw
+        type: epuck2_comm_interfaces/msg/EpuckState
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 27
+  compression_format: ""
+  compression_mode: ""
+  relative_file_paths:
+    - cooperative_exit_n2_n2_comm_off_EXCLUSIONARY_PILOT01_0.db3
+  files:
+    - path: cooperative_exit_n2_n2_comm_off_EXCLUSIONARY_PILOT01_0.db3
+      starting_time:
+        nanoseconds_since_epoch: 1784557790581465264
+      duration:
+        nanoseconds: 3218148591
+      message_count: 47
