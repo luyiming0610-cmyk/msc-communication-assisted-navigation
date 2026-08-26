@@ -53,6 +53,7 @@ git lfs install
 git -c core.longpaths=true clone --branch dissertation-submission-final \
   https://github.com/luyiming0610-cmyk/msc-communication-assisted-navigation.git
 cd msc-communication-assisted-navigation
+git config core.longpaths true
 git lfs pull
 git rev-list -n 1 dissertation-submission-final
 git lfs ls-files
