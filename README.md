@@ -44,18 +44,18 @@ metadata and dissertation.
 ## Obtain the submission snapshot
 
 The assessor-facing snapshot is identified by the annotated tag
-`dissertation-submission-final`. Git LFS is required to materialise the ROS bag
+`dissertation-submission-final-v2`. Git LFS is required to materialise the ROS bag
 databases. On Windows, use a short destination path and enable long paths for
 the clone because several retained evidence names are necessarily descriptive.
 
 ```bash
 git lfs install
-git -c core.longpaths=true clone --branch dissertation-submission-final \
+git -c core.longpaths=true clone --branch dissertation-submission-final-v2 \
   https://github.com/luyiming0610-cmyk/msc-communication-assisted-navigation.git
 cd msc-communication-assisted-navigation
 git config core.longpaths true
 git lfs pull
-git rev-list -n 1 dissertation-submission-final
+git rev-list -n 1 dissertation-submission-final-v2
 git lfs ls-files
 ```
 
@@ -102,7 +102,7 @@ included. Altering a raw record would invalidate its retained checksum.
 Resolve the immutable submission tag and verify the retained evidence with:
 
 ```bash
-git rev-list -n 1 dissertation-submission-final
+git rev-list -n 1 dissertation-submission-final-v2
 python3 tools/verify_evidence.py
 ```
 

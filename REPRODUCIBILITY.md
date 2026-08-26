@@ -8,11 +8,11 @@ operating system, simulator release or physical platform.
 ## 1. Canonical submission version
 
 The assessor-facing version is the annotated tag
-`dissertation-submission-final`. Resolve the tag to its full commit identifier
+`dissertation-submission-final-v2`. Resolve the tag to its full commit identifier
 after cloning:
 
 ```bash
-git rev-list -n 1 dissertation-submission-final
+git rev-list -n 1 dissertation-submission-final-v2
 git status --short
 ```
 
@@ -51,7 +51,7 @@ long-path support; WSL/Linux is preferred.
 
 ```bash
 git lfs install
-git -c core.longpaths=true clone --branch dissertation-submission-final \
+git -c core.longpaths=true clone --branch dissertation-submission-final-v2 \
   https://github.com/luyiming0610-cmyk/msc-communication-assisted-navigation.git
 cd msc-communication-assisted-navigation
 git config core.longpaths true
