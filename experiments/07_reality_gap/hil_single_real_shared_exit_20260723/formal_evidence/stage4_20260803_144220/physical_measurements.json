@@ -1,0 +1,22 @@
+{
+  "manual_forward_displacement_m": 0.08,
+  "corridor_crossed": false,
+  "stop_line_crossed": false,
+  "min_boundary_clearance_m": 0.5,
+  "unexpected_rotation": false,
+  "unexpected_direction": false,
+  "unexpected_sound": false,
+  "unexpected_acceleration": false,
+  "run_interrupted": false,
+  "measurement_basis": {
+    "manual_forward_displacement_m": "operator estimate, approximately 0.08 m after accounting for robot body position",
+    "min_boundary_clearance_m": "conservative recorded lower bound; operator reported greater than 0.50 m",
+    "final_yaw": "visually unclear; no unexpected rotation observed",
+    "rightward_drift": "observed during forward motion; assessed by operator as a mild mechanical/floor tendency, not an unexpected direction or safety event"
+  },
+  "hil_configuration": {
+    "physical_robot_count": 1,
+    "virtual_peer_count": 1,
+    "description": "One physical e-puck2 received a goal announcement from one software-only virtual peer and executed one bounded forward motion event. This was not a two-physical-robot cooperative trial."
+  }
+}

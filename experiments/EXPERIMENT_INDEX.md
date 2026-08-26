@@ -339,6 +339,10 @@ Hardware-in-the-loop/reality-gap preparation and bounded physical validation.
   `/home/eamon/epuck_comm_bags/hil_stage4_20260803_144220/`. Its
   `FINAL_SHA256SUMS.txt` verifies every final evidence file and has SHA-256
   `6867206b89336f982e40f9ecb975d527941751a463e3ad38d46f34a5b255f270`.
+- Version-controlled evidence copy:
+  `experiments/07_reality_gap/hil_single_real_shared_exit_20260723/formal_evidence/stage4_20260803_144220/`.
+  The copy was transferred without editing the evidence files and is checked
+  by the same `FINAL_SHA256SUMS.txt` manifest.
 - **Binding scope:** this is an `n=1` bounded virtual-to-physical event-path
   validation. It is **not dual-physical-robot cooperation**, not evidence of
   two real e-pucks communicating, and not yet a repeated-trial statistical

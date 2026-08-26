@@ -1,1 +1,8 @@
 *.db3 filter=lfs diff=lfs merge=lfs -text
+# rosbag2 metadata is hashed as evidence. Preserve its original bytes across
+# Windows and Linux checkouts instead of applying CRLF conversion.
+**/metadata.yaml -text
+
+# Retained Stage 4 evidence is checksum-governed and must remain byte-exact.
+# Treat it as evidence rather than source text when displaying Git diffs.
+experiments/07_reality_gap/hil_single_real_shared_exit_20260723/formal_evidence/stage4_20260803_144220/** -text -diff

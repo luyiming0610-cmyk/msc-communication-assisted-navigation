@@ -4,7 +4,7 @@
   <version>0.1.0</version>
   <description>Compact state interfaces for the e-puck2-Comm library.</description>
 
-  <maintainer email="yiming.lu@example.invalid">YiMing Lu</maintainer>
+  <maintainer email="luyiming0610-cmyk@users.noreply.github.com">Yiming Lu</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

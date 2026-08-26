@@ -28,7 +28,8 @@ runs are kept separate from formal results.
 | `src/` | ROS 2 interfaces, state exchange, impairment relay, navigation controller and tests |
 | `experiments/` | Frozen configurations, trial indices, derived records, validation outputs and evidence manifests |
 | `docs/` | Design notes and physical-validation scope documentation |
-| `PROJECT_HANDOFF.md` | Detailed project status, evidence boundaries, build instructions and known limitations |
+| `REPRODUCIBILITY.md` | Assessor-facing environment, evidence and verification instructions |
+| `PROJECT_HANDOFF.md` | Development history and detailed project provenance; not the primary reproduction guide |
 | `experiments/EXPERIMENT_INDEX.md` | Experiment taxonomy and evidence entry points |
 | `experiments/experiment_registry.csv` | Machine-readable classification of formal, diagnostic and excluded work |
 
@@ -40,19 +41,41 @@ Raspberry Pi running Raspbian GNU/Linux 10, ROS 2 Foxy and Python 3.7.3.
 Exact versions and study-specific settings are retained in the experiment
 metadata and dissertation.
 
+## Obtain the submission snapshot
+
+The assessor-facing snapshot is identified by the annotated tag
+`dissertation-submission-v2`. Git LFS is required to materialise the ROS bag
+databases. On Windows, use a short destination path and enable long paths for
+the clone because several retained evidence names are necessarily descriptive.
+
+```bash
+git lfs install
+git -c core.longpaths=true clone --branch dissertation-submission-v2 \
+  https://github.com/luyiming0610-cmyk/msc-communication-assisted-navigation.git
+cd msc-communication-assisted-navigation
+git lfs pull
+git rev-list -n 1 dissertation-submission-v2
+git lfs ls-files
+```
+
+Cloning under WSL/Linux avoids the Windows legacy path-length limit. A GitHub
+source-code ZIP is not a substitute for the commands above because it may
+contain Git LFS pointer files instead of the bag content.
+
 ## Build and test
 
 The ROS 2 package is normally built from the WSL workspace:
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd ~/epuck_ws
-colcon build --packages-select epuck2_comm --symlink-install
+cd msc-communication-assisted-navigation
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --packages-up-to epuck2_comm --symlink-install
 colcon test --packages-select epuck2_comm
 colcon test-result --verbose
 ```
 
-For evidence inspection, begin with `PROJECT_HANDOFF.md`, then read
+For evidence inspection, begin with `REPRODUCIBILITY.md`, then read
 `experiments/EXPERIMENT_INDEX.md` and the relevant condition or study summary.
 The derived records retain trial identifiers, configurations, validity
 classifications and SHA-256 manifests so that reported results can be traced
@@ -67,19 +90,19 @@ and SHA-256 digest of every retained bag file are recorded in
 `docs/RAW_ROSBAG_INVENTORY.csv`. Derived summaries are not a substitute for
 the raw recordings.
 
-Some physical and diagnostic records contain environment-specific network
-information. They must not be placed in a public archive without a deliberate
-access and redaction decision, because altering a raw bag would also invalidate
-its recorded checksum.
+The formal Stage 4 evidence is retained under
+`experiments/07_reality_gap/hil_single_real_shared_exit_20260723/formal_evidence/`.
+It contains environment-specific technical metadata that the author explicitly
+approved for public release. No passwords, private keys or API credentials are
+included. Altering a raw record would invalidate its retained checksum.
 
-## Version identification
+## Version and integrity identification
 
-The dissertation should identify the exact evaluated version using a tag and
-full commit hash. Obtain the current values with:
+Resolve the immutable submission tag and verify the retained evidence with:
 
 ```bash
-git describe --tags --always
-git rev-parse HEAD
+git rev-list -n 1 dissertation-submission-v2
+python3 tools/verify_evidence.py
 ```
 
 The repository supports inspection and reconstruction of the recorded

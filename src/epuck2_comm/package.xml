@@ -4,7 +4,7 @@
   <version>0.1.0</version>
   <description>Lightweight neighbor-state communication library for e-puck2 robots.</description>
 
-  <maintainer email="yiming.lu@example.invalid">YiMing Lu</maintainer>
+  <maintainer email="luyiming0610-cmyk@users.noreply.github.com">Yiming Lu</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_python</buildtool_depend>

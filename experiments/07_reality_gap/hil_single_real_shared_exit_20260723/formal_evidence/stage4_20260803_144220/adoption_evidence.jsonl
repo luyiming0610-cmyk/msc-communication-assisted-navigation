@@ -1,0 +1,1 @@
+{"monotonic_time_s": 830.322508474, "ros_time_s": 1785764736.0034187, "state": "VALIDATING_RAW_COMMAND", "event": "ADOPTION_CONFIRMED", "reason": "", "raw": {"goal_id": "shared_exit", "source_sequence": 1, "target_x_m": 1.2, "target_y_m": 0.5, "schema_version": "1.0.0"}, "run_id": "stage4_20260803_144220", "goal_id": "shared_exit"}

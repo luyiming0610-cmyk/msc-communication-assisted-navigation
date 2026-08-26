@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software or evidence package, please cite the accompanying MSc dissertation."
+title: "Communication-Assisted Multi-Robot Navigation"
+type: software
+authors:
+  - family-names: "Lu"
+    given-names: "Yiming"
+repository-code: "https://github.com/luyiming0610-cmyk/msc-communication-assisted-navigation"
+version: "dissertation-submission-v2"
+date-released: 2026-08-26
+license: Apache-2.0

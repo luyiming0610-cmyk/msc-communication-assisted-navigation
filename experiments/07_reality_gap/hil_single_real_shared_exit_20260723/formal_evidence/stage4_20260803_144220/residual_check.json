@@ -1,0 +1,9 @@
+{
+  "residual_process_check": "CLEAN",
+  "scope": "Stage 4 orchestrator-owned processes and the physical bridge/driver chain",
+  "basis": [
+    "run_hil_shutdown.sh reported PROCESSES_CLEAN for all six orchestrator-owned processes",
+    "operator separately confirmed state_publisher, WSL bridge, Pi audited server, and Pi driver gone",
+    "offline WSL residual-process sweep on 2026-08-03 found no matching process"
+  ]
+}

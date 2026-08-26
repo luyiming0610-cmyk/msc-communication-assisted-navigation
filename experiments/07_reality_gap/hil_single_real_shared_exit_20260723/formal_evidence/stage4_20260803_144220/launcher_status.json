@@ -1,0 +1,44 @@
+{
+  "run_id": "stage4_20260803_144220",
+  "execution_head": "e72e06dfc3b0d62a750fe6c88f221dec266e6c5f",
+  "components": {
+    "hil_topic_adapter": {
+      "launch_state": "STARTED",
+      "pid": 1527,
+      "exit_status": null
+    },
+    "recorder": {
+      "launch_state": "STARTED",
+      "pid": 1516,
+      "exit_status": null
+    },
+    "hil_cmd_vel_guard": {
+      "launch_state": "STARTED",
+      "pid": 1545,
+      "exit_status": null
+    },
+    "hil_stage4_motion_supervisor": {
+      "launch_state": "STARTED",
+      "pid": 1707,
+      "exit_status": null
+    },
+    "hil_virtual_peer": {
+      "launch_state": "STARTED",
+      "pid": 1840,
+      "exit_status": null
+    },
+    "cooperative_avoider": {
+      "launch_state": "STARTED",
+      "pid": 1687,
+      "exit_status": null
+    }
+  },
+  "operator_approval_state": "ACCEPTED",
+  "supervisor_terminal_state": null,
+  "cleanup": {
+    "result": "NOT_YET_RUN"
+  },
+  "recorder_stopped_last": null,
+  "residual_process_result": "NOT_YET_CHECKED",
+  "final_launcher_classification": "RUNNING_DETACHED"
+}

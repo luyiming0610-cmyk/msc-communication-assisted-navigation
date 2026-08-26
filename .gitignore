@@ -1,6 +1,6 @@
-# ROS 2 bag recordings: binary, large (hundreds of MB), preserved on disk
-# under experiments/*/bags/ per project policy, never committed to git.
-*.db3
+# Formal ROS 2 bag recordings are versioned through Git LFS; see
+# .gitattributes and docs/RAW_ROSBAG_INVENTORY.csv. Do not add a generic
+# *.db3 ignore rule because it would silently hide future formal evidence.
 
 # ROS/Webots run logs: regenerable diagnostic output, excluded per project policy.
 *.log
@@ -26,16 +26,8 @@ Thumbs.db
 # batch_summary.csv/md remain version-controlled as normal.
 /experiments/06_physical_pipuck/single_device_bringup/physical_single_device_zero_impairment_baseline_v1_batch/pi_system_metrics_batch_raw.csv
 
-# Objective5 impairment matrix: raw formal-trial bags + diag logs (CSVs,
-# .log, per-run JSON), preserved on disk (native WSL source + this
-# Windows copy, SHA-256 verified both directions), never committed --
-# derived evidence (final_verdict.json, summary.md, runtime_manifest.json,
-# README.md, SHA256SUMS, matrix_analysis.json, trial_verdict.json,
-# frozen_params.json) remains version-controlled as normal in the
-# sibling *_analysis/ directory.
-/experiments/05_objective5_impairment_matrix/bags/
-/experiments/10_cooperative_exit_navigation_20260720/bags/
-/experiments/10_cooperative_exit_navigation_20260720/bags/shared_exit_formal_20260721/
+# Formal A-G and shared-exit bags are intentionally tracked through Git LFS.
+# Pilot and diagnostic outputs remain excluded by their specific rules below.
 
 # Synthetic/exclusionary assessor-demo analyses exercise exclusion and
 # source-identity checks. They are not formal Condition B trials and are not
@@ -64,3 +56,9 @@ Thumbs.db
 /experiments/07_reality_gap/hil_single_real_shared_exit_20260723/stationary_physical_diagnostic_20260723/raw_logs/
 /experiments/07_reality_gap/hil_single_real_shared_exit_20260723/stationary_physical_diagnostic_20260723_attempt02/raw_logs/
 /experiments/07_reality_gap/hil_single_real_shared_exit_20260723/targeted_stationary_diagnostic_20260723/raw_logs/
+
+# The sealed Stage 4 formal evidence includes the final component logs. These
+# negations override the generic *.log rule above only for this one run.
+!/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/formal_evidence/
+!/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/formal_evidence/stage4_20260803_144220/
+!/experiments/07_reality_gap/hil_single_real_shared_exit_20260723/formal_evidence/stage4_20260803_144220/*.log

@@ -1,0 +1,23 @@
+{
+  "behavioural_reasons": [],
+  "classification": "PASS",
+  "generated_at_utc": "2026-08-03T14:57:38.151254+00:00",
+  "generator": "hil_stage4_post_run_verifier.verify_pi_command_audit",
+  "invalid_evidence_reasons": [],
+  "metrics": {
+    "pi_applied_max_abs_angular_rps": 0.0,
+    "pi_applied_max_abs_linear_mps": 0.015,
+    "pi_applied_nonzero_count": 122,
+    "pi_audit_record_count": 35563,
+    "pi_command_received_count": 10388,
+    "pi_received_max_abs_angular_rps": 0.0,
+    "pi_received_max_abs_linear_mps": 0.015,
+    "pi_received_nonzero_count": 57,
+    "pi_tick_applied_count": 25173
+  },
+  "preparation_id": "stage4_20260803_132544",
+  "run_id": "stage4_20260803_144220",
+  "schema_version": "1.0.0",
+  "source_path": "/home/eamon/epuck_comm_bags/hil_stage4_20260803_144220/pi_command_audit.jsonl",
+  "source_sha256": "174e592a2d66dba8012b3499480f5701a2861266aaa8c17a287991d6b899dc74"
+}

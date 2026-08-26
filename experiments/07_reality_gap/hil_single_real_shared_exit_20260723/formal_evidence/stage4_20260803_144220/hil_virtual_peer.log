@@ -1,0 +1,2 @@
+[INFO] [1785764679.071655434] [hil_virtual_peer]: HIL_VIRTUAL_PEER_READY namespace=epuck_virtual_peer announce_enabled=True
+[WARN] [1785764735.852270177] [hil_virtual_peer]: HIL_VIRTUAL_PEER_ANNOUNCEMENT_TX target=(1.2,0.5)

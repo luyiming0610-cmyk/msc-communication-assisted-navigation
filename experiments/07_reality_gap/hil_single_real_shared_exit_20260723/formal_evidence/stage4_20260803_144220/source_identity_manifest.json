@@ -1,0 +1,154 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "stage4_20260803_144220",
+  "expected_head": "e72e06dfc3b0d62a750fe6c88f221dec266e6c5f",
+  "actual_head": "e72e06dfc3b0d62a750fe6c88f221dec266e6c5f",
+  "source_paths": [
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/run_hil_stage4_trial.sh",
+      "expected_blob": "64216b0328a531a10929d7b13ae3c1764a089bd5",
+      "worktree_blob": "64216b0328a531a10929d7b13ae3c1764a089bd5",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_stage4_motion_supervisor.py",
+      "expected_blob": "bf5de59ffc5998939edf7eb5d85ecfed0c8f0014",
+      "worktree_blob": "bf5de59ffc5998939edf7eb5d85ecfed0c8f0014",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_stage4_post_run_verifier.py",
+      "expected_blob": "4340f22900ce8588d18fe3824f00f5fa2763680e",
+      "worktree_blob": "4340f22900ce8588d18fe3824f00f5fa2763680e",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_goal_announcement_evidence.py",
+      "expected_blob": "afbae351a18680e231e2662c3da3a070a886d9cf",
+      "worktree_blob": "afbae351a18680e231e2662c3da3a070a886d9cf",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_topic_adapter.py",
+      "expected_blob": "6b9f163183790e26d8c9bc99d97b3c6ad5f57639",
+      "worktree_blob": "6b9f163183790e26d8c9bc99d97b3c6ad5f57639",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_cmd_vel_guard.py",
+      "expected_blob": "8b9ac702dbac95678e9e83ef4e35e79495a23356",
+      "worktree_blob": "8b9ac702dbac95678e9e83ef4e35e79495a23356",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_virtual_peer.py",
+      "expected_blob": "0c0a596e0ae88acc631b0fcc0cbff0059b00d7e7",
+      "worktree_blob": "0c0a596e0ae88acc631b0fcc0cbff0059b00d7e7",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/hil_command_evidence_recorder.py",
+      "expected_blob": "be18c45fb5312df31c97533e3f50bea7af960d2b",
+      "worktree_blob": "be18c45fb5312df31c97533e3f50bea7af960d2b",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/tools/run_hil_shutdown.sh",
+      "expected_blob": "1c64e197685652e09789c5a18d0feae1283c4d27",
+      "worktree_blob": "1c64e197685652e09789c5a18d0feae1283c4d27",
+      "match": true
+    },
+    {
+      "path": "experiments/07_reality_gap/hil_single_real_shared_exit_20260723/STAGE4_PHYSICAL_HIL_SPEC.md",
+      "expected_blob": "fe56ad365086aaa6b0d864cb6c571cd8ffcee08b",
+      "worktree_blob": "fe56ad365086aaa6b0d864cb6c571cd8ffcee08b",
+      "match": true
+    },
+    {
+      "path": "experiments/10_cooperative_exit_navigation_20260720/tools/goal_navigator.py",
+      "expected_blob": "8edd9392fc5d47fd4685cc7c9cb1a2a324a2c64f",
+      "worktree_blob": "8edd9392fc5d47fd4685cc7c9cb1a2a324a2c64f",
+      "match": true
+    },
+    {
+      "path": "experiments/10_cooperative_exit_navigation_20260720/tools/goal_hold_tracker.py",
+      "expected_blob": "8f63abce7ee03596e5bebc58805a0788ffbae6c7",
+      "worktree_blob": "8f63abce7ee03596e5bebc58805a0788ffbae6c7",
+      "match": true
+    },
+    {
+      "path": "experiments/10_cooperative_exit_navigation_20260720/tools/navigation_target_state.py",
+      "expected_blob": "048e94adee00f3b8b8d05bf74c3ad016bf13bc14",
+      "worktree_blob": "048e94adee00f3b8b8d05bf74c3ad016bf13bc14",
+      "match": true
+    },
+    {
+      "path": "src/epuck2_comm/epuck2_comm/cooperative_avoider.py",
+      "expected_blob": "e58056ea2cd84e2362bb5897cb1a0e5f1bdf72ef",
+      "worktree_blob": "e58056ea2cd84e2362bb5897cb1a0e5f1bdf72ef",
+      "match": true
+    },
+    {
+      "path": "src/epuck2_comm/epuck2_comm/command_smoothing.py",
+      "expected_blob": "a5af8bbb8e726ac568dbdb88c2a95189215a69d4",
+      "worktree_blob": "a5af8bbb8e726ac568dbdb88c2a95189215a69d4",
+      "match": true
+    },
+    {
+      "path": "src/epuck2_comm/epuck2_comm/collision_math.py",
+      "expected_blob": "21cd1ab925ee0a9ebfc64ca3e669529989ac0035",
+      "worktree_blob": "21cd1ab925ee0a9ebfc64ca3e669529989ac0035",
+      "match": true
+    },
+    {
+      "path": "src/epuck2_comm/epuck2_comm/local_obstacle_logic.py",
+      "expected_blob": "e6e9c2bc5af0c68721c5727ddd27258df6e01955",
+      "worktree_blob": "e6e9c2bc5af0c68721c5727ddd27258df6e01955",
+      "match": true
+    },
+    {
+      "path": "src/epuck2_comm/epuck2_comm/state_publisher.py",
+      "expected_blob": "1bfeb03d67d41c93a7d849b5ba4bfde6b31543c2",
+      "worktree_blob": "1bfeb03d67d41c93a7d849b5ba4bfde6b31543c2",
+      "match": true
+    }
+  ],
+  "installed_runtime": [
+    {
+      "module": "cooperative_avoider",
+      "expected_hash": "e58056ea2cd84e2362bb5897cb1a0e5f1bdf72ef",
+      "installed_hash": "e58056ea2cd84e2362bb5897cb1a0e5f1bdf72ef",
+      "match": true
+    },
+    {
+      "module": "command_smoothing",
+      "expected_hash": "a5af8bbb8e726ac568dbdb88c2a95189215a69d4",
+      "installed_hash": "a5af8bbb8e726ac568dbdb88c2a95189215a69d4",
+      "match": true
+    },
+    {
+      "module": "collision_math",
+      "expected_hash": "21cd1ab925ee0a9ebfc64ca3e669529989ac0035",
+      "installed_hash": "21cd1ab925ee0a9ebfc64ca3e669529989ac0035",
+      "match": true
+    },
+    {
+      "module": "local_obstacle_logic",
+      "expected_hash": "e6e9c2bc5af0c68721c5727ddd27258df6e01955",
+      "installed_hash": "e6e9c2bc5af0c68721c5727ddd27258df6e01955",
+      "match": true
+    },
+    {
+      "module": "state_publisher",
+      "expected_hash": "1bfeb03d67d41c93a7d849b5ba4bfde6b31543c2",
+      "installed_hash": "1bfeb03d67d41c93a7d849b5ba4bfde6b31543c2",
+      "match": true
+    }
+  ],
+  "entrypoint_check": {
+    "component": "cooperative_avoider",
+    "candidates": 1,
+    "result": "PASS"
+  },
+  "overall_result": "PASS"
+}

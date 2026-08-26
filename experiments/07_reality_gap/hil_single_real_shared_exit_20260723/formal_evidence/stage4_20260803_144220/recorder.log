@@ -1,0 +1,4 @@
+[WARN] [1785764553.212686436] [hil_command_evidence_recorder]: HIL_COMMAND_EVIDENCE_RECORDER_START upstream_cmd_vel_topic=cmd_vel_unguarded guarded_cmd_vel_topic=cmd_vel arm_topic=/hil_guard/arm state_topic=/epuck1/state bridge_status_topic=/epuck_bridge/status
+[WARN] [1785764553.226591762] [hil_command_evidence_recorder]: HIL_COMMAND_EVIDENCE_RECORDER_TOPIC_VERIFY ok=True missing=() wrong_type=()
+[WARN] [1785764848.707678150] [hil_command_evidence_recorder]: HIL_COMMAND_EVIDENCE_RECORDER_DONE rows=8924 output=/home/eamon/epuck_comm_bags/hil_stage4_20260803_144220/command_evidence.csv
+Failed to publish log message to rosout: publisher's context is invalid, at ./src/rcl/publisher.c:389

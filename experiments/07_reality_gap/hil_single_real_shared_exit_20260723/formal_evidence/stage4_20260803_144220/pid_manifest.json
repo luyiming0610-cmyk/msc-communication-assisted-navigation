@@ -1,0 +1,12 @@
+{
+  "run_id": "stage4_20260803_144220",
+  "started_at": "2026-08-03T14:44:38+01:00",
+  "processes": {
+    "hil_topic_adapter": {"pid": 1527, "sha256": "be30b2d604256b18ceec3a9de3b5797b27046f278104efbb28cf5f0367786865"},
+    "recorder": {"pid": 1516, "sha256": "405e0eb47b7a5b9df48060fff10fe8c4015fe8f2cb1f7af96f24a1771e359eed"},
+    "hil_cmd_vel_guard": {"pid": 1545, "sha256": "9ae7ef6a07d560f90b653604a649f76e5517f4c841706646245b9f676322845c"},
+    "hil_stage4_motion_supervisor": {"pid": 1707, "sha256": "3c782cf73bbfb3f9f51848652d66b8a0258a34777dbb9c48003d64a680792fca"},
+    "hil_virtual_peer": {"pid": 1840, "sha256": "636b1dc4c70edef3b9f613c4f9a1f2a39f926fdca1fbbe8777331e9123799b18"},
+    "cooperative_avoider": {"pid": 1687, "sha256": ""}
+  }
+}

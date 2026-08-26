@@ -1,0 +1,29 @@
+[INFO] [1785764643.805776808] [cooperative_avoider]: robot=1 peer=/epuck_virtual_peer/state armed=True heading=0.000rad
+[INFO] [1785764643.806268424] [cooperative_avoider]: priority: stale/invalid safe stop > calibrated IR/ToF avoidance > peer-state CPA avoidance > cruise.
+[INFO] [1785764643.806620832] [cooperative_avoider]: local avoidance enabled=True, require sensors=True, front danger/warn/release=0.100/0.180/0.220m
+[INFO] [1785764643.806931640] [cooperative_avoider]: local dropout hold=1.00s, bypass distance=0.080m, recovery turn limit=0.180rad/s
+[INFO] [1785764643.807235298] [cooperative_avoider]: controller_v4_full_sensor_bypass_20260717: full-sensor bypass bounds (v4 pilot candidates, NOT validated constants) max_inplace_turn=0.900rad, max_turn_ledger=1.400rad, max_bypass_extension=0.400m, max_encounter_duration=25.0s, pass_confirm_hold=1.00s, rearm_quiet=1.50s, side_track_creep=0.010m/s, required_lateral_offset=0.070m, required_longitudinal_progress=0.100m
+[INFO] [1785764643.807539498] [cooperative_avoider]: command smoothing: linear accel/decel=0.050/0.100m/s2, angular accel/decel=3.000/4.000rad/s2
+[INFO] [1785764643.807871322] [cooperative_avoider]: stop after recovery=False, post-recovery hold=0.50s
+[INFO] [1785764643.808181697] [cooperative_avoider]: dynamic heading ENABLED: nav_intent_timeout=1.00s, default fallback heading=0.000rad
+[INFO] [1785764643.808485680] [cooperative_avoider]: dynamic speed ENABLED: nav_intent_timeout=1.00s, stale/invalid fallback=0.0 m/s (NOT nominal_speed_mps)
+[INFO] [1785764643.841060284] [cooperative_avoider]: TIMEBASE_INIT ros_time=1785764643.840 wall_time=1785764643.841
+[INFO] [1785764643.841572159] [cooperative_avoider]: TRANSITION wall_time=1785764643.841 ros_time=1785764643.841 mode=WAITING->SAFE_STOP_STALE phase=CLOSED encounter_elapsed=None pass_confirm_elapsed=None duration_remaining=None turn_ledger=0.0000rad longitudinal=None lateral=None zones=unavailable applied_cmd=(0.0000,0.0000) failsafe_cause=NONE drift_events=0
+[INFO] [1785764736.090945029] [cooperative_avoider]: ARMED mode=CRUISE distance=0.850m tcpa=0.00s dcpa=0.850m closing=0.000m/s local=(8.191,inf,inf)m cmd=(0.002,0.000)
+[INFO] [1785764736.091513887] [cooperative_avoider]: TRANSITION wall_time=1785764736.091 ros_time=1785764736.091 mode=SAFE_STOP_STALE->CRUISE phase=CLOSED encounter_elapsed=None pass_confirm_elapsed=None duration_remaining=None turn_ledger=0.0000rad longitudinal=None lateral=None zones=(lf=inf,lm=inf,lr=inf,rf=inf,rm=inf,rr=inf) applied_cmd=(0.0025,0.0000) failsafe_cause=NONE drift_events=0
+[INFO] [1785764736.592131505] [cooperative_avoider]: ARMED mode=CRUISE distance=0.850m tcpa=4.00s dcpa=0.835m closing=0.004m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764737.090987300] [cooperative_avoider]: ARMED mode=CRUISE distance=0.844m tcpa=4.00s dcpa=0.789m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764737.640837704] [cooperative_avoider]: ARMED mode=CRUISE distance=0.837m tcpa=4.00s dcpa=0.782m closing=0.014m/s local=(2.106,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764738.140960781] [cooperative_avoider]: ARMED mode=CRUISE distance=0.831m tcpa=4.00s dcpa=0.776m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764738.692049867] [cooperative_avoider]: ARMED mode=CRUISE distance=0.825m tcpa=4.00s dcpa=0.770m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764739.241264354] [cooperative_avoider]: ARMED mode=CRUISE distance=0.817m tcpa=4.00s dcpa=0.762m closing=0.014m/s local=(8.190,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764739.790817277] [cooperative_avoider]: ARMED mode=CRUISE distance=0.810m tcpa=4.00s dcpa=0.755m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764740.290739138] [cooperative_avoider]: ARMED mode=CRUISE distance=0.803m tcpa=4.00s dcpa=0.748m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764740.791298359] [cooperative_avoider]: ARMED mode=CRUISE distance=0.797m tcpa=4.00s dcpa=0.742m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764741.341154762] [cooperative_avoider]: ARMED mode=CRUISE distance=0.790m tcpa=4.00s dcpa=0.735m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764741.841596996] [cooperative_avoider]: ARMED mode=CRUISE distance=0.783m tcpa=4.00s dcpa=0.728m closing=0.014m/s local=(8.190,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764742.391619694] [cooperative_avoider]: ARMED mode=CRUISE distance=0.776m tcpa=4.00s dcpa=0.721m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764742.941388329] [cooperative_avoider]: ARMED mode=CRUISE distance=0.773m tcpa=4.00s dcpa=0.718m closing=0.014m/s local=(8.191,inf,inf)m cmd=(0.015,0.000)
+[INFO] [1785764743.090658688] [cooperative_avoider]: TRANSITION wall_time=1785764743.090 ros_time=1785764743.090 mode=CRUISE->SAFE_STOP_STALE phase=CLOSED encounter_elapsed=None pass_confirm_elapsed=None duration_remaining=None turn_ledger=0.0000rad longitudinal=None lateral=None zones=(lf=inf,lm=inf,lr=inf,rf=inf,rm=inf,rr=inf) applied_cmd=(0.0000,0.0000) failsafe_cause=NONE drift_events=0
+[INFO] [1785764796.190666097] [cooperative_avoider]: COMPLETE: maximum runtime reached; commanding zero
+[INFO] [1785764796.191499721] [cooperative_avoider]: TRANSITION wall_time=1785764796.191 ros_time=1785764796.191 mode=SAFE_STOP_STALE->COMPLETE phase=CLOSED encounter_elapsed=None pass_confirm_elapsed=None duration_remaining=None turn_ledger=0.0000rad longitudinal=None lateral=None zones=(lf=inf,lm=inf,lr=inf,rf=inf,rm=inf,rr=inf) applied_cmd=(0.0000,0.0000) failsafe_cause=NONE drift_events=0
