@@ -28,6 +28,8 @@ Thumbs.db
 
 # Formal A-G and shared-exit bags are intentionally tracked through Git LFS.
 # Pilot and diagnostic outputs remain excluded by their specific rules below.
+**/diag_logs/
+**/*_diag_logs/
 
 # Synthetic/exclusionary assessor-demo analyses exercise exclusion and
 # source-identity checks. They are not formal Condition B trials and are not
